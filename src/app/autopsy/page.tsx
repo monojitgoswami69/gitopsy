@@ -81,20 +81,13 @@ export default function AutopsyConsolePage() {
       checkpointInfo: null,
     });
 
-    let sinceDate: string | undefined;
-    let isIncremental = false;
-    if (currentAnalysis?.generatedAt) {
-      sinceDate = currentAnalysis.generatedAt;
-      isIncremental = true;
-    }
-
     try {
       const report = await workerClient.startAnalysis(
         {
           token: authToken,
           username: targetUsername,
-          sinceDate,
-          isIncremental,
+          sinceDate: undefined,
+          isIncremental: false,
           maxConcurrency: 15,
         },
         {
