@@ -255,9 +255,15 @@ async function processSingleRepo(
   const issues = issuesOutcome.data;
   const languages = languagesOutcome.data;
 
-  if (repoCommits.length > 0 && !cancelled) {
+  // Fetch commit details for up to 200 most recent commits per repo.
+  // This balances data completeness (real churn data for analytics) with
+  // API budget (200 detail calls per repo vs 1000+ for unlimited).
+  // Size-based analytics only use hasDetails=true commits, so the sample
+  // is always accurate regardless of how many were fetched.
+  const commitsToDetail = Math.min(repoCommits.length, 200);
+  if (commitsToDetail > 0 && !cancelled) {
     await Promise.all(
-      repoCommits.map(async (c) => {
+      repoCommits.slice(0, commitsToDetail).map(async (c) => {
         const detail = await rest.getCommitDetails(r.fullName!, c.sha);
         if (detail.ok) {
           c.additions = detail.data.additions;
@@ -598,7 +604,7 @@ async function runAnalysisPipeline(
       maxConcurrency: state.concurrency,
       baseDelayMs: 600,
       maxPages: 50,
-      lowRemainingThreshold: 100,
+      lowRemainingThreshold: 0,
       longPauseThresholdSeconds: 300,
       onRateLimitWarning: (status, message, isTerminal) => {
         if (!isTerminal) state.rateLimitHitCount++;
