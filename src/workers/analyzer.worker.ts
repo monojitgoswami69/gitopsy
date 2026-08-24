@@ -213,14 +213,13 @@ async function processSingleRepo(
   const repoWarnings: string[] = [];
   let fetchStatus: RepositoryAnalysis["fetchStatus"] = "ok";
 
-  const [commitsOutcome, contribStatsOutcome, prsOutcome, issuesOutcome, languagesOutcome] =
-    await Promise.all([
-      rest.getRepoCommits(r.fullName!, state.subjectLogin, state.sinceDate, 1000),
-      rest.getRepoContributorStats(r.fullName!, state.subjectLogin),
-      rest.getRepoPullRequests(r.fullName!, state.subjectLogin, state.sinceDate),
-      rest.getRepoIssues(r.fullName!, state.subjectLogin, state.sinceDate),
-      rest.getRepoLanguages(r.fullName!),
-    ]);
+  // Phase 1: fetch commits first. This is the fastest call and determines
+  // whether the user has ANY activity in this repo. If 0 commits, skip
+  // all other fetches (PRs, issues, languages, contributor stats, details)
+  // to save 4+ API calls per dead repo.
+  const commitsOutcome = await rest.getRepoCommits(
+    r.fullName!, state.subjectLogin, state.sinceDate, 200
+  );
 
   if (!commitsOutcome.ok) {
     fetchStatus = "failed";
@@ -230,51 +229,67 @@ async function processSingleRepo(
   }
   if (commitsOutcome.truncated) {
     fetchStatus = fetchStatus === "ok" ? "partial" : fetchStatus;
-    repoWarnings.push("commits truncated at 1000");
+    repoWarnings.push("commits truncated at 200");
     state.truncatedRepos.push({ repoFullName: r.fullName!, phase: "COMMITS", error: "truncated at maxCommits cap" });
-  }
-  if (!contribStatsOutcome.ok && contribStatsOutcome.error) {
-    repoWarnings.push(`contributorStats: ${contribStatsOutcome.error}`);
-  }
-  if (!prsOutcome.ok) {
-    fetchStatus = fetchStatus === "ok" ? "partial" : fetchStatus;
-    repoWarnings.push(`pullRequests: ${prsOutcome.error}`);
-  }
-  if (!issuesOutcome.ok) {
-    fetchStatus = fetchStatus === "ok" ? "partial" : fetchStatus;
-    repoWarnings.push(`issues: ${issuesOutcome.error}`);
-  }
-  if (!languagesOutcome.ok) {
-    fetchStatus = fetchStatus === "ok" ? "partial" : fetchStatus;
-    repoWarnings.push(`languages: ${languagesOutcome.error}`);
   }
 
   const repoCommits = commitsOutcome.data;
-  const contribStats = contribStatsOutcome.data;
-  const prs = prsOutcome.data;
-  const issues = issuesOutcome.data;
-  const languages = languagesOutcome.data;
 
-  // Fetch commit details for up to 200 most recent commits per repo.
-  // This balances data completeness (real churn data for analytics) with
-  // API budget (200 detail calls per repo vs 1000+ for unlimited).
-  // Size-based analytics only use hasDetails=true commits, so the sample
-  // is always accurate regardless of how many were fetched.
-  const commitsToDetail = Math.min(repoCommits.length, 200);
-  if (commitsToDetail > 0 && !cancelled) {
-    await Promise.all(
-      repoCommits.slice(0, commitsToDetail).map(async (c) => {
-        const detail = await rest.getCommitDetails(r.fullName!, c.sha);
-        if (detail.ok) {
-          c.additions = detail.data.additions;
-          c.deletions = detail.data.deletions;
-          c.filesChanged = detail.data.filesChanged;
-          c.hasDetails = true;
-        } else {
-          c.hasDetails = false;
-        }
-      })
-    );
+  // Skip all other fetches if the user has 0 commits in this repo.
+  // This is the single biggest performance optimization: dead repos
+  // cost 1 API call instead of 10+.
+  let contribStats: Awaited<ReturnType<typeof rest.getRepoContributorStats>>["data"] = null;
+  let prs: Awaited<ReturnType<typeof rest.getRepoPullRequests>>["data"] = [];
+  let issues: Awaited<ReturnType<typeof rest.getRepoIssues>>["data"] = [];
+  let languages: Awaited<ReturnType<typeof rest.getRepoLanguages>>["data"] = [];
+
+  if (repoCommits.length > 0 && !cancelled) {
+    // Phase 2: fetch remaining resources only for active repos
+    const [contribStatsOutcome, prsOutcome, issuesOutcome, languagesOutcome] = await Promise.all([
+      rest.getRepoContributorStats(r.fullName!, state.subjectLogin),
+      rest.getRepoPullRequests(r.fullName!, state.subjectLogin, state.sinceDate),
+      rest.getRepoIssues(r.fullName!, state.subjectLogin, state.sinceDate),
+      rest.getRepoLanguages(r.fullName!),
+    ]);
+
+    if (!contribStatsOutcome.ok && contribStatsOutcome.error) {
+      repoWarnings.push(`contributorStats: ${contribStatsOutcome.error}`);
+    }
+    if (!prsOutcome.ok) {
+      fetchStatus = fetchStatus === "ok" ? "partial" : fetchStatus;
+      repoWarnings.push(`pullRequests: ${prsOutcome.error}`);
+    }
+    if (!issuesOutcome.ok) {
+      fetchStatus = fetchStatus === "ok" ? "partial" : fetchStatus;
+      repoWarnings.push(`issues: ${issuesOutcome.error}`);
+    }
+    if (!languagesOutcome.ok) {
+      fetchStatus = fetchStatus === "ok" ? "partial" : fetchStatus;
+      repoWarnings.push(`languages: ${languagesOutcome.error}`);
+    }
+
+    contribStats = contribStatsOutcome.data;
+    prs = prsOutcome.data;
+    issues = issuesOutcome.data;
+    languages = languagesOutcome.data;
+
+    // Fetch commit details for the top 5 most recent commits.
+    const commitsToDetail = Math.min(repoCommits.length, 5);
+    if (commitsToDetail > 0 && !cancelled) {
+      await Promise.all(
+        repoCommits.slice(0, commitsToDetail).map(async (c) => {
+          const detail = await rest.getCommitDetails(r.fullName!, c.sha);
+          if (detail.ok) {
+            c.additions = detail.data.additions;
+            c.deletions = detail.data.deletions;
+            c.filesChanged = detail.data.filesChanged;
+            c.hasDetails = true;
+          } else {
+            c.hasDetails = false;
+          }
+        })
+      );
+    }
   }
 
   languages.forEach((lang) => {
@@ -602,7 +617,7 @@ async function runAnalysisPipeline(
     const client = new ForensicGitHubClient({
       token,
       maxConcurrency: state.concurrency,
-      baseDelayMs: 600,
+      baseDelayMs: 200,
       maxPages: 50,
       longPauseThresholdSeconds: 300,
       onRateLimitWarning: (status, message, isTerminal) => {
@@ -728,7 +743,7 @@ self.onmessage = async (event: MessageEvent<WorkerInMessage>) => {
   if (data.type === "START_ANALYSIS") {
     cancelled = false;
     const { token, username, sinceDate, isIncremental, maxConcurrency } = data.payload;
-    const concurrency = Math.max(1, Math.min(maxConcurrency ?? 4, 8));
+    const concurrency = Math.max(1, Math.min(maxConcurrency ?? 15, 15));
     const checkpointId = `dossier-${username || "viewer"}-${Date.now()}`;
     const state = newState(checkpointId, username || "", concurrency);
     state.sinceDate = sinceDate;
@@ -741,7 +756,7 @@ self.onmessage = async (event: MessageEvent<WorkerInMessage>) => {
     cancelled = false;
     const { token, checkpoint, maxConcurrency } = data.payload;
     const state = restoreFromCheckpoint(checkpoint);
-    state.concurrency = Math.max(1, Math.min(maxConcurrency ?? state.concurrency, 8));
+    state.concurrency = Math.max(1, Math.min(maxConcurrency ?? state.concurrency, 15));
     state.checkpointTriggered = false;
     postLog("info", `Resuming analysis from checkpoint ${checkpoint.checkpointId}. ${state.processedRepoFullNames.size}/${state.reposToScan.length} repos already processed.`);
     await runAnalysisPipeline(state, token, true);

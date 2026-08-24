@@ -95,7 +95,7 @@ export default function AutopsyConsolePage() {
           username: targetUsername,
           sinceDate,
           isIncremental,
-          maxConcurrency: 4,
+          maxConcurrency: 15,
         },
         {
           onProgress: (p) => setProgress({ ...p, isAnalyzing: true }),
