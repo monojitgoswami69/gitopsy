@@ -59,12 +59,14 @@ export function calculateTemporalAnalytics(
   }
 
   // If authoritative weekly stats from GitHub contributor endpoints are available,
-  // synchronize the monthly additions and deletions so the monthly chart matches total churn accurately.
+  // synchronize the monthly AND daily additions/deletions so the charts reflect
+  // total churn accurately — not just the 5 detailed commits per repo.
   if (weeklyStats && weeklyStats.length > 0) {
     const totalWeeklyAdditions = weeklyStats.reduce((acc, w) => acc + (w.a || 0), 0);
     const totalWeeklyDeletions = weeklyStats.reduce((acc, w) => acc + (w.d || 0), 0);
 
     if (totalWeeklyAdditions > 0 || totalWeeklyDeletions > 0) {
+      // --- Sync monthly data ---
       for (const m of monthMap.values()) {
         m.additions = 0;
         m.deletions = 0;
@@ -78,6 +80,48 @@ export function calculateTemporalAnalytics(
           m.additions += w.a || 0;
           m.deletions += w.d || 0;
           monthMap.set(monthStr, m);
+        }
+      }
+
+      // --- Sync daily heatmap data ---
+      // Distribute each week's additions/deletions proportionally across
+      // the days that have commits in that week. This gives every active
+      // day real churn data instead of zeros from un-detailed commits.
+      for (const w of weeklyStats) {
+        const weekAdditions = w.a || 0;
+        const weekDeletions = w.d || 0;
+        const weekCommits = w.c || 0;
+        if ((weekAdditions === 0 && weekDeletions === 0) || weekCommits === 0) continue;
+
+        // Find the date range for this week (7 days starting from w.w)
+        const weekStart = new Date(w.w * 1000);
+        const weekStartStr = weekStart.toISOString().slice(0, 10);
+
+        // Collect all days in this week that have commits
+        const weekDays: string[] = [];
+        const weekDayCommitCounts: number[] = [];
+        let totalWeekDayCommits = 0;
+
+        for (let d = 0; d < 7; d++) {
+          const day = new Date(weekStart);
+          day.setUTCDate(day.getUTCDate() + d);
+          const dayStr = day.toISOString().slice(0, 10);
+          const dayData = dateMap.get(dayStr);
+          if (dayData && dayData.count > 0) {
+            weekDays.push(dayStr);
+            weekDayCommitCounts.push(dayData.count);
+            totalWeekDayCommits += dayData.count;
+          }
+        }
+
+        // Distribute the week's churn proportionally across active days
+        if (totalWeekDayCommits > 0 && weekDays.length > 0) {
+          for (let i = 0; i < weekDays.length; i++) {
+            const ratio = weekDayCommitCounts[i] / totalWeekDayCommits;
+            const dayData = dateMap.get(weekDays[i])!;
+            dayData.additions = Math.round(weekAdditions * ratio);
+            dayData.deletions = Math.round(weekDeletions * ratio);
+          }
         }
       }
     }
