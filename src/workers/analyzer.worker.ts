@@ -478,16 +478,11 @@ async function aggregateAndComplete(
   let totalContributions = totalCommits;
   try {
     const calendar = state.subjectLogin
-      ? await graphql.getUserContributions(state.subjectLogin, state.sinceDate)
-      : await graphql.getViewerContributions(state.sinceDate);
+      ? await graphql.getUserContributions(state.subjectLogin, state.sinceDate, undefined, 2)
+      : await graphql.getViewerContributions(state.sinceDate, undefined, 2);
     if (calendar) {
       state.graphqlContributionCalendarAvailable = true;
       totalContributions = calendar.totalContributions;
-      if (!state.sinceDate) {
-        state.diagnosticsWarnings.push(
-          "GraphQL contribution calendar covers the current year only (no sinceDate provided). totalContributions may undercount all-time activity."
-        );
-      }
     }
   } catch {
     postLog("warn", "GraphQL contribution calendar fetch failed; using REST-derived totals.");
@@ -669,6 +664,22 @@ async function runAnalysisPipeline(
       }
 
       const rawRepos = reposOutcome.data;
+      const owned = rawRepos.filter((r) =>
+        r.fullName.toLowerCase().startsWith(state.subjectLogin.toLowerCase() + "/")
+      );
+      const ownedPublic = owned.filter((r) => !r.isPrivate).length;
+      const ownedPrivate = owned.filter((r) => r.isPrivate).length;
+
+      if (state.profile) {
+        state.profile = {
+          ...state.profile,
+          accessibleReposCount: rawRepos.length,
+          ownedReposCount: owned.length,
+          ownedPublicRepos: ownedPublic,
+          ownedPrivateRepos: ownedPrivate,
+        };
+      }
+
       if (reposOutcome.truncated) {
         state.diagnosticsWarnings.push(
           `Repository list was truncated at ${rawRepos.length} repos (max pages reached).`
