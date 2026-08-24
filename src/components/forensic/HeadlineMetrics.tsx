@@ -3,15 +3,16 @@
 import React from "react";
 import { SummaryMetrics, LanguageAnalysis } from "@/types/domain";
 import {
-  GitCommit,
-  FolderGit2,
-  FileCode2,
-  GitPullRequest,
+  History,
+  Layers,
+  GitCompareArrows,
+  GitMerge,
   Flame,
+  Braces,
+  MessageSquareCode,
+  Trophy,
   Star,
-  Globe2,
   GitFork,
-  MessageSquare,
 } from "lucide-react";
 
 interface HeadlineMetricsProps {
@@ -31,21 +32,21 @@ export function HeadlineMetrics({ summary, topLanguage }: HeadlineMetricsProps) 
       title: "TOTAL COMMITS ANALYZED",
       value: summary.totalCommits.toLocaleString(),
       subtitle: `${summary.totalActiveDays} active days logged`,
-      icon: GitCommit,
-      rotation: -12,
+      icon: History,
+      rotation: -10,
     },
     {
       title: "REPOSITORIES EXAMINED",
       value: summary.reposAnalyzed.toString(),
       subtitle: `${summary.activeRepos} active in last 90 days`,
-      icon: FolderGit2,
+      icon: Layers,
       rotation: 8,
     },
     {
       title: "HISTORICAL CHURN",
       value: `+${formatLines(summary.linesAdded)} / -${formatLines(summary.linesDeleted)}`,
       subtitle: `Net change: ${summary.netLines >= 0 ? "+" : ""}${formatLines(summary.netLines)} lines`,
-      icon: FileCode2,
+      icon: GitCompareArrows,
       rotation: -8,
     },
     {
@@ -55,29 +56,29 @@ export function HeadlineMetrics({ summary, topLanguage }: HeadlineMetricsProps) 
         summary.mergeRatePercentage !== null
           ? `${summary.mergeRatePercentage}% merge completion rate`
           : "No pull requests authored",
-      icon: GitPullRequest,
-      rotation: 14,
+      icon: GitMerge,
+      rotation: 12,
     },
     {
       title: "LONGEST CODING STREAK",
       value: `${summary.longestStreakDays} DAYS`,
       subtitle: `Current active streak: ${summary.activeStreakDays}d`,
       icon: Flame,
-      rotation: -14,
+      rotation: -12,
     },
     {
       title: "PRIMARY LANGUAGE",
       value: topLanguage?.name || "N/A",
       subtitle: topLanguage ? `${topLanguage.percentage}% of total bytes` : "No language bytes",
-      icon: Globe2,
+      icon: Braces,
       rotation: 10,
     },
     {
       title: "ISSUES & REVIEWS",
       value: `${summary.issuesAuthored} / ${summary.reviewsAuthored}`,
       subtitle: `${summary.issuesAuthored} issues authored • ${summary.reviewsAuthored} reviews`,
-      icon: MessageSquare,
-      rotation: -10,
+      icon: MessageSquareCode,
+      rotation: -8,
     },
     {
       title: "COMMUNITY ENGAGEMENT",
@@ -95,8 +96,8 @@ export function HeadlineMetrics({ summary, topLanguage }: HeadlineMetricsProps) 
         </span>
       ),
       subtitle: "Stars & forks across repositories",
-      icon: Star,
-      rotation: 12,
+      icon: Trophy,
+      rotation: 10,
     },
   ];
 
@@ -116,9 +117,9 @@ export function HeadlineMetrics({ summary, topLanguage }: HeadlineMetricsProps) 
               key={idx}
               className="relative overflow-hidden border-[3px] border-black bg-white rounded-[10px] p-4 shadow-[4px_4px_0_0_#000] flex flex-col justify-between gap-3 text-black hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150 group cursor-default"
             >
-              {/* Faint Rotated Watermark Icon strictly layered in background on the right */}
+              {/* Faint Rotated Watermark Icon strictly layered in background with unified group opacity (no alpha overlap dots) */}
               <div
-                className="absolute -right-1 bottom-1 pointer-events-none select-none text-black/[0.045] group-hover:text-black/[0.08] transition-colors duration-200 z-0"
+                className="absolute -right-1 bottom-1 pointer-events-none select-none text-black opacity-[0.05] group-hover:opacity-[0.09] transition-opacity duration-200 z-0"
                 style={{ transform: `rotate(${card.rotation}deg)` }}
                 aria-hidden="true"
               >

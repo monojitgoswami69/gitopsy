@@ -24,12 +24,12 @@ export function SubjectHeader({
     year: "numeric",
   });
 
-  const accessibleRepos =
-    subject.accessibleReposCount ??
-    (subject.publicRepos + subject.totalPrivateRepos);
-  const ownedRepos = subject.ownedReposCount ?? subject.publicRepos;
   const ownedPublic = subject.ownedPublicRepos ?? subject.publicRepos;
   const ownedPrivate = subject.ownedPrivateRepos ?? subject.totalPrivateRepos;
+  const ownedRepos = subject.ownedReposCount ?? (ownedPublic + ownedPrivate);
+  const accessibleRepos =
+    subject.accessibleReposCount ??
+    Math.max(ownedRepos, subject.publicRepos + subject.totalPrivateRepos);
 
   return (
     <div id="section-subject" className="w-full flex flex-col items-center justify-center text-black">

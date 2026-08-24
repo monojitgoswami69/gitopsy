@@ -125,11 +125,13 @@ export function DossierIndexNav({ onLaunchWrapped }: DossierIndexNavProps) {
 
   return (
     <>
-      {/* Desktop Left Column (Fixed Standalone Sidebar with Dynamic Header Offset) */}
+      {/* Desktop Left Column (Fixed Standalone Sidebar with Dynamic Header Offset & Scroll Isolation) */}
       <aside
-        className="hidden lg:flex fixed left-4 xl:left-6 bottom-8 w-52 xl:w-60 flex-col justify-between z-30 pointer-events-auto select-none"
+        className="hidden lg:flex fixed left-4 xl:left-6 bottom-8 w-52 xl:w-60 flex-col justify-between z-30 pointer-events-auto select-none overscroll-contain"
         style={{ top: `${headerOffset}px` }}
         aria-label="Dossier Index Navigation"
+        data-lenis-prevent="true"
+        onWheel={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col h-full justify-between">
           <div>
@@ -151,8 +153,9 @@ export function DossierIndexNav({ onLaunchWrapped }: DossierIndexNavProps) {
 
             {/* Section Items with Clean Color Indicator */}
             <nav
-              className="flex flex-col gap-1 pr-1 overflow-y-auto"
+              className="flex flex-col gap-1 pr-1 overflow-y-auto overscroll-contain"
               style={{ maxHeight: `calc(100vh - ${headerOffset + 180}px)` }}
+              data-lenis-prevent="true"
             >
               {SECTIONS.map((sec) => {
                 const isActive = activeSection === sec.id;
@@ -240,7 +243,11 @@ export function DossierIndexNav({ onLaunchWrapped }: DossierIndexNavProps) {
         </div>
 
         {isMobileOpen && (
-          <div className="bg-white border-2 border-black rounded-lg p-2 shadow-[4px_4px_0_0_#000] mt-2 flex flex-col gap-1 max-h-60 overflow-y-auto">
+          <div
+            className="bg-white border-2 border-black rounded-lg p-2 shadow-[4px_4px_0_0_#000] mt-2 flex flex-col gap-1 max-h-60 overflow-y-auto overscroll-contain"
+            data-lenis-prevent="true"
+            onWheel={(e) => e.stopPropagation()}
+          >
             {SECTIONS.map((sec) => (
               <button
                 key={sec.id}

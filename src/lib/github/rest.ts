@@ -87,6 +87,13 @@ export class ForensicGitHubRest {
 
     const user = await this.client.fetchRest<GitHubUserResponse>("/user");
 
+    const publicRepos = user.public_repos ?? 0;
+    const totalPrivateRepos = user.total_private_repos ?? 0;
+    const ownedPrivateRepos = user.owned_private_repos ?? totalPrivateRepos;
+    const ownedPublicRepos = publicRepos;
+    const ownedReposCount = ownedPublicRepos + ownedPrivateRepos;
+    const accessibleReposCount = publicRepos + totalPrivateRepos;
+
     return {
       login: user.login,
       name: user.name,
@@ -94,9 +101,12 @@ export class ForensicGitHubRest {
       bio: user.bio,
       location: user.location,
       company: user.company,
-      publicRepos: user.public_repos,
-      totalPrivateRepos: user.total_private_repos ?? 0,
-      ownedPrivateRepos: user.owned_private_repos ?? 0,
+      publicRepos,
+      totalPrivateRepos,
+      ownedReposCount,
+      ownedPublicRepos,
+      ownedPrivateRepos,
+      accessibleReposCount,
       followers: user.followers,
       following: user.following,
       createdAt: user.created_at,
@@ -203,7 +213,7 @@ export class ForensicGitHubRest {
     fullName: string,
     author: string,
     sinceDate?: string,
-    maxCommits: number = 1000
+    maxCommits: number = 100
   ): Promise<FetchOutcome<ForensicCommit[]>> {
     if (!isValidIsoDate(sinceDate)) {
       return fail([], `Invalid sinceDate format: "${sinceDate}". Expected ISO 8601.`);

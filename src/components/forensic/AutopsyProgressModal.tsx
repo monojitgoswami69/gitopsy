@@ -164,9 +164,6 @@ export function AutopsyProgressModal({
                 <Terminal className="size-3 text-black" />
                 <span>CORONER DISPATCH TELEMETRY</span>
               </span>
-              <span className="text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded border border-black/20">
-                STREAM LIVE
-              </span>
             </div>
             <p className="text-xs sm:text-sm font-mono font-black text-black leading-snug">
               &ldquo;{message || "Processing version control artifacts..."}&rdquo;

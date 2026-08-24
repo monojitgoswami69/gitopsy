@@ -69,25 +69,22 @@ export async function GET(request: NextRequest) {
       page++;
     }
 
-    const nonArchived = allRepos.filter((r: any) => !r.archived);
-    const accessibleReposCount =
-      nonArchived.length > 0
-        ? nonArchived.length
-        : data.public_repos + (data.total_private_repos || 0);
-
-    const owned = nonArchived.filter(
+    const owned = allRepos.filter(
       (r: any) => r.owner?.login?.toLowerCase() === data.login?.toLowerCase()
     );
-    const ownedReposCount =
-      owned.length > 0
-        ? owned.length
-        : data.public_repos + (data.total_private_repos || 0);
     const ownedPublicRepos =
-      owned.length > 0 ? owned.filter((r: any) => !r.private).length : data.public_repos;
+      allRepos.length > 0
+        ? owned.filter((r: any) => !r.private).length
+        : data.public_repos ?? 0;
     const ownedPrivateRepos =
-      owned.length > 0
+      allRepos.length > 0
         ? owned.filter((r: any) => Boolean(r.private)).length
         : data.total_private_repos || 0;
+    const ownedReposCount = ownedPublicRepos + ownedPrivateRepos;
+    const accessibleReposCount =
+      allRepos.length > 0
+        ? allRepos.length
+        : data.public_repos + (data.total_private_repos || 0);
 
     const profile: SubjectProfile = {
       login: data.login,
