@@ -51,7 +51,10 @@ export function HeadlineMetrics({ summary, topLanguage }: HeadlineMetricsProps) 
     {
       title: "PULL REQUESTS MERGED",
       value: `${summary.prsMerged} / ${summary.prsAuthored}`,
-      subtitle: `${summary.mergeRatePercentage}% merge completion rate`,
+      subtitle:
+        summary.mergeRatePercentage !== null
+          ? `${summary.mergeRatePercentage}% merge completion rate`
+          : "No pull requests authored",
       icon: GitPullRequest,
       rotation: 14,
     },

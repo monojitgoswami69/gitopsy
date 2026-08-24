@@ -9,16 +9,35 @@ interface AuthState {
   profile: SubjectProfile | null;
   isAuthenticated: boolean;
   isLoadingSession: boolean;
+  authError: string | null;
   setToken: (token: string, username?: string, avatarUrl?: string) => void;
   setProfile: (profile: SubjectProfile | null) => void;
   fetchProfile: (force?: boolean) => Promise<SubjectProfile | null>;
   checkSession: () => Promise<string | null>;
   disconnect: () => Promise<void>;
+  clearAuthError: () => void;
 }
 
-// In-flight promise singletons to eliminate duplicate concurrent network calls
 let inFlightSessionPromise: Promise<string | null> | null = null;
 let inFlightProfilePromise: Promise<SubjectProfile | null> | null = null;
+
+function safeSessionStorage(): Storage {
+  if (typeof window !== "undefined") {
+    try {
+      return window.sessionStorage;
+    } catch {
+      // sessionStorage may be unavailable (private mode, sandbox)
+    }
+  }
+  return {
+    getItem: () => null,
+    setItem: () => {},
+    removeItem: () => {},
+    clear: () => {},
+    key: () => null,
+    length: 0,
+  };
+}
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -29,6 +48,7 @@ export const useAuthStore = create<AuthState>()(
       profile: null,
       isAuthenticated: false,
       isLoadingSession: false,
+      authError: null,
 
       setToken: (token: string, username?: string, avatarUrl?: string) =>
         set({
@@ -38,6 +58,7 @@ export const useAuthStore = create<AuthState>()(
             avatarUrl || (username ? `https://github.com/${username}.png` : null),
           isAuthenticated: true,
           isLoadingSession: false,
+          authError: null,
         }),
 
       setProfile: (profile) =>
@@ -48,7 +69,6 @@ export const useAuthStore = create<AuthState>()(
         }),
 
       fetchProfile: async (force = false) => {
-        // If profile already exists in state/localStorage and force is not true, return immediately in 0ms!
         const existing = get().profile;
         if (existing && !force) {
           if (!get().username && existing.login) {
@@ -60,7 +80,6 @@ export const useAuthStore = create<AuthState>()(
           return existing;
         }
 
-        // Deduplicate in-flight fetch
         if (inFlightProfilePromise) {
           return inFlightProfilePromise;
         }
@@ -91,7 +110,6 @@ export const useAuthStore = create<AuthState>()(
       },
 
       checkSession: async () => {
-        // If already in-flight from another component, return the single active promise
         if (inFlightSessionPromise) {
           return inFlightSessionPromise;
         }
@@ -115,9 +133,9 @@ export const useAuthStore = create<AuthState>()(
                   profile: currentProfile,
                   isAuthenticated: true,
                   isLoadingSession: false,
+                  authError: null,
                 });
 
-                // Fetch profile only in background if missing
                 if (!currentProfile || !userLogin) {
                   get().fetchProfile();
                 }
@@ -149,6 +167,7 @@ export const useAuthStore = create<AuthState>()(
         } catch {
           // ignore
         }
+
         set({
           token: null,
           username: null,
@@ -156,25 +175,25 @@ export const useAuthStore = create<AuthState>()(
           profile: null,
           isAuthenticated: false,
           isLoadingSession: false,
+          authError: null,
         });
+
         if (typeof window !== "undefined") {
-          localStorage.removeItem("gitopsy_auth_storage");
+          try {
+            sessionStorage.removeItem("gitopsy_auth_storage");
+            localStorage.removeItem("gitopsy_auth_storage");
+          } catch {
+            // storage may be unavailable
+          }
         }
       },
+
+      clearAuthError: () => set({ authError: null }),
     }),
     {
       name: "gitopsy_auth_storage",
-      storage: createJSONStorage(() =>
-        typeof window !== "undefined"
-          ? localStorage
-          : {
-              getItem: () => null,
-              setItem: () => {},
-              removeItem: () => {},
-            }
-      ),
+      storage: createJSONStorage(() => safeSessionStorage()),
       partialize: (state) => ({
-        token: state.token,
         username: state.username,
         avatarUrl: state.avatarUrl,
         profile: state.profile,

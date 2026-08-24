@@ -33,6 +33,7 @@ import {
   FileCode2,
   ArrowLeft,
   FileText,
+  AlertTriangle,
 } from "lucide-react";
 
 export default function AutopsyReportDetailPage() {
@@ -42,6 +43,7 @@ export default function AutopsyReportDetailPage() {
 
   const [analysis, setAnalysis] = useState<GitopsyAnalysis | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [heatmapMetric, setHeatmapMetric] = useState<"COMMITS" | "LINES">("COMMITS");
   const [isWrappedOpen, setIsWrappedOpen] = useState(false);
   const [selectedEgg, setSelectedEgg] = useState<DeterministicEasterEgg | null>(null);
@@ -56,9 +58,12 @@ export default function AutopsyReportDetailPage() {
         const found = await gitopsyDb.analyses.get(reportId);
         if (found) {
           setAnalysis(found);
+          setLoadError(null);
+        } else {
+          setLoadError(`Report "${reportId}" not found in local storage.`);
         }
-      } catch {
-        // ignore error
+      } catch (err) {
+        setLoadError(err instanceof Error ? err.message : String(err));
       } finally {
         setIsLoading(false);
       }
@@ -96,6 +101,11 @@ export default function AutopsyReportDetailPage() {
           <p className="text-xs sm:text-sm font-semibold text-gray-600">
             The requested autopsy report ID does not exist or was removed from local storage.
           </p>
+          {loadError && (
+            <p className="text-xs font-mono text-red-600 mt-2 break-words">
+              Error: {loadError}
+            </p>
+          )}
         </div>
         <Link
           href="/autopsy"
@@ -138,6 +148,44 @@ export default function AutopsyReportDetailPage() {
         summary={analysis.summary}
         topLanguage={analysis.languages[0]}
       />
+
+      {/* Diagnostics Banner (shown if analysis had issues) */}
+      {analysis.diagnostics &&
+        (analysis.diagnostics.failedRepos.length > 0 ||
+          analysis.diagnostics.truncatedRepos.length > 0 ||
+          analysis.diagnostics.warnings.length > 0) && (
+          <div className="border-[3px] border-amber-500 bg-amber-50 rounded-[12px] p-4 shadow-[4px_4px_0_0_#000] text-black">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle className="size-5 text-amber-600" />
+              <h3 className="text-sm font-black uppercase tracking-tight text-amber-900">
+                Analysis Diagnostics
+              </h3>
+              {analysis.isIncremental && (
+                <Badge variant="cyan" className="text-[10px]">INCREMENTAL</Badge>
+              )}
+            </div>
+            <div className="flex flex-col gap-1.5 text-xs font-mono font-bold text-amber-800">
+              {analysis.diagnostics.failedRepos.length > 0 && (
+                <div>
+                  {analysis.diagnostics.failedRepos.length} repos failed:{" "}
+                  {analysis.diagnostics.failedRepos.map((f) => f.repoFullName).join(", ")}
+                </div>
+              )}
+              {analysis.diagnostics.truncatedRepos.length > 0 && (
+                <div>
+                  {analysis.diagnostics.truncatedRepos.length} repos truncated:{" "}
+                  {analysis.diagnostics.truncatedRepos.map((t) => t.repoFullName).join(", ")}
+                </div>
+              )}
+              {analysis.diagnostics.rateLimitHitCount > 0 && (
+                <div>Rate limit triggered {analysis.diagnostics.rateLimitHitCount} time(s).</div>
+              )}
+              {analysis.diagnostics.warnings.map((w, i) => (
+                <div key={i}>⚠ {w}</div>
+              ))}
+            </div>
+          </div>
+        )}
 
       {/* 02. Contribution Activity & Heatmap */}
       <div id="section-activity" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[8px_8px_0_0_#000] flex flex-col gap-6 text-black">
@@ -205,7 +253,7 @@ export default function AutopsyReportDetailPage() {
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="border-[2px] border-black bg-amber-50 p-3 rounded">
-            <span className="text-[10px] font-black uppercase text-gray-500">NOCTURNAL RATIO (21:00-04:00)</span>
+            <span className="text-[10px] font-black uppercase text-gray-500">NOCTURNAL RATIO (21:00-04:59)</span>
             <div className="text-2xl font-black font-mono mt-1 text-purple-700">
               {analysis.summary.nightCommitPercentage}%
             </div>

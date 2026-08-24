@@ -4,17 +4,22 @@ import { ForensicAuthError, ForensicGitHubError } from "./errors";
 export interface GitHubClientOptions extends SchedulerOptions {
   token?: string;
   userAgent?: string;
+  maxPages?: number;
 }
+
+export const DEFAULT_MAX_PAGES = 50;
 
 export class ForensicGitHubClient {
   private token?: string;
   private scheduler: ForensicRequestScheduler;
   private userAgent: string;
   private baseUrl: string = "https://api.github.com";
+  private maxPages: number;
 
   constructor(options: GitHubClientOptions = {}) {
     this.token = options.token;
     this.userAgent = options.userAgent || "Gitopsy-Forensic-Analyzer/1.0";
+    this.maxPages = options.maxPages ?? DEFAULT_MAX_PAGES;
     this.scheduler = new ForensicRequestScheduler({
       maxConcurrency: options.maxConcurrency ?? 4,
       maxRetries: options.maxRetries ?? 3,
@@ -34,6 +39,10 @@ export class ForensicGitHubClient {
 
   public getRateLimitStatus() {
     return this.scheduler.getRateLimitStatus();
+  }
+
+  public getMaxPages(): number {
+    return this.maxPages;
   }
 
   public async fetchRest<T = unknown>(
@@ -69,6 +78,18 @@ export class ForensicGitHubClient {
         headers,
       });
 
+      const responseHeaders: Record<string, string> = {};
+      response.headers.forEach((val, key) => {
+        responseHeaders[key.toLowerCase()] = val;
+      });
+
+      // Feed successful-response headers to the scheduler so it always
+      // knows the true remaining budget and can pre-emptively throttle
+      // before GitHub returns a hard 403/429.
+      if (response.ok) {
+        this.scheduler.updateRateLimitFromHeaders(path, responseHeaders);
+      }
+
       if (!response.ok) {
         if (response.status === 401) {
           throw new ForensicAuthError();
@@ -85,11 +106,6 @@ export class ForensicGitHubClient {
           // ignore non-json error
         }
 
-        const responseHeaders: Record<string, string> = {};
-        response.headers.forEach((val, key) => {
-          responseHeaders[key.toLowerCase()] = val;
-        });
-
         throw {
           status: response.status,
           message,
@@ -104,12 +120,15 @@ export class ForensicGitHubClient {
   public async *paginateRest<T = unknown>(
     path: string,
     params?: Record<string, string | number | boolean | undefined>,
-    maxPages: number = 10
-  ): AsyncGenerator<T[], void, unknown> {
+    maxPages?: number
+  ): AsyncGenerator<T[], { totalFetched: number; hitMaxPages: boolean }, unknown> {
     let page = 1;
     const perPage = 100;
+    const pagesCap = maxPages ?? this.maxPages;
+    let totalFetched = 0;
+    let hitMaxPages = false;
 
-    while (page <= maxPages) {
+    while (page <= pagesCap) {
       const pageParams = {
         ...(params || {}),
         per_page: perPage,
@@ -118,16 +137,22 @@ export class ForensicGitHubClient {
 
       const items = await this.fetchRest<T[]>(path, pageParams);
       if (!Array.isArray(items) || items.length === 0) {
-        return;
+        return { totalFetched, hitMaxPages };
       }
 
+      totalFetched += items.length;
       yield items;
 
       if (items.length < perPage) {
-        return;
+        return { totalFetched, hitMaxPages };
       }
       page++;
+      if (page > pagesCap) {
+        hitMaxPages = true;
+      }
     }
+
+    return { totalFetched, hitMaxPages };
   }
 
   public async fetchGraphQL<T = unknown>(
@@ -152,6 +177,15 @@ export class ForensicGitHubClient {
         headers,
         body: JSON.stringify({ query, variables }),
       });
+
+      const responseHeaders: Record<string, string> = {};
+      response.headers.forEach((val, key) => {
+        responseHeaders[key.toLowerCase()] = val;
+      });
+
+      if (response.ok) {
+        this.scheduler.updateRateLimitFromHeaders("/graphql", responseHeaders);
+      }
 
       if (!response.ok) {
         if (response.status === 401) {

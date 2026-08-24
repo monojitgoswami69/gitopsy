@@ -51,12 +51,12 @@ export function computeDeveloperClassifications(ctx: ClassificationContext): Dev
     id: "night-owl-builder",
     title: "NIGHT OWL BUILDER",
     tagline: "Your Git history appears to have declared war on normal sleep schedules.",
-    description: "A substantial percentage of your engineering output occurs between 9:00 PM and 4:00 AM UTC.",
+    description: "A substantial percentage of your engineering output occurs between 21:00 and 04:59 UTC.",
     badgeAccent: "#C084FC",
     evidenceStrength: getStrength(totalCommits, nightOwlMargin),
     evidence: [
       {
-        criterion: "Late-night commit percentage (21:00 - 04:00 UTC)",
+        criterion: "Late-night commit percentage (21:00 - 04:59 UTC)",
         actualValue: `${summary.nightCommitPercentage}%`,
         threshold: "≥ 35%",
         isSatisfied: isNightOwl,
@@ -64,7 +64,7 @@ export function computeDeveloperClassifications(ctx: ClassificationContext): Dev
       {
         criterion: "Peak activity hour",
         actualValue: `${summary.busiestHour}:00 UTC`,
-        threshold: "≥ 21:00 or ≤ 04:00",
+        threshold: "≥ 21:00 or ≤ 04:59",
         isSatisfied: summary.busiestHour >= 21 || summary.busiestHour <= 4,
       },
     ],

@@ -29,6 +29,8 @@ describe("Repository Awards Engine", () => {
         issuesAuthored: 2,
         activitySpanDays: 500,
         daysSinceLastPush: 5,
+        fetchStatus: "ok",
+        fetchWarnings: [],
       },
       {
         id: 2,
@@ -54,6 +56,8 @@ describe("Repository Awards Engine", () => {
         issuesAuthored: 0,
         activitySpanDays: 100,
         daysSinceLastPush: 10,
+        fetchStatus: "ok",
+        fetchWarnings: [],
       },
     ];
 

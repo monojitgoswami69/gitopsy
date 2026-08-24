@@ -2,6 +2,11 @@
  * COMMIT MESSAGE FORENSICS ENGINE
  * Categorizes commit messages using deterministic pattern matching and verifiable metrics.
  * Strictly analytical: categorizes message intent, lengths, prefixes, repeated patterns, and size distribution.
+ *
+ * Size-based metrics (averages, distribution, median, largest commit) are computed
+ * ONLY from commits with hasDetails === true (i.e., real additions/deletions from
+ * the GitHub API). Message-based metrics (categories, short messages, repeated,
+ * conventional) are computed from ALL commits since they don't depend on churn data.
  */
 
 import { ForensicCommit, CommitForensics, CommitMessageCategory } from "@/types/domain";
@@ -14,6 +19,7 @@ export function analyzeCommitForensics(
   if (totalAnalyzed === 0) {
     return {
       totalAnalyzed: 0,
+      detailedCommitsCount: 0,
       averageAdditionsPerCommit: 0,
       averageDeletionsPerCommit: 0,
       medianCommitSize: 0,
@@ -26,6 +32,10 @@ export function analyzeCommitForensics(
       largestCommit: null,
     };
   }
+
+  // Split into detailed (with real churn) and all (for message analysis)
+  const detailedCommits = commits.filter((c) => c.hasDetails);
+  const detailedCount = detailedCommits.length;
 
   let totalAdditions = 0;
   let totalDeletions = 0;
@@ -52,31 +62,8 @@ export function analyzeCommitForensics(
   let largestCommit: CommitForensics["largestCommit"] = null;
   let maxLines = 0;
 
+  // Message-based metrics: iterate ALL commits (not just detailed ones)
   for (const c of commits) {
-    totalAdditions += c.additions;
-    totalDeletions += c.deletions;
-    const totalLines = c.additions + c.deletions;
-    sizes.push(totalLines);
-
-    if (totalLines > maxLines) {
-      maxLines = totalLines;
-      largestCommit = {
-        sha: c.sha,
-        repoFullName: c.repoFullName,
-        message: c.message,
-        additions: c.additions,
-        deletions: c.deletions,
-        filesChanged: c.filesChanged,
-      };
-    }
-
-    // Size distribution
-    if (totalLines < 10) sizeDistribution.tiny++;
-    else if (totalLines <= 50) sizeDistribution.small++;
-    else if (totalLines <= 200) sizeDistribution.medium++;
-    else if (totalLines <= 1000) sizeDistribution.large++;
-    else sizeDistribution.monster++;
-
     const msg = c.message.trim();
     const msgLower = msg.toLowerCase();
 
@@ -118,16 +105,44 @@ export function analyzeCommitForensics(
     }
   }
 
+  // Size-based metrics: iterate ONLY detailed commits
+  for (const c of detailedCommits) {
+    totalAdditions += c.additions;
+    totalDeletions += c.deletions;
+    const totalLines = c.additions + c.deletions;
+    sizes.push(totalLines);
+
+    // Deterministic tie-breaking: prefer the commit with the lower SHA
+    if (totalLines > maxLines || (totalLines === maxLines && largestCommit && c.sha < largestCommit.sha)) {
+      maxLines = totalLines;
+      largestCommit = {
+        sha: c.sha,
+        repoFullName: c.repoFullName,
+        message: c.message,
+        additions: c.additions,
+        deletions: c.deletions,
+        filesChanged: c.filesChanged,
+      };
+    }
+
+    // Size distribution
+    if (totalLines < 10) sizeDistribution.tiny++;
+    else if (totalLines <= 50) sizeDistribution.small++;
+    else if (totalLines <= 200) sizeDistribution.medium++;
+    else if (totalLines <= 1000) sizeDistribution.large++;
+    else sizeDistribution.monster++;
+  }
+
   // Count repeated messages
   let repeatedMessageCount = 0;
   messageMap.forEach((count) => {
     if (count > 1) repeatedMessageCount += count;
   });
 
-  // Calculate median
+  // Calculate median from detailed commits only
   sizes.sort((a, b) => a - b);
   const mid = Math.floor(sizes.length / 2);
-  const medianCommitSize = sizes.length % 2 !== 0 ? sizes[mid] : Math.round((sizes[mid - 1] + sizes[mid]) / 2);
+  const medianCommitSize = sizes.length === 0 ? 0 : sizes.length % 2 !== 0 ? sizes[mid] : Math.round((sizes[mid - 1] + sizes[mid]) / 2);
 
   const messageCategories: CommitMessageCategory[] = Object.entries(categoryCounts)
     .filter(([_, count]) => count > 0)
@@ -138,13 +153,20 @@ export function analyzeCommitForensics(
     }))
     .sort((a, b) => b.count - a.count);
 
+  // Unified churn ratio: deletions / (additions + deletions), from detailed commits
   const totalChurn = totalAdditions + totalDeletions;
   const churnRatio = totalChurn > 0 ? Number((totalDeletions / totalChurn).toFixed(2)) : 0;
 
+  // Averages computed from detailed commits only
+  const avgBase = Math.max(1, detailedCount);
+  const averageAdditions = Math.round(totalAdditions / avgBase);
+  const averageDeletions = Math.round(totalDeletions / avgBase);
+
   return {
     totalAnalyzed,
-    averageAdditionsPerCommit: Math.round(totalAdditions / totalAnalyzed),
-    averageDeletionsPerCommit: Math.round(totalDeletions / totalAnalyzed),
+    detailedCommitsCount: detailedCount,
+    averageAdditionsPerCommit: averageAdditions,
+    averageDeletionsPerCommit: averageDeletions,
     medianCommitSize,
     churnRatio,
     sizeDistribution,

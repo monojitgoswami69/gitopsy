@@ -23,14 +23,16 @@ export interface SubjectProfile {
 
 export interface SummaryMetrics {
   totalCommits: number;
+  totalContributions: number;
   reposAnalyzed: number;
+  reposSkipped: number;
   activeRepos: number;
   linesAdded: number;
   linesDeleted: number;
   netLines: number;
   prsAuthored: number;
   prsMerged: number;
-  mergeRatePercentage: number;
+  mergeRatePercentage: number | null;
   issuesAuthored: number;
   reviewsAuthored: number;
   starsReceived: number;
@@ -41,7 +43,7 @@ export interface SummaryMetrics {
   busiestHour: number; // 0-23 UTC
   busiestWeekday: string;
   busiestMonth: string;
-  nightCommitPercentage: number; // 21:00 - 04:00 UTC
+  nightCommitPercentage: number; // 21:00 - 04:59 UTC
   weekendCommitPercentage: number; // Sat & Sun
 }
 
@@ -84,6 +86,8 @@ export interface RepositoryAnalysis {
   activitySpanDays: number;
   daysSinceLastPush: number;
   classification?: string;
+  fetchStatus: "ok" | "partial" | "failed";
+  fetchWarnings: string[];
 }
 
 export interface LanguageAnalysis {
@@ -101,6 +105,7 @@ export interface CommitMessageCategory {
 
 export interface CommitForensics {
   totalAnalyzed: number;
+  detailedCommitsCount: number;
   averageAdditionsPerCommit: number;
   averageDeletionsPerCommit: number;
   medianCommitSize: number;
@@ -176,11 +181,74 @@ export interface DeterministicEasterEgg {
   dialogue: string;
 }
 
+export interface RepoFailureEntry {
+  repoFullName: string;
+  phase: string;
+  error: string;
+}
+
+export interface AnalysisDiagnostics {
+  failedRepos: RepoFailureEntry[];
+  truncatedRepos: RepoFailureEntry[];
+  rateLimitHitCount: number;
+  schedulerMaxRetries: number;
+  graphqlContributionCalendarAvailable: boolean;
+  warnings: string[];
+}
+
+export interface AnalysisCheckpoint {
+  checkpointId: string;
+  subjectLogin: string;
+  startedAt: string;
+  lastSavedAt: string;
+  sinceDate?: string;
+  isIncremental: boolean;
+  maxConcurrency: number;
+
+  profile: SubjectProfile | null;
+  reposToScan: {
+    id: number;
+    name: string;
+    fullName: string;
+    isPrivate: boolean;
+    isFork: boolean;
+    isArchived: boolean;
+    defaultBranch: string;
+    stars: number;
+    forks: number;
+    openIssues: number;
+    sizeKb: number;
+    createdAt: string;
+    updatedAt: string;
+    lastPushedAt: string;
+    primaryLanguage: string | null;
+    topics: string[];
+  }[];
+
+  processedRepoFullNames: string[];
+  failedRepos: RepoFailureEntry[];
+  truncatedRepos: RepoFailureEntry[];
+
+  processedRepos: RepositoryAnalysis[];
+  allCommits: ForensicCommit[];
+  allWeeks: { w: number; a: number; d: number; c: number }[];
+  languageMapEntries: [string, { bytes: number; repoCount: number }][];
+
+  rateLimitHitCount: number;
+  diagnosticsWarnings: string[];
+  graphqlContributionCalendarAvailable: boolean;
+
+  rateLimitResetEpoch: number;
+  resumeAt: string;
+  resumeReason: string;
+}
+
 export interface GitopsyAnalysis {
   id: string;
   generatedAt: string;
   isIncremental: boolean;
   durationMs: number;
+  subjectLogin: string;
   subject: SubjectProfile;
   summary: SummaryMetrics;
   activity: TemporalActivity;
@@ -193,6 +261,7 @@ export interface GitopsyAnalysis {
   courtCharges: CourtCharge[];
   findings: DeterministicFinding[];
   easterEggs: DeterministicEasterEgg[];
+  diagnostics: AnalysisDiagnostics;
 }
 
 export interface ForensicCommit {
@@ -209,10 +278,12 @@ export interface ForensicCommit {
   hour: number;
   weekday: number;
   month: string;
+  hasDetails: boolean;
 }
 
 export type WorkerInMessage =
-  | { type: "START_ANALYSIS"; payload: { token: string; username?: string; isIncremental?: boolean; sinceDate?: string } }
+  | { type: "START_ANALYSIS"; payload: { token: string; username?: string; isIncremental?: boolean; sinceDate?: string; maxConcurrency?: number } }
+  | { type: "RESUME"; payload: { token: string; checkpoint: AnalysisCheckpoint; maxConcurrency?: number } }
   | { type: "CANCEL" };
 
 export type WorkerOutMessage =
@@ -228,7 +299,12 @@ export type WorkerOutMessage =
         rateLimitRemaining?: number;
       };
     }
-  | { type: "RATE_LIMIT"; payload: { resetAt: string; waitSeconds: number; message: string } }
+  | { type: "RATE_LIMIT"; payload: { resetAt: string; waitSeconds: number; message: string; isTerminal: boolean } }
+  | { type: "RESUME_AVAILABLE"; payload: { checkpointId: string; resumeAt: string; resumeReason: string; resetEpoch: number } }
+  | { type: "CHECKPOINT_SAVED"; payload: { checkpointId: string; reposProcessed: number; reposTotal: number } }
+  | { type: "REPO_WARNING"; payload: { repoFullName: string; phase: string; error: string } }
   | { type: "WARNING"; payload: { message: string; code: string } }
+  | { type: "LOG"; payload: { level: "info" | "warn" | "error"; message: string } }
   | { type: "COMPLETE"; payload: { report: GitopsyAnalysis } }
-  | { type: "ERROR"; payload: { error: string; details?: unknown } };
+  | { type: "ERROR"; payload: { error: string; details?: unknown } }
+  | { type: "CANCELLED" };

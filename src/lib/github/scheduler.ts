@@ -12,7 +12,10 @@ export interface SchedulerOptions {
   maxConcurrency?: number;
   maxRetries?: number;
   baseDelayMs?: number;
-  onRateLimitWarning?: (status: RateLimitStatus, message: string) => void;
+  onRateLimitWarning?: (status: RateLimitStatus, message: string, isTerminal: boolean) => void;
+  lowRemainingThreshold?: number;
+  longPauseThresholdSeconds?: number;
+  onLongPause?: (resetEpoch: number, resetIso: string, pauseSeconds: number) => void;
 }
 
 interface QueuedTask<T> {
@@ -23,6 +26,14 @@ interface QueuedTask<T> {
   cacheKey?: string;
 }
 
+const INITIAL_RATE_LIMIT: RateLimitStatus = {
+  limit: 5000,
+  remaining: 5000,
+  resetTimeEpoch: 0,
+  resetTimeIso: new Date().toISOString(),
+  isThrottled: false,
+};
+
 export class ForensicRequestScheduler {
   private maxConcurrency: number;
   private maxRetries: number;
@@ -30,31 +41,99 @@ export class ForensicRequestScheduler {
   private currentRunning: number = 0;
   private queue: QueuedTask<unknown>[] = [];
   private inFlightPromises = new Map<string, Promise<unknown>>();
-  private rateLimitStatus: RateLimitStatus = {
-    limit: 5000,
-    remaining: 5000,
-    resetTimeEpoch: 0,
-    resetTimeIso: new Date().toISOString(),
-    isThrottled: false,
-  };
+  private rateLimitStatus: RateLimitStatus = { ...INITIAL_RATE_LIMIT };
   private isPaused: boolean = false;
   private pauseUntilTimestamp: number = 0;
-  private onRateLimitWarning?: (status: RateLimitStatus, message: string) => void;
+  private pauseTimer: ReturnType<typeof setTimeout> | null = null;
+  private onRateLimitWarning?: (status: RateLimitStatus, message: string, isTerminal: boolean) => void;
+  private lowRemainingThreshold: number;
+  private longPauseThresholdSeconds: number;
+  private onLongPause?: (resetEpoch: number, resetIso: string, pauseSeconds: number) => void;
 
   constructor(options: SchedulerOptions = {}) {
     this.maxConcurrency = options.maxConcurrency ?? 4;
     this.maxRetries = options.maxRetries ?? 3;
     this.baseDelayMs = options.baseDelayMs ?? 800;
     this.onRateLimitWarning = options.onRateLimitWarning;
+    this.lowRemainingThreshold = options.lowRemainingThreshold ?? 100;
+    this.longPauseThresholdSeconds = options.longPauseThresholdSeconds ?? 300;
+    this.onLongPause = options.onLongPause;
   }
 
   public getRateLimitStatus(): RateLimitStatus {
     return { ...this.rateLimitStatus };
   }
 
+  /**
+   * Update rate-limit state from SUCCESSFUL response headers.
+   * Called by the client after every non-error response so the scheduler
+   * always knows the true remaining budget and can pre-emptively throttle
+   * before GitHub returns a hard 403/429.
+   */
+  public updateRateLimitFromHeaders(path: string, headers: Record<string, string>): void {
+    const remaining = headers["x-ratelimit-remaining"];
+    const resetEpoch = headers["x-ratelimit-reset"];
+    const limit = headers["x-ratelimit-limit"];
+
+    if (remaining !== undefined) {
+      const parsed = parseInt(remaining, 10);
+      if (!isNaN(parsed)) {
+        this.rateLimitStatus.remaining = parsed;
+      }
+    }
+    if (resetEpoch !== undefined) {
+      const parsed = parseInt(resetEpoch, 10);
+      if (!isNaN(parsed)) {
+        this.rateLimitStatus.resetTimeEpoch = parsed;
+        this.rateLimitStatus.resetTimeIso = new Date(parsed * 1000).toISOString();
+      }
+    }
+    if (limit !== undefined) {
+      const parsed = parseInt(limit, 10);
+      if (!isNaN(parsed)) {
+        this.rateLimitStatus.limit = parsed;
+      }
+    }
+
+    // Pre-emptive throttle: if remaining budget is below threshold,
+    // pause until the reset epoch so we don't burn through the last
+    // requests and trigger a hard 403.
+    if (
+      this.rateLimitStatus.remaining > 0 &&
+      this.rateLimitStatus.remaining < this.lowRemainingThreshold &&
+      this.rateLimitStatus.resetTimeEpoch > 0 &&
+      !this.isPaused
+    ) {
+      const nowEpoch = Math.floor(Date.now() / 1000);
+      const secondsUntilReset = this.rateLimitStatus.resetTimeEpoch - nowEpoch;
+      if (secondsUntilReset > 0 && secondsUntilReset <= 3600) {
+        this.isPaused = true;
+        this.pauseUntilTimestamp = Date.now() + secondsUntilReset * 1000;
+        if (this.pauseTimer) clearTimeout(this.pauseTimer);
+        this.pauseTimer = setTimeout(() => {
+          this.pauseTimer = null;
+          this.isPaused = false;
+          this.rateLimitStatus.remaining = this.rateLimitStatus.limit;
+          this.processQueue();
+        }, secondsUntilReset * 1000);
+
+        if (this.onRateLimitWarning) {
+          this.onRateLimitWarning(
+            this.rateLimitStatus,
+            `Pre-emptive throttle: ${this.rateLimitStatus.remaining} requests remaining. Pausing until reset at ${this.rateLimitStatus.resetTimeIso}.`,
+            false
+          );
+        }
+      }
+    }
+  }
+
   public schedule<T>(fn: () => Promise<T>, cacheKey?: string): Promise<T> {
-    if (cacheKey && this.inFlightPromises.has(cacheKey)) {
-      return this.inFlightPromises.get(cacheKey) as Promise<T>;
+    if (cacheKey) {
+      const existing = this.inFlightPromises.get(cacheKey);
+      if (existing) {
+        return existing as Promise<T>;
+      }
     }
 
     const promise = new Promise<T>((resolve, reject) => {
@@ -70,16 +149,25 @@ export class ForensicRequestScheduler {
 
     if (cacheKey) {
       this.inFlightPromises.set(cacheKey, promise);
-      promise.finally(() => {
+      const clear = () => {
         this.inFlightPromises.delete(cacheKey);
-      });
+      };
+      promise.then(clear, clear);
     }
 
     return promise;
   }
 
   private async processQueue(): Promise<void> {
-    if (this.isPaused || this.currentRunning >= this.maxConcurrency || this.queue.length === 0) {
+    if (this.queue.length === 0) {
+      return;
+    }
+
+    if (this.isPaused) {
+      return;
+    }
+
+    if (this.currentRunning >= this.maxConcurrency) {
       return;
     }
 
@@ -87,7 +175,9 @@ export class ForensicRequestScheduler {
     if (this.pauseUntilTimestamp > now) {
       this.isPaused = true;
       const waitMs = this.pauseUntilTimestamp - now;
-      setTimeout(() => {
+      if (this.pauseTimer) clearTimeout(this.pauseTimer);
+      this.pauseTimer = setTimeout(() => {
+        this.pauseTimer = null;
         this.isPaused = false;
         this.processQueue();
       }, waitMs);
@@ -127,17 +217,20 @@ export class ForensicRequestScheduler {
     const headers = errorObj.headers || errorObj.response?.headers || {};
     const message = errorObj.response?.data?.message || errorObj.message || "Unknown error";
 
-    // Rate Limit Parsing
     const remaining = headers["x-ratelimit-remaining"];
     const resetEpoch = headers["x-ratelimit-reset"];
     const retryAfter = headers["retry-after"];
 
     if (remaining !== undefined) {
-      this.rateLimitStatus.remaining = parseInt(remaining, 10);
+      const parsed = parseInt(remaining, 10);
+      if (!isNaN(parsed)) this.rateLimitStatus.remaining = parsed;
     }
     if (resetEpoch !== undefined) {
-      this.rateLimitStatus.resetTimeEpoch = parseInt(resetEpoch, 10);
-      this.rateLimitStatus.resetTimeIso = new Date(this.rateLimitStatus.resetTimeEpoch * 1000).toISOString();
+      const parsed = parseInt(resetEpoch, 10);
+      if (!isNaN(parsed)) {
+        this.rateLimitStatus.resetTimeEpoch = parsed;
+        this.rateLimitStatus.resetTimeIso = new Date(parsed * 1000).toISOString();
+      }
     }
 
     const isSecondaryRateLimit =
@@ -150,8 +243,11 @@ export class ForensicRequestScheduler {
 
     if (isPrimaryRateLimit || isSecondaryRateLimit || status === 429) {
       let pauseDurationSeconds = 60;
-      if (retryAfter) {
-        pauseDurationSeconds = parseInt(retryAfter, 10);
+      if (retryAfter !== undefined) {
+        const parsed = parseInt(retryAfter, 10);
+        if (!isNaN(parsed)) {
+          pauseDurationSeconds = parsed;
+        }
       } else if (isPrimaryRateLimit && this.rateLimitStatus.resetTimeEpoch) {
         const secondsUntilReset = Math.max(1, this.rateLimitStatus.resetTimeEpoch - Math.floor(Date.now() / 1000));
         pauseDurationSeconds = Math.min(secondsUntilReset, 3600);
@@ -164,18 +260,94 @@ export class ForensicRequestScheduler {
         ? "GitHub secondary rate limit triggered. Forensic scheduler is throttling requests."
         : "GitHub primary API rate limit reached. Analysis pausing temporarily.";
 
-      if (this.onRateLimitWarning) {
-        this.onRateLimitWarning(this.rateLimitStatus, warningMsg);
-      }
+      // If the pause is too long (e.g. 1 hour for primary rate limit reset),
+      // don't block the worker. Instead, reject all tasks with a resumable
+      // error so the worker can save a checkpoint and let the user resume later.
+      const isLongPause = pauseDurationSeconds >= this.longPauseThresholdSeconds;
 
-      if (task.retries < this.maxRetries) {
-        task.retries++;
-        this.queue.unshift(task); // Re-queue at head
-        return;
-      } else {
+      if (isLongPause) {
+        const resumableMsg = isSecondaryRateLimit
+          ? `GitHub secondary rate limit triggered. Resume after ${pauseDurationSeconds}s (reset at ${this.rateLimitStatus.resetTimeIso}).`
+          : `GitHub primary rate limit exhausted. Resume after ${pauseDurationSeconds}s (reset at ${this.rateLimitStatus.resetTimeIso}).`;
+
+        if (this.onRateLimitWarning) {
+          this.onRateLimitWarning(this.rateLimitStatus, resumableMsg, true);
+        }
+        if (this.onLongPause) {
+          this.onLongPause(
+            this.rateLimitStatus.resetTimeEpoch,
+            this.rateLimitStatus.resetTimeIso,
+            pauseDurationSeconds
+          );
+        }
+
+        // Reject this task
         task.reject(
           new ForensicRateLimitError(
-            warningMsg,
+            resumableMsg,
+            this.rateLimitStatus.resetTimeIso,
+            pauseDurationSeconds,
+            isSecondaryRateLimit,
+            true
+          )
+        );
+
+        // Reject ALL remaining queued tasks so the worker unblocks everywhere
+        while (this.queue.length > 0) {
+          const queued = this.queue.shift();
+          if (queued) {
+            queued.reject(
+              new ForensicRateLimitError(
+                "Cancelled for checkpoint resume.",
+                this.rateLimitStatus.resetTimeIso,
+                pauseDurationSeconds,
+                isSecondaryRateLimit,
+                true
+              )
+            );
+          }
+        }
+
+        this.rateLimitStatus.isThrottled = false;
+        this.pauseUntilTimestamp = 0;
+        this.isPaused = false;
+        if (this.pauseTimer) {
+          clearTimeout(this.pauseTimer);
+          this.pauseTimer = null;
+        }
+        return;
+      }
+
+      const willRetry = task.retries < this.maxRetries;
+
+      if (willRetry) {
+        if (this.onRateLimitWarning) {
+          this.onRateLimitWarning(this.rateLimitStatus, warningMsg, false);
+        }
+
+        task.retries++;
+        this.queue.unshift(task);
+        return;
+      } else {
+        const terminalMsg = isSecondaryRateLimit
+          ? "GitHub secondary rate limit exhausted after maximum retries. Repository fetch aborted."
+          : "GitHub primary API rate limit exhausted after maximum retries. Repository fetch aborted.";
+
+        if (this.onRateLimitWarning) {
+          this.onRateLimitWarning(this.rateLimitStatus, terminalMsg, true);
+        }
+
+        this.rateLimitStatus.isThrottled = false;
+        this.pauseUntilTimestamp = 0;
+        this.isPaused = false;
+        if (this.pauseTimer) {
+          clearTimeout(this.pauseTimer);
+          this.pauseTimer = null;
+        }
+
+        task.reject(
+          new ForensicRateLimitError(
+            terminalMsg,
             this.rateLimitStatus.resetTimeIso,
             pauseDurationSeconds,
             isSecondaryRateLimit
@@ -185,7 +357,6 @@ export class ForensicRequestScheduler {
       }
     }
 
-    // Transient server errors (500, 502, 503, 504) -> Exponential Backoff + Jitter
     if (status && status >= 500 && status < 600 && task.retries < this.maxRetries) {
       task.retries++;
       const jitter = Math.random() * 200;
@@ -197,7 +368,6 @@ export class ForensicRequestScheduler {
       return;
     }
 
-    // Non-retryable error
     task.reject(
       new ForensicGitHubError(message, {
         statusCode: status,
@@ -213,5 +383,18 @@ export class ForensicRequestScheduler {
       }
     }
     this.inFlightPromises.clear();
+    this.currentRunning = 0;
+    this.isPaused = false;
+    this.pauseUntilTimestamp = 0;
+    this.rateLimitStatus = { ...INITIAL_RATE_LIMIT };
+    if (this.pauseTimer) {
+      clearTimeout(this.pauseTimer);
+      this.pauseTimer = null;
+    }
+    this.processQueue();
+  }
+
+  public reset(): void {
+    this.clearQueue();
   }
 }

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { GitopsyAnalysis } from "@/types/domain";
+import { GitopsyAnalysis, AnalysisCheckpoint } from "@/types/domain";
 import { gitopsyDb } from "../db";
 
 interface AutopsyProgressState {
@@ -10,11 +10,27 @@ interface AutopsyProgressState {
   total: number;
   percentage: number;
   message: string;
+  rateLimitRemaining?: number;
   rateLimitWarning: {
     isThrottled: boolean;
     resetAt: string;
     message: string;
+    isTerminal: boolean;
   } | null;
+  repoWarnings: { repoFullName: string; phase: string; error: string }[];
+  logs: { level: "info" | "warn" | "error"; message: string; timestamp: number }[];
+  checkpointInfo: {
+    checkpointId: string;
+    reposProcessed: number;
+    reposTotal: number;
+  } | null;
+}
+
+interface ResumeAvailableState {
+  checkpointId: string;
+  resumeAt: string;
+  resumeReason: string;
+  resetEpoch: number;
 }
 
 interface AutopsyStoreState {
@@ -23,14 +39,24 @@ interface AutopsyStoreState {
   selectedRepoFullName: string | null;
   activeHeatmapMetric: "COMMITS" | "LINES";
   progress: AutopsyProgressState;
-  
+  loadError: string | null;
+  resumeState: ResumeAvailableState | null;
+  activeCheckpoint: AnalysisCheckpoint | null;
+
   setCurrentAnalysis: (analysis: GitopsyAnalysis) => void;
   setPreviousAnalysis: (analysis: GitopsyAnalysis | null) => void;
   setSelectedRepoFullName: (fullName: string | null) => void;
   setActiveHeatmapMetric: (metric: "COMMITS" | "LINES") => void;
   setProgress: (progress: Partial<AutopsyProgressState>) => void;
+  addRepoWarning: (warning: { repoFullName: string; phase: string; error: string }) => void;
+  addLog: (log: { level: "info" | "warn" | "error"; message: string }) => void;
+  setCheckpointInfo: (info: { checkpointId: string; reposProcessed: number; reposTotal: number } | null) => void;
+  setResumeState: (state: ResumeAvailableState | null) => void;
+  setActiveCheckpoint: (checkpoint: AnalysisCheckpoint | null) => void;
+  loadExistingCheckpoint: () => Promise<AnalysisCheckpoint | null>;
   resetProgress: () => void;
   loadLatestSavedAnalysis: () => Promise<GitopsyAnalysis | null>;
+  clearLoadError: () => void;
 }
 
 const initialProgress: AutopsyProgressState = {
@@ -41,7 +67,11 @@ const initialProgress: AutopsyProgressState = {
   total: 0,
   percentage: 0,
   message: "Coroner standby. Ready to examine specimen.",
+  rateLimitRemaining: undefined,
   rateLimitWarning: null,
+  repoWarnings: [],
+  logs: [],
+  checkpointInfo: null,
 };
 
 export const useAutopsyStore = create<AutopsyStoreState>((set) => ({
@@ -50,6 +80,9 @@ export const useAutopsyStore = create<AutopsyStoreState>((set) => ({
   selectedRepoFullName: null,
   activeHeatmapMetric: "COMMITS",
   progress: initialProgress,
+  loadError: null,
+  resumeState: null,
+  activeCheckpoint: null,
 
   setCurrentAnalysis: (analysis) => set({ currentAnalysis: analysis }),
   setPreviousAnalysis: (analysis) => set({ previousAnalysis: analysis }),
@@ -57,18 +90,62 @@ export const useAutopsyStore = create<AutopsyStoreState>((set) => ({
   setActiveHeatmapMetric: (metric) => set({ activeHeatmapMetric: metric }),
   setProgress: (progress) =>
     set((state) => ({ progress: { ...state.progress, ...progress } })),
-  resetProgress: () => set({ progress: initialProgress }),
-
-  loadLatestSavedAnalysis: async () => {
+  addRepoWarning: (warning) =>
+    set((state) => ({
+      progress: {
+        ...state.progress,
+        repoWarnings: [...state.progress.repoWarnings, warning],
+      },
+    })),
+  addLog: (log) =>
+    set((state) => ({
+      progress: {
+        ...state.progress,
+        logs: [
+          ...state.progress.logs,
+          { ...log, timestamp: Date.now() },
+        ],
+      },
+    })),
+  setCheckpointInfo: (info) =>
+    set((state) => ({ progress: { ...state.progress, checkpointInfo: info } })),
+  setResumeState: (resumeState) => set({ resumeState }),
+  setActiveCheckpoint: (checkpoint) => set({ activeCheckpoint: checkpoint }),
+  loadExistingCheckpoint: async () => {
     try {
-      const latest = await gitopsyDb.analyses.orderBy("generatedAt").reverse().first();
-      if (latest) {
-        set({ currentAnalysis: latest });
-        return latest;
+      const checkpoint = await gitopsyDb.checkpoints.orderBy("resumeAt").reverse().first();
+      if (checkpoint) {
+        set({ activeCheckpoint: checkpoint, resumeState: {
+          checkpointId: checkpoint.checkpointId,
+          resumeAt: checkpoint.resumeAt,
+          resumeReason: checkpoint.resumeReason,
+          resetEpoch: checkpoint.rateLimitResetEpoch,
+        } });
+        return checkpoint;
       }
       return null;
     } catch {
       return null;
     }
   },
+  resetProgress: () => set({ progress: initialProgress }),
+
+  loadLatestSavedAnalysis: async () => {
+    try {
+      const latest = await gitopsyDb.analyses.orderBy("generatedAt").reverse().first();
+      if (latest) {
+        set({ currentAnalysis: latest, loadError: null });
+        return latest;
+      }
+      set({ loadError: null });
+      return null;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      set({ loadError: `Failed to load saved analysis: ${message}` });
+      return null;
+    }
+  },
+
+  clearLoadError: () => set({ loadError: null }),
 }));
+

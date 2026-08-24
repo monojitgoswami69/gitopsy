@@ -30,6 +30,8 @@ describe("Developer Classifications Engine", () => {
         issuesAuthored: 1,
         activitySpanDays: 200,
         daysSinceLastPush: 5,
+        fetchStatus: "ok",
+        fetchWarnings: [],
       },
     ];
 

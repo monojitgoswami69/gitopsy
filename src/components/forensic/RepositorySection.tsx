@@ -169,9 +169,21 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
                         {repo.prsMerged}/{repo.prsAuthored} PRs • {repo.issuesAuthored} issues
                       </td>
                       <td className="p-3">
-                        <Badge variant={isDormant ? "coral" : repo.daysSinceLastPush <= 30 ? "lime" : "main"}>
-                          {isDormant ? `DORMANT (${repo.daysSinceLastPush}d)` : `ACTIVE (${repo.daysSinceLastPush}d ago)`}
-                        </Badge>
+                        <div className="flex flex-col gap-1">
+                          <Badge variant={isDormant ? "coral" : repo.daysSinceLastPush <= 30 ? "lime" : "main"}>
+                            {isDormant ? `DORMANT (${repo.daysSinceLastPush}d)` : `ACTIVE (${repo.daysSinceLastPush}d ago)`}
+                          </Badge>
+                          {repo.fetchStatus === "partial" && (
+                            <span className="text-[9px] font-black uppercase text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-400" title={repo.fetchWarnings.join("; ")}>
+                              PARTIAL
+                            </span>
+                          )}
+                          {repo.fetchStatus === "failed" && (
+                            <span className="text-[9px] font-black uppercase text-red-700 bg-red-100 px-1.5 py-0.5 rounded border border-red-400" title={repo.fetchWarnings.join("; ")}>
+                              FAILED
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="p-3 text-right">
                         <button
@@ -228,6 +240,18 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
                                 </div>
                               </div>
                             </div>
+
+                            {/* Fetch warnings if any */}
+                            {repo.fetchWarnings.length > 0 && (
+                              <div className="border-[2px] border-amber-400 bg-amber-50 p-2.5 rounded text-[11px] font-mono font-bold text-amber-800">
+                                <div className="font-black uppercase mb-1">FETCH DIAGNOSTICS ({repo.fetchStatus}):</div>
+                                <ul className="list-disc list-inside space-y-0.5">
+                                  {repo.fetchWarnings.map((w, i) => (
+                                    <li key={i}>{w}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
 
                             {/* Languages detected */}
                             {repo.languages.length > 0 && (

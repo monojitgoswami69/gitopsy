@@ -31,20 +31,21 @@ export function AutopsyReportsConsole({
   const router = useRouter();
   const [reports, setReports] = useState<GitopsyAnalysis[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadReports = async () => {
     try {
       const all = await gitopsyDb.analyses
         .filter((a) => !a.id.startsWith("demo-") && !a.id.startsWith("specimen-"))
         .toArray();
-      // Sort newest first
       all.sort(
         (a, b) =>
           new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime()
       );
       setReports(all);
-    } catch {
-      // ignore db read errors
+      setLoadError(null);
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : String(err));
     } finally {
       setIsLoading(false);
     }
@@ -105,6 +106,19 @@ export function AutopsyReportsConsole({
       {isLoading ? (
         <div className="text-center py-6 font-mono text-xs text-gray-500">
           Scanning local database records...
+        </div>
+      ) : loadError ? (
+        <div className="text-center py-10 border-2 border-dashed border-red-400 rounded-2xl bg-red-50 flex flex-col items-center gap-3">
+          <FileText className="size-8 text-red-400" />
+          <div className="text-sm font-bold text-red-700">
+            Failed to load autopsy reports.
+          </div>
+          <div className="text-xs font-mono text-red-500 max-w-md break-words">
+            {loadError}
+          </div>
+          <Button size="sm" variant="main" onClick={loadReports}>
+            <Zap className="size-4" /> Retry Load
+          </Button>
         </div>
       ) : reports.length === 0 ? (
         <div className="text-center py-10 border-2 border-dashed border-black/30 rounded-2xl bg-amber-50/40 flex flex-col items-center gap-3">

@@ -5,7 +5,7 @@ export interface CodeChurnAnalytics {
   totalDeletions: number;
   netLines: number;
   totalFilesChanged: number;
-  churnRatio: number; // deletions / additions
+  churnRatio: number; // deletions / (additions + deletions), range [0, 1]
   averageCommitAdditions: number;
   averageCommitDeletions: number;
   largestCommit: ForensicCommit | null;
@@ -21,6 +21,11 @@ export interface CodeChurnAnalytics {
 }
 
 export function calculateCodeChurnAnalytics(commits: ForensicCommit[]): CodeChurnAnalytics {
+  // Size-based metrics are computed ONLY from commits with real churn data
+  // (hasDetails === true). Commits without details have additions=0, deletions=0
+  // and would corrupt averages, distributions, and medians if included.
+  const detailedCommits = commits.filter((c) => c.hasDetails);
+
   let totalAdditions = 0;
   let totalDeletions = 0;
   let totalFilesChanged = 0;
@@ -39,7 +44,7 @@ export function calculateCodeChurnAnalytics(commits: ForensicCommit[]): CodeChur
 
   const sizes: number[] = [];
 
-  for (const c of commits) {
+  for (const c of detailedCommits) {
     totalAdditions += c.additions;
     totalDeletions += c.deletions;
     totalFilesChanged += c.filesChanged;
@@ -67,14 +72,16 @@ export function calculateCodeChurnAnalytics(commits: ForensicCommit[]): CodeChur
   const mid = Math.floor(sizes.length / 2);
   const medianCommitSize = sizes.length === 0 ? 0 : sizes.length % 2 !== 0 ? sizes[mid] : Math.round((sizes[mid - 1] + sizes[mid]) / 2);
 
-  const count = Math.max(1, commits.length);
+  const count = Math.max(1, detailedCommits.length);
+  const totalChurn = totalAdditions + totalDeletions;
 
   return {
     totalAdditions,
     totalDeletions,
     netLines: totalAdditions - totalDeletions,
     totalFilesChanged,
-    churnRatio: totalAdditions > 0 ? Math.round((totalDeletions / totalAdditions) * 100) / 100 : 0,
+    // Unified formula: deletions / total churn, range [0, 1]
+    churnRatio: totalChurn > 0 ? Number((totalDeletions / totalChurn).toFixed(2)) : 0,
     averageCommitAdditions: Math.round(totalAdditions / count),
     averageCommitDeletions: Math.round(totalDeletions / count),
     largestCommit,

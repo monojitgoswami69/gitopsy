@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { ForensicRequestScheduler } from "@/lib/github/scheduler";
 
-describe("Forensic Request Scheduler", () => {
+describe("Forensic Request Scheduler — Hardened Behavior", () => {
   it("should enforce max concurrency bounds", async () => {
     const scheduler = new ForensicRequestScheduler({ maxConcurrency: 2 });
     let concurrent = 0;
@@ -46,6 +46,115 @@ describe("Forensic Request Scheduler", () => {
 
     expect(r1).toBe("success");
     expect(r2).toBe("success");
-    expect(executionCount).toBe(1); // Executed only once
+    expect(executionCount).toBe(1);
+  });
+
+  it("should reset all state including pause on clearQueue", async () => {
+    const scheduler = new ForensicRequestScheduler({ maxConcurrency: 1, maxRetries: 3 });
+    const onRateLimitWarning = vi.fn();
+
+    const errorTask = () =>
+      new Promise<string>((_, reject) => {
+        reject({
+          status: 429,
+          message: "Too many requests",
+          headers: {
+            "x-ratelimit-remaining": "0",
+            "x-ratelimit-reset": String(Math.floor(Date.now() / 1000) + 60),
+            "retry-after": "60",
+          },
+        });
+      });
+
+    const promise = scheduler.schedule(errorTask, "task1");
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    scheduler.clearQueue();
+
+    await expect(promise).rejects.toThrow();
+
+    const status = scheduler.getRateLimitStatus();
+    expect(status.remaining).toBe(5000);
+    expect(status.isThrottled).toBe(false);
+
+    const okTask = () =>
+      new Promise<string>((resolve) => setTimeout(() => resolve("ok"), 10));
+    const result = await scheduler.schedule(okTask, "task2");
+    expect(result).toBe("ok");
+  });
+
+  it("should call onRateLimitWarning with isTerminal=true after exhausting retries", async () => {
+    const onRateLimitWarning = vi.fn();
+    const scheduler = new ForensicRequestScheduler({
+      maxConcurrency: 1,
+      maxRetries: 1,
+      onRateLimitWarning,
+    });
+
+    const errorTask = () =>
+      new Promise<string>((_, reject) => {
+        reject({
+          status: 429,
+          message: "Too many requests",
+          headers: {
+            "x-ratelimit-remaining": "100",
+            "retry-after": "0",
+          },
+        });
+      });
+
+    const promise = scheduler.schedule(errorTask, "task1");
+    await expect(promise).rejects.toThrow();
+
+    expect(onRateLimitWarning).toHaveBeenCalled();
+    const lastCall = onRateLimitWarning.mock.calls[onRateLimitWarning.mock.calls.length - 1];
+    expect(lastCall[2]).toBe(true);
+  });
+
+  it("should handle empty queue gracefully", () => {
+    const scheduler = new ForensicRequestScheduler();
+    expect(() => scheduler.clearQueue()).not.toThrow();
+  });
+
+  it("should pre-emptively throttle when remaining budget is low on successful responses", () => {
+    const onRateLimitWarning = vi.fn();
+    const scheduler = new ForensicRequestScheduler({
+      maxConcurrency: 4,
+      lowRemainingThreshold: 100,
+      onRateLimitWarning,
+    });
+
+    const resetEpoch = Math.floor(Date.now() / 1000) + 60;
+    scheduler.updateRateLimitFromHeaders("/user/repos", {
+      "x-ratelimit-remaining": "50",
+      "x-ratelimit-reset": String(resetEpoch),
+      "x-ratelimit-limit": "5000",
+    });
+
+    const status = scheduler.getRateLimitStatus();
+    expect(status.remaining).toBe(50);
+    expect(status.limit).toBe(5000);
+
+    expect(onRateLimitWarning).toHaveBeenCalledTimes(1);
+    expect(onRateLimitWarning.mock.calls[0][2]).toBe(false);
+    expect(onRateLimitWarning.mock.calls[0][1]).toContain("Pre-emptive throttle");
+  });
+
+  it("should not pre-emptively throttle when remaining budget is healthy", () => {
+    const onRateLimitWarning = vi.fn();
+    const scheduler = new ForensicRequestScheduler({
+      lowRemainingThreshold: 100,
+      onRateLimitWarning,
+    });
+
+    scheduler.updateRateLimitFromHeaders("/user/repos", {
+      "x-ratelimit-remaining": "4500",
+      "x-ratelimit-reset": String(Math.floor(Date.now() / 1000) + 3600),
+      "x-ratelimit-limit": "5000",
+    });
+
+    expect(onRateLimitWarning).not.toHaveBeenCalled();
+    expect(scheduler.getRateLimitStatus().remaining).toBe(4500);
   });
 });

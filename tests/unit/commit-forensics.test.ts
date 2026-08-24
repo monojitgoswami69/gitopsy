@@ -2,6 +2,30 @@ import { describe, it, expect } from "vitest";
 import { analyzeCommitForensics } from "@/lib/analytics/commitForensics";
 import { ForensicCommit } from "@/types/domain";
 
+function makeCommitWithDetails(
+  sha: string,
+  additions: number,
+  deletions: number,
+  hasDetails: boolean
+): ForensicCommit {
+  return {
+    sha,
+    repoFullName: "user/repo",
+    authorLogin: "user",
+    authorDate: "2026-05-10T10:00:00Z",
+    message: `commit ${sha}`,
+    additions,
+    deletions,
+    filesChanged: 1,
+    isMerge: false,
+    isRevert: false,
+    hour: 10,
+    weekday: 2,
+    month: "2026-05",
+    hasDetails,
+  };
+}
+
 describe("Commit Forensics Engine", () => {
   it("should categorize commit messages into correct intent categories", () => {
     const commits: ForensicCommit[] = [
@@ -19,6 +43,7 @@ describe("Commit Forensics Engine", () => {
         hour: 12,
         weekday: 2,
         month: "2026-05",
+        hasDetails: true,
       },
       {
         sha: "e5f6g7h8",
@@ -34,6 +59,7 @@ describe("Commit Forensics Engine", () => {
         hour: 14,
         weekday: 3,
         month: "2026-05",
+        hasDetails: true,
       },
       {
         sha: "i9j0k1l2",
@@ -49,6 +75,7 @@ describe("Commit Forensics Engine", () => {
         hour: 3,
         weekday: 4,
         month: "2026-05",
+        hasDetails: true,
       },
     ];
 
@@ -81,6 +108,7 @@ describe("Commit Forensics Engine", () => {
         hour: 10,
         weekday: 2,
         month: "2026-05",
+        hasDetails: true,
       },
       {
         sha: "monster001",
@@ -96,6 +124,7 @@ describe("Commit Forensics Engine", () => {
         hour: 3,
         weekday: 2,
         month: "2026-05",
+        hasDetails: true,
       },
     ];
 
@@ -104,5 +133,32 @@ describe("Commit Forensics Engine", () => {
     expect(result.sizeDistribution.monster).toBe(1);
     expect(result.largestCommit?.sha).toBe("monster001");
     expect(result.largestCommit?.additions).toBe(4200);
+  });
+
+  it("should compute size metrics only from detailed commits and report detailedCommitsCount", () => {
+    const commitsWithDetails: ForensicCommit[] = [
+      makeCommitWithDetails("d1", 100, 50, true),
+      makeCommitWithDetails("d2", 200, 100, true),
+    ];
+    const commitsWithoutDetails: ForensicCommit[] = [
+      makeCommitWithDetails("n1", 0, 0, false),
+      makeCommitWithDetails("n2", 0, 0, false),
+    ];
+    const allCommits = [...commitsWithDetails, ...commitsWithoutDetails];
+
+    const result = analyzeCommitForensics(allCommits, "user");
+    expect(result.totalAnalyzed).toBe(4);
+    expect(result.detailedCommitsCount).toBe(2);
+    // Averages computed from 2 detailed commits, not 4 total
+    expect(result.averageAdditionsPerCommit).toBe(150);
+    expect(result.averageDeletionsPerCommit).toBe(75);
+    // Size distribution only has 2 entries (the detailed ones)
+    const totalInDistribution =
+      result.sizeDistribution.tiny +
+      result.sizeDistribution.small +
+      result.sizeDistribution.medium +
+      result.sizeDistribution.large +
+      result.sizeDistribution.monster;
+    expect(totalInDistribution).toBe(2);
   });
 });

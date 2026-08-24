@@ -1,12 +1,33 @@
 /**
  * GITOPSY BACKGROUND ANALYZER WEB WORKER
- * Offloads heavy network fetching, pagination, metrics normalization, and aggregation
- * completely off the React main UI thread.
+ *
+ * Checkpoint & Resume Architecture:
+ * - After each repo processes, a checkpoint is saved to IndexedDB.
+ * - If the GitHub rate limit reset is > 5 minutes away (longPauseThreshold),
+ *   the scheduler aborts all in-flight tasks with a resumable error.
+ * - The worker saves a final checkpoint and posts RESUME_AVAILABLE with the
+ *   resume timestamp. The user can resume later (timer or manual button).
+ * - On RESUME, the worker reconstructs state from the checkpoint and
+ *   processes remaining repos (including previously-failed ones).
+ * - No repo is permanently dropped: failed repos are retried on every resume.
  */
 
-import { WorkerInMessage, WorkerOutMessage, GitopsyAnalysis, ForensicCommit, RepositoryAnalysis } from "@/types/domain";
+import {
+  WorkerInMessage,
+  WorkerOutMessage,
+  GitopsyAnalysis,
+  ForensicCommit,
+  RepositoryAnalysis,
+  RepoFailureEntry,
+  AnalysisDiagnostics,
+  AnalysisCheckpoint,
+  SubjectProfile,
+} from "@/types/domain";
 import { ForensicGitHubClient } from "@/lib/github/client";
-import { ForensicGitHubRest } from "@/lib/github/rest";
+import { ForensicGitHubRest, RestRepoSummary } from "@/lib/github/rest";
+import { ForensicGitHubGraphQL } from "@/lib/github/graphql";
+import { gitopsyDb } from "@/lib/db";
+import { isResumableRateLimitError } from "@/lib/github/errors";
 import { calculateTemporalAnalytics } from "@/lib/analytics/temporal";
 import { calculateCodeChurnAnalytics } from "@/lib/analytics/churn";
 import { analyzeCommitForensics } from "@/lib/analytics/commitForensics";
@@ -16,355 +37,709 @@ import { generateCourtCharges } from "@/lib/analytics/court";
 import { generateDeterministicFindings } from "@/lib/analytics/funFacts";
 import { detectDeterministicEasterEggs } from "@/lib/analytics/easterEggs";
 
-const FORENSIC_LOADING_QUOTES = [
-  "Examining GitHub author signatures...",
-  "Auditing repository commit histories...",
-  "Calculating 24-hour UTC activity distribution...",
-  "Analyzing additions vs deletions code churn...",
-  "Parsing commit message categorizations...",
-  "Evaluating deterministic developer classifications...",
-  "Preparing the People vs Defendant court docket...",
-  "Synthesizing the complete forensic dossier...",
-];
-
 function post(msg: WorkerOutMessage) {
   self.postMessage(msg);
+}
+
+function postProgress(
+  phase: string,
+  currentItem: string,
+  current: number,
+  total: number,
+  percentage: number,
+  message: string,
+  rateLimitRemaining?: number
+) {
+  post({
+    type: "PROGRESS",
+    payload: { phase, currentItem, current, total, percentage, message, rateLimitRemaining },
+  });
+}
+
+function postRepoWarning(repoFullName: string, phase: string, error: string) {
+  post({ type: "REPO_WARNING", payload: { repoFullName, phase, error } });
+}
+
+function postLog(level: "info" | "warn" | "error", message: string) {
+  post({ type: "LOG", payload: { level, message } });
+}
+
+let cancelled = false;
+
+interface AnalysisState {
+  checkpointId: string;
+  subjectLogin: string;
+  startedAt: number;
+  sinceDate?: string;
+  isIncremental: boolean;
+  concurrency: number;
+
+  profile: SubjectProfile | null;
+  reposToScan: RestRepoSummary[];
+
+  processedRepoFullNames: Set<string>;
+  processedRepos: RepositoryAnalysis[];
+  allCommits: ForensicCommit[];
+  allWeeks: { w: number; a: number; d: number; c: number }[];
+  languageMap: Map<string, { bytes: number; repoCount: number }>;
+  seenCommitShasGlobal: Set<string>;
+
+  failedRepos: RepoFailureEntry[];
+  truncatedRepos: RepoFailureEntry[];
+  rateLimitHitCount: number;
+  diagnosticsWarnings: string[];
+  graphqlContributionCalendarAvailable: boolean;
+
+  checkpointTriggered: boolean;
+  rateLimitResetEpoch: number;
+  resumeAtIso: string;
+  resumeReason: string;
+}
+
+function newState(checkpointId: string, subjectLogin: string, concurrency: number): AnalysisState {
+  return {
+    checkpointId,
+    subjectLogin,
+    startedAt: Date.now(),
+    sinceDate: undefined,
+    isIncremental: false,
+    concurrency,
+    profile: null,
+    reposToScan: [],
+    processedRepoFullNames: new Set(),
+    processedRepos: [],
+    allCommits: [],
+    allWeeks: [],
+    languageMap: new Map(),
+    seenCommitShasGlobal: new Set(),
+    failedRepos: [],
+    truncatedRepos: [],
+    rateLimitHitCount: 0,
+    diagnosticsWarnings: [],
+    graphqlContributionCalendarAvailable: false,
+    checkpointTriggered: false,
+    rateLimitResetEpoch: 0,
+    resumeAtIso: "",
+    resumeReason: "",
+  };
+}
+
+async function saveCheckpoint(state: AnalysisState): Promise<void> {
+  const checkpoint: AnalysisCheckpoint = {
+    checkpointId: state.checkpointId,
+    subjectLogin: state.subjectLogin,
+    startedAt: new Date(state.startedAt).toISOString(),
+    lastSavedAt: new Date().toISOString(),
+    sinceDate: state.sinceDate,
+    isIncremental: state.isIncremental,
+    maxConcurrency: state.concurrency,
+    profile: state.profile,
+    reposToScan: state.reposToScan.map((r) => ({
+      id: r.id,
+      name: r.name,
+      fullName: r.fullName,
+      isPrivate: r.isPrivate,
+      isFork: r.isFork,
+      isArchived: r.isArchived,
+      defaultBranch: r.defaultBranch,
+      stars: r.stars,
+      forks: r.forks,
+      openIssues: r.openIssues,
+      sizeKb: r.sizeKb,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+      lastPushedAt: r.lastPushedAt,
+      primaryLanguage: r.primaryLanguage,
+      topics: r.topics,
+    })),
+    processedRepoFullNames: Array.from(state.processedRepoFullNames),
+    failedRepos: state.failedRepos,
+    truncatedRepos: state.truncatedRepos,
+    processedRepos: state.processedRepos,
+    allCommits: state.allCommits,
+    allWeeks: state.allWeeks,
+    languageMapEntries: Array.from(state.languageMap.entries()),
+    rateLimitHitCount: state.rateLimitHitCount,
+    diagnosticsWarnings: state.diagnosticsWarnings,
+    graphqlContributionCalendarAvailable: state.graphqlContributionCalendarAvailable,
+    rateLimitResetEpoch: state.rateLimitResetEpoch,
+    resumeAt: state.resumeAtIso,
+    resumeReason: state.resumeReason,
+  };
+
+  try {
+    await gitopsyDb.checkpoints.put(checkpoint);
+    post({
+      type: "CHECKPOINT_SAVED",
+      payload: {
+        checkpointId: state.checkpointId,
+        reposProcessed: state.processedRepoFullNames.size,
+        reposTotal: state.reposToScan.length,
+      },
+    });
+  } catch (err) {
+    postLog("error", `Failed to save checkpoint: ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+
+function restoreFromCheckpoint(checkpoint: AnalysisCheckpoint): AnalysisState {
+  const state = newState(checkpoint.checkpointId, checkpoint.subjectLogin, checkpoint.maxConcurrency);
+  state.startedAt = new Date(checkpoint.startedAt).getTime();
+  state.sinceDate = checkpoint.sinceDate;
+  state.isIncremental = checkpoint.isIncremental;
+  state.profile = checkpoint.profile;
+  state.reposToScan = checkpoint.reposToScan;
+  state.processedRepoFullNames = new Set(checkpoint.processedRepoFullNames);
+  state.processedRepos = [...checkpoint.processedRepos];
+  state.allCommits = [...checkpoint.allCommits];
+  state.allWeeks = [...checkpoint.allWeeks];
+  state.languageMap = new Map(checkpoint.languageMapEntries);
+  state.seenCommitShasGlobal = new Set(state.allCommits.map((c) => c.sha));
+  state.failedRepos = [...checkpoint.failedRepos];
+  state.truncatedRepos = [...checkpoint.truncatedRepos];
+  state.rateLimitHitCount = checkpoint.rateLimitHitCount;
+  state.diagnosticsWarnings = [...checkpoint.diagnosticsWarnings];
+  state.graphqlContributionCalendarAvailable = checkpoint.graphqlContributionCalendarAvailable;
+  return state;
+}
+
+async function processSingleRepo(
+  state: AnalysisState,
+  r: RestRepoSummary,
+  index: number,
+  rest: ForensicGitHubRest,
+  client: ForensicGitHubClient
+): Promise<void> {
+  const repoWarnings: string[] = [];
+  let fetchStatus: RepositoryAnalysis["fetchStatus"] = "ok";
+
+  const [commitsOutcome, contribStatsOutcome, prsOutcome, issuesOutcome, languagesOutcome] =
+    await Promise.all([
+      rest.getRepoCommits(r.fullName!, state.subjectLogin, state.sinceDate, 1000),
+      rest.getRepoContributorStats(r.fullName!, state.subjectLogin),
+      rest.getRepoPullRequests(r.fullName!, state.subjectLogin, state.sinceDate),
+      rest.getRepoIssues(r.fullName!, state.subjectLogin, state.sinceDate),
+      rest.getRepoLanguages(r.fullName!),
+    ]);
+
+  if (!commitsOutcome.ok) {
+    fetchStatus = "failed";
+    repoWarnings.push(`commits: ${commitsOutcome.error}`);
+    postRepoWarning(r.fullName!, "COMMITS", commitsOutcome.error || "unknown");
+    state.failedRepos.push({ repoFullName: r.fullName!, phase: "COMMITS", error: commitsOutcome.error || "unknown" });
+  }
+  if (commitsOutcome.truncated) {
+    fetchStatus = fetchStatus === "ok" ? "partial" : fetchStatus;
+    repoWarnings.push("commits truncated at 1000");
+    state.truncatedRepos.push({ repoFullName: r.fullName!, phase: "COMMITS", error: "truncated at maxCommits cap" });
+  }
+  if (!contribStatsOutcome.ok && contribStatsOutcome.error) {
+    repoWarnings.push(`contributorStats: ${contribStatsOutcome.error}`);
+  }
+  if (!prsOutcome.ok) {
+    fetchStatus = fetchStatus === "ok" ? "partial" : fetchStatus;
+    repoWarnings.push(`pullRequests: ${prsOutcome.error}`);
+  }
+  if (!issuesOutcome.ok) {
+    fetchStatus = fetchStatus === "ok" ? "partial" : fetchStatus;
+    repoWarnings.push(`issues: ${issuesOutcome.error}`);
+  }
+  if (!languagesOutcome.ok) {
+    fetchStatus = fetchStatus === "ok" ? "partial" : fetchStatus;
+    repoWarnings.push(`languages: ${languagesOutcome.error}`);
+  }
+
+  const repoCommits = commitsOutcome.data;
+  const contribStats = contribStatsOutcome.data;
+  const prs = prsOutcome.data;
+  const issues = issuesOutcome.data;
+  const languages = languagesOutcome.data;
+
+  if (repoCommits.length > 0 && !cancelled) {
+    await Promise.all(
+      repoCommits.map(async (c) => {
+        const detail = await rest.getCommitDetails(r.fullName!, c.sha);
+        if (detail.ok) {
+          c.additions = detail.data.additions;
+          c.deletions = detail.data.deletions;
+          c.filesChanged = detail.data.filesChanged;
+          c.hasDetails = true;
+        } else {
+          c.hasDetails = false;
+        }
+      })
+    );
+  }
+
+  languages.forEach((lang) => {
+    const current = state.languageMap.get(lang.name) || { bytes: 0, repoCount: 0 };
+    current.bytes += lang.bytes;
+    current.repoCount++;
+    state.languageMap.set(lang.name, current);
+  });
+
+  const mergedPrs = prs.filter((p) => p.state === "merged").length;
+
+  let repoAdditions = 0;
+  let repoDeletions = 0;
+  if (contribStats && (contribStats.additions > 0 || contribStats.deletions > 0)) {
+    repoAdditions = contribStats.additions;
+    repoDeletions = contribStats.deletions;
+  } else {
+    repoAdditions = repoCommits.reduce((acc, c) => acc + c.additions, 0);
+    repoDeletions = repoCommits.reduce((acc, c) => acc + c.deletions, 0);
+  }
+
+  const createdMs = new Date(r.createdAt || Date.now()).getTime();
+  const pushedMs = new Date(r.lastPushedAt || Date.now()).getTime();
+  const activitySpanDays = Math.max(1, Math.floor((pushedMs - createdMs) / (1000 * 60 * 60 * 24)));
+  const daysSinceLastPush = Math.max(0, Math.floor((Date.now() - pushedMs) / (1000 * 60 * 60 * 24)));
+
+  if (contribStats && contribStats.weeks && contribStats.weeks.length > 0) {
+    state.allWeeks.push(...contribStats.weeks);
+  }
+
+  try {
+    await gitopsyDb.syncState.put({
+      repoFullName: r.fullName!,
+      lastCommitSha: repoCommits[0]?.sha,
+      lastFetchedAt: new Date().toISOString(),
+      isComplete: !commitsOutcome.truncated,
+    });
+  } catch {
+    // syncState write is best-effort
+  }
+
+  const repoAnalysis: RepositoryAnalysis = {
+    id: r.id || index + 1,
+    name: r.name || "repo",
+    fullName: r.fullName || `${state.subjectLogin}/${r.name}`,
+    isPrivate: Boolean(r.isPrivate),
+    isFork: Boolean(r.isFork),
+    isArchived: Boolean(r.isArchived),
+    defaultBranch: r.defaultBranch || "main",
+    stars: r.stars || 0,
+    forks: r.forks || 0,
+    openIssues: r.openIssues || 0,
+    createdAt: r.createdAt || new Date().toISOString(),
+    lastPushedAt: r.lastPushedAt || new Date().toISOString(),
+    primaryLanguage: r.primaryLanguage || null,
+    languages,
+    commitCount: repoCommits.length,
+    additions: repoAdditions,
+    deletions: repoDeletions,
+    netLines: repoAdditions - repoDeletions,
+    prsAuthored: prs.length,
+    prsMerged: mergedPrs,
+    issuesAuthored: issues.length,
+    activitySpanDays,
+    daysSinceLastPush,
+    fetchStatus,
+    fetchWarnings: repoWarnings,
+  };
+
+  state.processedRepos.push(repoAnalysis);
+  state.processedRepoFullNames.add(r.fullName!);
+
+  for (const c of repoCommits) {
+    if (!state.seenCommitShasGlobal.has(c.sha)) {
+      state.seenCommitShasGlobal.add(c.sha);
+      state.allCommits.push(c);
+    }
+  }
+}
+
+async function processRepos(
+  state: AnalysisState,
+  rest: ForensicGitHubRest,
+  client: ForensicGitHubClient
+): Promise<void> {
+  const totalReposToScan = state.reposToScan.length;
+  let completedReposCount = state.processedRepoFullNames.size;
+  let cursor = 0;
+
+  const remaining = state.reposToScan.filter((r) => !state.processedRepoFullNames.has(r.fullName));
+
+  async function worker() {
+    while (cursor < remaining.length && !cancelled && !state.checkpointTriggered) {
+      const idx = cursor++;
+      const repo = remaining[idx];
+      try {
+        await processSingleRepo(state, repo, idx, rest, client);
+      } catch (err) {
+        if (isResumableRateLimitError(err)) {
+          postLog("warn", `Rate limit pause triggered during repo ${repo.fullName}. Aborting for checkpoint.`);
+        } else {
+          const errorMsg = err instanceof Error ? err.message : String(err);
+          postRepoWarning(repo.fullName!, "PROCESSING", errorMsg);
+          state.failedRepos.push({ repoFullName: repo.fullName!, phase: "PROCESSING", error: errorMsg });
+        }
+      } finally {
+        completedReposCount++;
+        const pct = 15 + Math.round((completedReposCount / Math.max(1, totalReposToScan)) * 60);
+        postProgress(
+          "AUTOPSY",
+          repo.fullName || "repository",
+          completedReposCount,
+          totalReposToScan,
+          pct,
+          `Examining specimen ${completedReposCount}/${totalReposToScan}: ${repo.name}...`,
+          client.getRateLimitStatus().remaining
+        );
+      }
+    }
+  }
+
+  const pool: Promise<void>[] = [];
+  const workerCount = Math.max(1, Math.min(state.concurrency, remaining.length));
+  for (let i = 0; i < workerCount; i++) {
+    pool.push(worker());
+  }
+
+  await Promise.all(pool);
+}
+
+async function aggregateAndComplete(
+  state: AnalysisState,
+  rest: ForensicGitHubRest,
+  graphql: ForensicGitHubGraphQL
+): Promise<void> {
+  if (cancelled) {
+    post({ type: "CANCELLED" });
+    return;
+  }
+
+  postProgress("AGGREGATION", "Forensic Metrics", 9, 10, 80, "Synthesizing classifications, temporal distributions, and awards...");
+
+  const { allCommits, processedRepos, allWeeks, languageMap, profile } = state;
+
+  const totalCommits = allCommits.length;
+  const totalLinesAdded = processedRepos.reduce((acc, r) => acc + r.additions, 0);
+  const totalLinesDeleted = processedRepos.reduce((acc, r) => acc + r.deletions, 0);
+  const totalPrsAuthored = processedRepos.reduce((acc, r) => acc + r.prsAuthored, 0);
+  const totalPrsMerged = processedRepos.reduce((acc, r) => acc + r.prsMerged, 0);
+  const totalIssuesAuthored = processedRepos.reduce((acc, r) => acc + r.issuesAuthored, 0);
+
+  const reviewsOutcome = await rest.getReviewsCount(state.subjectLogin, state.sinceDate);
+  let reviewsCount = 0;
+  if (!reviewsOutcome.ok) {
+    postLog("warn", `Reviews count fetch failed: ${reviewsOutcome.error}. Defaulting to 0.`);
+    state.diagnosticsWarnings.push(`Reviews count fetch failed: ${reviewsOutcome.error}`);
+  }
+  reviewsCount = reviewsOutcome.data;
+  if (reviewsOutcome.truncated) {
+    state.diagnosticsWarnings.push("Reviews count truncated at 1000 (GitHub Search API cap).");
+  }
+
+  const temporal = calculateTemporalAnalytics(allCommits, allWeeks);
+  const churn = calculateCodeChurnAnalytics(allCommits);
+  if (totalLinesAdded > 0 || totalLinesDeleted > 0) {
+    churn.totalAdditions = totalLinesAdded;
+    churn.totalDeletions = totalLinesDeleted;
+    churn.netLines = totalLinesAdded - totalLinesDeleted;
+    churn.churnRatio = totalLinesAdded > 0 ? Math.round((totalLinesDeleted / totalLinesAdded) * 100) / 100 : 0;
+  }
+  const commitForensics = analyzeCommitForensics(allCommits, state.subjectLogin);
+  if (totalLinesAdded > 0 || totalLinesDeleted > 0) {
+    commitForensics.churnRatio = churn.churnRatio;
+  }
+
+  const totalBytes = Array.from(languageMap.values()).reduce((acc, v) => acc + v.bytes, 0);
+  const languageAnalysis = Array.from(languageMap.entries())
+    .map(([name, data]) => ({
+      name,
+      bytes: data.bytes,
+      percentage: totalBytes > 0 ? Math.round((data.bytes / totalBytes) * 100) : 0,
+      repoCount: data.repoCount,
+    }))
+    .sort((a, b) => b.bytes - a.bytes);
+
+  let totalContributions = totalCommits;
+  try {
+    const calendar = state.subjectLogin
+      ? await graphql.getUserContributions(state.subjectLogin, state.sinceDate)
+      : await graphql.getViewerContributions(state.sinceDate);
+    if (calendar) {
+      state.graphqlContributionCalendarAvailable = true;
+      totalContributions = calendar.totalContributions;
+      if (!state.sinceDate) {
+        state.diagnosticsWarnings.push(
+          "GraphQL contribution calendar covers the current year only (no sinceDate provided). totalContributions may undercount all-time activity."
+        );
+      }
+    }
+  } catch {
+    postLog("warn", "GraphQL contribution calendar fetch failed; using REST-derived totals.");
+  }
+
+  const mergeRatePercentage = totalPrsAuthored > 0 ? Math.round((totalPrsMerged / totalPrsAuthored) * 100) : null;
+
+  const summary = {
+    totalCommits,
+    totalContributions,
+    reposAnalyzed: processedRepos.length,
+    reposSkipped: state.failedRepos.length,
+    activeRepos: processedRepos.filter((r) => r.daysSinceLastPush <= 90).length,
+    linesAdded: totalLinesAdded,
+    linesDeleted: totalLinesDeleted,
+    netLines: totalLinesAdded - totalLinesDeleted,
+    prsAuthored: totalPrsAuthored,
+    prsMerged: totalPrsMerged,
+    mergeRatePercentage,
+    issuesAuthored: totalIssuesAuthored,
+    reviewsAuthored: reviewsCount,
+    starsReceived: processedRepos.reduce((acc, r) => acc + r.stars, 0),
+    forksReceived: processedRepos.reduce((acc, r) => acc + r.forks, 0),
+    longestStreakDays: temporal.longestStreakDays,
+    activeStreakDays: temporal.activeStreakDays,
+    totalActiveDays: temporal.totalActiveDays,
+    busiestHour: temporal.busiestHour,
+    busiestWeekday: temporal.busiestWeekday,
+    busiestMonth: temporal.busiestMonth,
+    nightCommitPercentage: temporal.nightCommitPercentage,
+    weekendCommitPercentage: temporal.weekendCommitPercentage,
+  };
+
+  const classifications = computeDeveloperClassifications({
+    commits: allCommits,
+    repositories: processedRepos,
+    temporal: {
+      heatmapCalendar: temporal.heatmapCalendar,
+      byHour: temporal.commitsByHour,
+      byWeekday: temporal.commitsByWeekday,
+      byMonth: temporal.commitsByMonth.map((m) => ({
+        month: m.month,
+        commits: m.count,
+        additions: m.additions,
+        deletions: m.deletions,
+      })),
+    },
+    summary,
+    churn: {
+      churnRatio: churn.churnRatio,
+      totalDeletions: totalLinesDeleted,
+      totalAdditions: totalLinesAdded,
+    },
+    languageCount: languageAnalysis.length,
+    commitCategories: commitForensics.messageCategories,
+  });
+
+  const awards = generateRepositoryAwards(processedRepos, totalCommits);
+
+  const partialAnalysis: Partial<GitopsyAnalysis> = {
+    subject: profile || undefined,
+    summary,
+    repositories: processedRepos,
+    languages: languageAnalysis,
+    commitForensics,
+  };
+
+  const courtCharges = generateCourtCharges(partialAnalysis, state.subjectLogin);
+  const findings = generateDeterministicFindings(partialAnalysis);
+  const easterEggs = detectDeterministicEasterEggs(partialAnalysis, allCommits);
+
+  const diagnostics: AnalysisDiagnostics = {
+    failedRepos: state.failedRepos,
+    truncatedRepos: state.truncatedRepos,
+    rateLimitHitCount: state.rateLimitHitCount,
+    schedulerMaxRetries: 3,
+    graphqlContributionCalendarAvailable: state.graphqlContributionCalendarAvailable,
+    warnings: state.diagnosticsWarnings,
+  };
+
+  const finalReport: GitopsyAnalysis = {
+    id: state.checkpointId,
+    generatedAt: new Date().toISOString(),
+    isIncremental: Boolean(state.isIncremental && state.sinceDate),
+    durationMs: Date.now() - state.startedAt,
+    subjectLogin: state.subjectLogin,
+    subject: profile!,
+    summary,
+    activity: {
+      heatmapCalendar: temporal.heatmapCalendar,
+      byHour: temporal.commitsByHour,
+      byWeekday: temporal.commitsByWeekday,
+      byMonth: temporal.commitsByMonth.map((m) => ({
+        month: m.month,
+        commits: m.count,
+        additions: m.additions,
+        deletions: m.deletions,
+      })),
+    },
+    repositories: processedRepos,
+    languages: languageAnalysis,
+    commitForensics,
+    classifications,
+    primaryClassification: classifications[0],
+    awards,
+    courtCharges,
+    findings,
+    easterEggs,
+    diagnostics,
+  };
+
+  try {
+    await gitopsyDb.checkpoints.delete(state.checkpointId);
+  } catch {
+    // best-effort cleanup
+  }
+
+  post({ type: "COMPLETE", payload: { report: finalReport } });
+}
+
+async function runAnalysisPipeline(
+  state: AnalysisState,
+  token: string,
+  isResume: boolean
+): Promise<void> {
+  try {
+    const client = new ForensicGitHubClient({
+      token,
+      maxConcurrency: state.concurrency,
+      baseDelayMs: 600,
+      maxPages: 50,
+      lowRemainingThreshold: 100,
+      longPauseThresholdSeconds: 300,
+      onRateLimitWarning: (status, message, isTerminal) => {
+        if (!isTerminal) state.rateLimitHitCount++;
+        post({
+          type: "RATE_LIMIT",
+          payload: {
+            resetAt: status.resetTimeIso,
+            waitSeconds: Math.max(1, status.resetTimeEpoch - Math.floor(Date.now() / 1000)),
+            message,
+            isTerminal,
+          },
+        });
+      },
+      onLongPause: (resetEpoch, resetIso, pauseSeconds) => {
+        state.checkpointTriggered = true;
+        state.rateLimitResetEpoch = resetEpoch;
+        state.resumeAtIso = resetIso;
+        state.resumeReason = `GitHub rate limit reached. ${pauseSeconds}s until reset at ${resetIso}.`;
+        postLog("warn", state.resumeReason);
+      },
+    });
+
+    const rest = new ForensicGitHubRest(client);
+    const graphql = new ForensicGitHubGraphQL(client);
+
+    if (cancelled) {
+      post({ type: "CANCELLED" });
+      return;
+    }
+
+    if (!isResume) {
+      postProgress("IDENTIFICATION", "GitHub Profile", 1, 10, 5, "Summoning subject profile and metadata...");
+      const profile = await rest.getAuthenticatedUser();
+      state.profile = profile;
+      state.subjectLogin = state.subjectLogin || profile.login;
+
+      if (cancelled) {
+        post({ type: "CANCELLED" });
+        return;
+      }
+
+      postProgress("DISCOVERY", "Repositories", 2, 10, 15, `Discovering accessible repositories for @${state.subjectLogin}...`);
+      const reposOutcome = await rest.getRepositories(state.sinceDate);
+      if (!reposOutcome.ok) {
+        postLog("error", `Repository discovery failed: ${reposOutcome.error}`);
+        post({ type: "ERROR", payload: { error: `Repository discovery failed: ${reposOutcome.error}` } });
+        return;
+      }
+
+      const rawRepos = reposOutcome.data;
+      if (reposOutcome.truncated) {
+        state.diagnosticsWarnings.push(
+          `Repository list was truncated at ${rawRepos.length} repos (max pages reached).`
+        );
+        post({
+          type: "WARNING",
+          payload: {
+            message: `Repository list truncated at ${rawRepos.length} repos.`,
+            code: "REPO_TRUNCATION",
+          },
+        });
+      }
+
+      state.reposToScan = rawRepos.filter((r) => !r.isArchived);
+    }
+
+    const totalReposToScan = state.reposToScan.length;
+    if (totalReposToScan === 0) {
+      postLog("warn", "No non-archived repositories found for analysis.");
+    }
+
+    const alreadyProcessed = state.processedRepoFullNames.size;
+    if (isResume && alreadyProcessed > 0) {
+      postProgress(
+        "RESUMING",
+        "Checkpoint Restore",
+        alreadyProcessed,
+        totalReposToScan,
+        15 + Math.round((alreadyProcessed / Math.max(1, totalReposToScan)) * 60),
+        `Resuming from checkpoint: ${alreadyProcessed}/${totalReposToScan} repos already processed.`
+      );
+    }
+
+    await processRepos(state, rest, client);
+
+    if (state.checkpointTriggered && !cancelled) {
+      await saveCheckpoint(state);
+      post({
+        type: "RESUME_AVAILABLE",
+        payload: {
+          checkpointId: state.checkpointId,
+          resumeAt: state.resumeAtIso,
+          resumeReason: state.resumeReason,
+          resetEpoch: state.rateLimitResetEpoch,
+        },
+      });
+      return;
+    }
+
+    if (cancelled) {
+      post({ type: "CANCELLED" });
+      return;
+    }
+
+    await aggregateAndComplete(state, rest, graphql);
+  } catch (err) {
+    const errorDetails = err instanceof Error ? err.stack || err.message : String(err);
+    postLog("error", `Fatal analysis error: ${errorDetails}`);
+    post({ type: "ERROR", payload: { error: String(err), details: errorDetails } });
+  }
 }
 
 self.onmessage = async (event: MessageEvent<WorkerInMessage>) => {
   const data = event.data;
 
+  if (data.type === "CANCEL") {
+    cancelled = true;
+    post({ type: "CANCELLED" });
+    return;
+  }
+
   if (data.type === "START_ANALYSIS") {
-    const { token, username, sinceDate } = data.payload;
-    const startTime = Date.now();
+    cancelled = false;
+    const { token, username, sinceDate, isIncremental, maxConcurrency } = data.payload;
+    const concurrency = Math.max(1, Math.min(maxConcurrency ?? 4, 8));
+    const checkpointId = `dossier-${username || "viewer"}-${Date.now()}`;
+    const state = newState(checkpointId, username || "", concurrency);
+    state.sinceDate = sinceDate;
+    state.isIncremental = Boolean(isIncremental && sinceDate);
+    await runAnalysisPipeline(state, token, false);
+    return;
+  }
 
-    try {
-      const client = new ForensicGitHubClient({
-        token,
-        maxConcurrency: 10,
-        baseDelayMs: 200,
-        onRateLimitWarning: (status, message) => {
-          post({
-            type: "RATE_LIMIT",
-            payload: {
-              resetAt: status.resetTimeIso,
-              waitSeconds: Math.max(1, status.resetTimeEpoch - Math.floor(Date.now() / 1000)),
-              message,
-            },
-          });
-        },
-      });
-
-      const rest = new ForensicGitHubRest(client);
-
-      post({
-        type: "PROGRESS",
-        payload: {
-          phase: "IDENTIFICATION",
-          currentItem: "GitHub Profile",
-          current: 1,
-          total: 10,
-          percentage: 10,
-          message: "Summoning subject profile and metadata...",
-        },
-      });
-
-      const profile = await rest.getAuthenticatedUser();
-      const targetUser = username || profile.login;
-
-      post({
-        type: "PROGRESS",
-        payload: {
-          phase: "DISCOVERY",
-          currentItem: "Repositories",
-          current: 2,
-          total: 10,
-          percentage: 25,
-          message: `Discovering accessible repositories for @${targetUser}...`,
-        },
-      });
-
-      const rawRepos = await rest.getRepositories(sinceDate);
-      const reposToScan = rawRepos.filter((r) => !r.isArchived);
-      const totalReposToScan = reposToScan.length;
-
-      const allCommits: ForensicCommit[] = [];
-      const seenCommitShas = new Set<string>();
-      const languageMap = new Map<string, { bytes: number; repoCount: number }>();
-      const processedRepos: RepositoryAnalysis[] = [];
-      
-      const CONCURRENCY_LIMIT = 10;
-      let completedReposCount = 0;
-
-      async function processSingleRepo(r: (typeof reposToScan)[0], index: number): Promise<{
-        repoAnalysis: RepositoryAnalysis;
-        commits: ForensicCommit[];
-      }> {
-        // Fetch all repo resources concurrently in parallel
-        const [repoCommits, contribStats, prs, issues, languages] = await Promise.all([
-          rest.getRepoCommits(r.fullName!, targetUser, sinceDate, 200),
-          rest.getRepoContributorStats(r.fullName!, targetUser),
-          rest.getRepoPullRequests(r.fullName!, targetUser, sinceDate),
-          rest.getRepoIssues(r.fullName!, targetUser, sinceDate),
-          rest.getRepoLanguages(r.fullName!),
-        ]);
-
-        // Filter and deduplicate commits
-        const uniqueRepoCommits: ForensicCommit[] = [];
-        for (const c of repoCommits) {
-          if (!seenCommitShas.has(c.sha)) {
-            seenCommitShas.add(c.sha);
-            uniqueRepoCommits.push(c);
-          }
-        }
-
-        // Fetch commit details for top 5 recent commits concurrently
-        const commitsToDetail = Math.min(uniqueRepoCommits.length, 5);
-        if (commitsToDetail > 0) {
-          await Promise.all(
-            uniqueRepoCommits.slice(0, commitsToDetail).map(async (c) => {
-              const detail = await rest.getCommitDetails(r.fullName!, c.sha);
-              c.additions = detail.additions;
-              c.deletions = detail.deletions;
-              c.filesChanged = detail.filesChanged;
-            })
-          );
-        }
-
-        // Register languages
-        languages.forEach((lang) => {
-          const current = languageMap.get(lang.name) || { bytes: 0, repoCount: 0 };
-          current.bytes += lang.bytes;
-          current.repoCount++;
-          languageMap.set(lang.name, current);
-        });
-
-        const mergedPrs = prs.filter((p) => p.state === "merged").length;
-
-        let repoAdditions = 0;
-        let repoDeletions = 0;
-        if (contribStats && (contribStats.additions > 0 || contribStats.deletions > 0)) {
-          repoAdditions = contribStats.additions;
-          repoDeletions = contribStats.deletions;
-        } else {
-          repoAdditions = uniqueRepoCommits.reduce((acc, c) => acc + c.additions, 0);
-          repoDeletions = uniqueRepoCommits.reduce((acc, c) => acc + c.deletions, 0);
-        }
-
-        const createdMs = new Date(r.createdAt || Date.now()).getTime();
-        const pushedMs = new Date(r.lastPushedAt || Date.now()).getTime();
-        const activitySpanDays = Math.max(1, Math.floor((pushedMs - createdMs) / (1000 * 60 * 60 * 24)));
-        const daysSinceLastPush = Math.max(
-          0,
-          Math.floor((Date.now() - pushedMs) / (1000 * 60 * 60 * 24))
-        );
-
-        completedReposCount++;
-        const pct = 25 + Math.round((completedReposCount / Math.max(1, totalReposToScan)) * 55);
-
-        post({
-          type: "PROGRESS",
-          payload: {
-            phase: "AUTOPSY",
-            currentItem: r.fullName || "repository",
-            current: completedReposCount,
-            total: totalReposToScan,
-            percentage: pct,
-            message: `Examining specimen ${completedReposCount}/${totalReposToScan}: ${r.name}...`,
-            rateLimitRemaining: client.getRateLimitStatus().remaining,
-          },
-        });
-
-        return {
-          repoAnalysis: {
-            id: r.id || index + 1,
-            name: r.name || "repo",
-            fullName: r.fullName || `${targetUser}/${r.name}`,
-            isPrivate: Boolean(r.isPrivate),
-            isFork: Boolean(r.isFork),
-            isArchived: Boolean(r.isArchived),
-            defaultBranch: r.defaultBranch || "main",
-            stars: r.stars || 0,
-            forks: r.forks || 0,
-            openIssues: r.openIssues || 0,
-            createdAt: r.createdAt || new Date().toISOString(),
-            lastPushedAt: r.lastPushedAt || new Date().toISOString(),
-            primaryLanguage: r.primaryLanguage || null,
-            languages,
-            commitCount: uniqueRepoCommits.length,
-            additions: repoAdditions,
-            deletions: repoDeletions,
-            netLines: repoAdditions - repoDeletions,
-            prsAuthored: prs.length,
-            prsMerged: mergedPrs,
-            issuesAuthored: issues.length,
-            activitySpanDays,
-            daysSinceLastPush,
-          },
-          commits: uniqueRepoCommits,
-        };
-      }
-
-      // Concurrently run 10 parallel repository worker streams
-      const pool: Promise<void>[] = [];
-      let cursor = 0;
-
-      async function worker() {
-        while (cursor < reposToScan.length) {
-          const idx = cursor++;
-          const repo = reposToScan[idx];
-          try {
-            const result = await processSingleRepo(repo, idx);
-            processedRepos.push(result.repoAnalysis);
-            allCommits.push(...result.commits);
-          } catch {
-            // continue processing other repositories
-          }
-        }
-      }
-
-      for (let i = 0; i < Math.min(CONCURRENCY_LIMIT, reposToScan.length); i++) {
-        pool.push(worker());
-      }
-
-      await Promise.all(pool);
-
-      post({
-        type: "PROGRESS",
-        payload: {
-          phase: "AGGREGATION",
-          currentItem: "Forensic Metrics",
-          current: 9,
-          total: 10,
-          percentage: 85,
-          message: "Synthesizing classifications, temporal distributions, and awards...",
-        },
-      });
-
-      const totalCommits = allCommits.length;
-      const totalLinesAdded = processedRepos.reduce((acc, r) => acc + r.additions, 0);
-      const totalLinesDeleted = processedRepos.reduce((acc, r) => acc + r.deletions, 0);
-      const totalPrsAuthored = processedRepos.reduce((acc, r) => acc + r.prsAuthored, 0);
-      const totalPrsMerged = processedRepos.reduce((acc, r) => acc + r.prsMerged, 0);
-      const totalIssuesAuthored = processedRepos.reduce((acc, r) => acc + r.issuesAuthored, 0);
-
-      // Reviews authored count
-      const reviewsCount = await rest.getReviewsCount(targetUser);
-
-      const temporal = calculateTemporalAnalytics(allCommits);
-      const churn = calculateCodeChurnAnalytics(allCommits);
-      if (totalLinesAdded > 0) {
-        churn.totalAdditions = totalLinesAdded;
-        churn.totalDeletions = totalLinesDeleted;
-        churn.netLines = totalLinesAdded - totalLinesDeleted;
-        churn.churnRatio = totalLinesAdded > 0 ? Math.round((totalLinesDeleted / totalLinesAdded) * 100) / 100 : 0;
-      }
-      const commitForensics = analyzeCommitForensics(allCommits, targetUser);
-
-      const totalBytes = Array.from(languageMap.values()).reduce((acc, v) => acc + v.bytes, 0);
-      const languageAnalysis = Array.from(languageMap.entries())
-        .map(([name, data]) => ({
-          name,
-          bytes: data.bytes,
-          percentage: totalBytes > 0 ? Math.round((data.bytes / totalBytes) * 100) : 0,
-          repoCount: data.repoCount,
-        }))
-        .sort((a, b) => b.bytes - a.bytes);
-
-      const summary = {
-        totalCommits,
-        reposAnalyzed: processedRepos.length,
-        activeRepos: processedRepos.filter((r) => r.daysSinceLastPush <= 90).length,
-        linesAdded: totalLinesAdded,
-        linesDeleted: totalLinesDeleted,
-        netLines: totalLinesAdded - totalLinesDeleted,
-        prsAuthored: totalPrsAuthored,
-        prsMerged: totalPrsMerged,
-        mergeRatePercentage: totalPrsAuthored > 0 ? Math.round((totalPrsMerged / totalPrsAuthored) * 100) : 100,
-        issuesAuthored: totalIssuesAuthored,
-        reviewsAuthored: reviewsCount,
-        starsReceived: processedRepos.reduce((acc, r) => acc + r.stars, 0),
-        forksReceived: processedRepos.reduce((acc, r) => acc + r.forks, 0),
-        longestStreakDays: temporal.longestStreakDays,
-        activeStreakDays: temporal.activeStreakDays,
-        totalActiveDays: temporal.totalActiveDays,
-        busiestHour: temporal.busiestHour,
-        busiestWeekday: temporal.busiestWeekday,
-        busiestMonth: temporal.busiestMonth,
-        nightCommitPercentage: temporal.nightCommitPercentage,
-        weekendCommitPercentage: temporal.weekendCommitPercentage,
-      };
-
-      const classifications = computeDeveloperClassifications({
-        commits: allCommits,
-        repositories: processedRepos,
-        temporal: {
-          heatmapCalendar: temporal.heatmapCalendar,
-          byHour: temporal.commitsByHour,
-          byWeekday: temporal.commitsByWeekday,
-          byMonth: temporal.commitsByMonth.map((m) => ({
-            month: m.month,
-            commits: m.count,
-            additions: m.additions,
-            deletions: m.deletions,
-          })),
-        },
-        summary,
-        churn: {
-          churnRatio: churn.churnRatio,
-          totalDeletions: totalLinesDeleted,
-          totalAdditions: totalLinesAdded,
-        },
-        languageCount: languageAnalysis.length,
-        commitCategories: commitForensics.messageCategories,
-      });
-
-      const awards = generateRepositoryAwards(processedRepos, totalCommits);
-
-      const partialAnalysis: Partial<GitopsyAnalysis> = {
-        subject: profile,
-        summary,
-        repositories: processedRepos,
-        languages: languageAnalysis,
-        commitForensics,
-      };
-
-      const courtCharges = generateCourtCharges(partialAnalysis, targetUser);
-      const findings = generateDeterministicFindings(partialAnalysis);
-      const easterEggs = detectDeterministicEasterEggs(partialAnalysis, allCommits);
-
-      const finalReport: GitopsyAnalysis = {
-        id: `dossier-${targetUser}-${Date.now()}`,
-        generatedAt: new Date().toISOString(),
-        isIncremental: Boolean(sinceDate),
-        durationMs: Date.now() - startTime,
-        subject: profile,
-        summary,
-        activity: {
-          heatmapCalendar: temporal.heatmapCalendar,
-          byHour: temporal.commitsByHour,
-          byWeekday: temporal.commitsByWeekday,
-          byMonth: temporal.commitsByMonth.map((m) => ({
-            month: m.month,
-            commits: m.count,
-            additions: m.additions,
-            deletions: m.deletions,
-          })),
-        },
-        repositories: processedRepos,
-        languages: languageAnalysis,
-        commitForensics,
-        classifications,
-        primaryClassification: classifications[0],
-        awards,
-        courtCharges,
-        findings,
-        easterEggs,
-      };
-
-      post({ type: "COMPLETE", payload: { report: finalReport } });
-    } catch (err) {
-      post({ type: "ERROR", payload: { error: String(err) } });
-    }
+  if (data.type === "RESUME") {
+    cancelled = false;
+    const { token, checkpoint, maxConcurrency } = data.payload;
+    const state = restoreFromCheckpoint(checkpoint);
+    state.concurrency = Math.max(1, Math.min(maxConcurrency ?? state.concurrency, 8));
+    state.checkpointTriggered = false;
+    postLog("info", `Resuming analysis from checkpoint ${checkpoint.checkpointId}. ${state.processedRepoFullNames.size}/${state.reposToScan.length} repos already processed.`);
+    await runAnalysisPipeline(state, token, true);
+    return;
   }
 };

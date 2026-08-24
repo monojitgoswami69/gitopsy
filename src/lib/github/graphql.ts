@@ -11,6 +11,12 @@ export interface GraphQLContributionCalendar {
   }[];
 }
 
+export interface ContributionDay {
+  date: string;
+  contributionCount: number;
+  weekday: number;
+}
+
 export class ForensicGitHubGraphQL {
   constructor(private client: ForensicGitHubClient) {}
 
@@ -39,7 +45,7 @@ export class ForensicGitHubGraphQL {
         viewer: {
           contributionsCollection: {
             contributionCalendar: GraphQLContributionCalendar;
-          };
+          } | null;
         };
       }>(query, { from, to });
 
@@ -49,40 +55,49 @@ export class ForensicGitHubGraphQL {
     }
   }
 
-  public async getBatchRepoOverview(owner: string, repoNames: string[]) {
-    if (repoNames.length === 0) return {};
-
-    const fragments = repoNames
-      .slice(0, 20)
-      .map(
-        (name, idx) => `
-        repo_${idx}: repository(owner: "${owner}", name: "${name}") {
-          name
-          stargazerCount
-          forkCount
-          isPrivate
-          isArchived
-          diskUsage
-          languages(first: 10, orderBy: {field: SIZE, direction: DESC}) {
-            edges {
-              size
-              node {
-                name
-                color
+  public async getUserContributions(login: string, from?: string, to?: string): Promise<GraphQLContributionCalendar | null> {
+    const query = `
+      query ($login: String!, $from: DateTime, $to: DateTime) {
+        user(login: $login) {
+          contributionsCollection(from: $from, to: $to) {
+            contributionCalendar {
+              totalContributions
+              weeks {
+                contributionDays {
+                  contributionCount
+                  date
+                  weekday
+                }
               }
             }
           }
         }
-      `
-      )
-      .join("\n");
-
-    const query = `query { ${fragments} }`;
+      }
+    `;
 
     try {
-      return await this.client.fetchGraphQL<Record<string, unknown>>(query);
+      const data = await this.client.fetchGraphQL<{
+        user: {
+          contributionsCollection: {
+            contributionCalendar: GraphQLContributionCalendar;
+          } | null;
+        } | null;
+      }>(query, { login, from, to });
+
+      return data.user?.contributionsCollection?.contributionCalendar || null;
     } catch {
-      return {};
+      return null;
     }
+  }
+
+  public flattenCalendar(calendar: GraphQLContributionCalendar | null): ContributionDay[] {
+    if (!calendar) return [];
+    const days: ContributionDay[] = [];
+    for (const week of calendar.weeks) {
+      for (const day of week.contributionDays) {
+        days.push(day);
+      }
+    }
+    return days;
   }
 }

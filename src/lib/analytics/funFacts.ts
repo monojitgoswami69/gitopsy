@@ -71,5 +71,16 @@ export function generateDeterministicFindings(
     });
   }
 
+  // 6. Merge Rate
+  if (summary.mergeRatePercentage !== null && summary.prsAuthored > 0) {
+    findings.push({
+      id: "finding-merge-rate",
+      icon: "🔀",
+      title: `Merge Rate: ${summary.mergeRatePercentage}%`,
+      evidence: `${summary.prsMerged.toLocaleString()} of ${summary.prsAuthored.toLocaleString()} pull requests were merged.`,
+      category: "BEHAVIOR",
+    });
+  }
+
   return findings;
 }

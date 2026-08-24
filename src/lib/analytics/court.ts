@@ -37,7 +37,6 @@ export function generateCourtCharges(
       sentence: "Sentence: Sentenced to maintain legacy jQuery repositories for 30 days.",
     });
   }
-
   // Charge 3: WIP Spammer
   const wipCategory = churn?.messageCategories.find((c) => c.category === "WIP");
   if (wipCategory && wipCategory.count >= 3) {

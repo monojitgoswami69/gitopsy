@@ -15,7 +15,10 @@ export interface TemporalAnalytics {
   weekendCommitPercentage: number; // Sat + Sun
 }
 
-export function calculateTemporalAnalytics(commits: ForensicCommit[]): TemporalAnalytics {
+export function calculateTemporalAnalytics(
+  commits: ForensicCommit[],
+  weeklyStats?: { w: number; a: number; d: number; c: number }[]
+): TemporalAnalytics {
   const hourCounts = new Array(24).fill(0);
   const weekdayCounts = new Array(7).fill(0);
   const monthMap = new Map<string, { count: number; additions: number; deletions: number }>();
@@ -34,6 +37,7 @@ export function calculateTemporalAnalytics(commits: ForensicCommit[]): TemporalA
     hourCounts[hour]++;
     weekdayCounts[weekday]++;
 
+    // Night window: 21:00 - 04:59 UTC (8-hour band)
     if (hour >= 21 || hour <= 4) {
       nightCommits++;
     }
@@ -54,6 +58,31 @@ export function calculateTemporalAnalytics(commits: ForensicCommit[]): TemporalA
     dateMap.set(dateStr, day);
   }
 
+  // If authoritative weekly stats from GitHub contributor endpoints are available,
+  // synchronize the monthly additions and deletions so the monthly chart matches total churn accurately.
+  if (weeklyStats && weeklyStats.length > 0) {
+    const totalWeeklyAdditions = weeklyStats.reduce((acc, w) => acc + (w.a || 0), 0);
+    const totalWeeklyDeletions = weeklyStats.reduce((acc, w) => acc + (w.d || 0), 0);
+
+    if (totalWeeklyAdditions > 0 || totalWeeklyDeletions > 0) {
+      for (const m of monthMap.values()) {
+        m.additions = 0;
+        m.deletions = 0;
+      }
+
+      for (const w of weeklyStats) {
+        if ((w.a || 0) > 0 || (w.d || 0) > 0 || (w.c || 0) > 0) {
+          const weekDate = new Date(w.w * 1000);
+          const monthStr = `${weekDate.getUTCFullYear()}-${String(weekDate.getUTCMonth() + 1).padStart(2, "0")}`;
+          const m = monthMap.get(monthStr) || { count: 0, additions: 0, deletions: 0 };
+          m.additions += w.a || 0;
+          m.deletions += w.d || 0;
+          monthMap.set(monthStr, m);
+        }
+      }
+    }
+  }
+
   // Calculate Streaks
   const uniqueDatesSorted = Array.from(dateMap.keys()).sort();
   let longestStreak = 0;
@@ -69,6 +98,9 @@ export function calculateTemporalAnalytics(commits: ForensicCommit[]): TemporalA
 
       if (prevEpochDays === null || epochDay === prevEpochDays + 1) {
         currentRunningStreak++;
+      } else if (epochDay === prevEpochDays) {
+        // Same day (duplicate, already deduped via dateMap) — skip
+        continue;
       } else {
         currentRunningStreak = 1;
       }
@@ -76,7 +108,8 @@ export function calculateTemporalAnalytics(commits: ForensicCommit[]): TemporalA
       prevEpochDays = epochDay;
     }
 
-    // Active streak up to today/yesterday
+    // Active streak: the streak ending at the most recent commit date.
+    // Only counts if the last commit was today or yesterday (within 1 day of now).
     const todayEpoch = Math.floor(Date.now() / (1000 * 60 * 60 * 24));
     const lastCommitEpoch = prevEpochDays || 0;
     if (todayEpoch - lastCommitEpoch <= 1) {
