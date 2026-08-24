@@ -13,7 +13,6 @@ export interface SchedulerOptions {
   maxRetries?: number;
   baseDelayMs?: number;
   onRateLimitWarning?: (status: RateLimitStatus, message: string, isTerminal: boolean) => void;
-  lowRemainingThreshold?: number;
   longPauseThresholdSeconds?: number;
   onLongPause?: (resetEpoch: number, resetIso: string, pauseSeconds: number) => void;
 }
@@ -46,7 +45,6 @@ export class ForensicRequestScheduler {
   private pauseUntilTimestamp: number = 0;
   private pauseTimer: ReturnType<typeof setTimeout> | null = null;
   private onRateLimitWarning?: (status: RateLimitStatus, message: string, isTerminal: boolean) => void;
-  private lowRemainingThreshold: number;
   private longPauseThresholdSeconds: number;
   private onLongPause?: (resetEpoch: number, resetIso: string, pauseSeconds: number) => void;
 
@@ -55,77 +53,12 @@ export class ForensicRequestScheduler {
     this.maxRetries = options.maxRetries ?? 3;
     this.baseDelayMs = options.baseDelayMs ?? 800;
     this.onRateLimitWarning = options.onRateLimitWarning;
-    this.lowRemainingThreshold = options.lowRemainingThreshold ?? 100;
     this.longPauseThresholdSeconds = options.longPauseThresholdSeconds ?? 300;
     this.onLongPause = options.onLongPause;
   }
 
   public getRateLimitStatus(): RateLimitStatus {
     return { ...this.rateLimitStatus };
-  }
-
-  /**
-   * Update rate-limit state from SUCCESSFUL response headers.
-   * Called by the client after every non-error response so the scheduler
-   * always knows the true remaining budget and can pre-emptively throttle
-   * before GitHub returns a hard 403/429.
-   */
-  public updateRateLimitFromHeaders(path: string, headers: Record<string, string>): void {
-    const remaining = headers["x-ratelimit-remaining"];
-    const resetEpoch = headers["x-ratelimit-reset"];
-    const limit = headers["x-ratelimit-limit"];
-
-    if (remaining !== undefined) {
-      const parsed = parseInt(remaining, 10);
-      if (!isNaN(parsed)) {
-        this.rateLimitStatus.remaining = parsed;
-      }
-    }
-    if (resetEpoch !== undefined) {
-      const parsed = parseInt(resetEpoch, 10);
-      if (!isNaN(parsed)) {
-        this.rateLimitStatus.resetTimeEpoch = parsed;
-        this.rateLimitStatus.resetTimeIso = new Date(parsed * 1000).toISOString();
-      }
-    }
-    if (limit !== undefined) {
-      const parsed = parseInt(limit, 10);
-      if (!isNaN(parsed)) {
-        this.rateLimitStatus.limit = parsed;
-      }
-    }
-
-    // Pre-emptive throttle: if remaining budget is below threshold,
-    // pause until the reset epoch so we don't burn through the last
-    // requests and trigger a hard 403.
-    if (
-      this.rateLimitStatus.remaining > 0 &&
-      this.rateLimitStatus.remaining < this.lowRemainingThreshold &&
-      this.rateLimitStatus.resetTimeEpoch > 0 &&
-      !this.isPaused
-    ) {
-      const nowEpoch = Math.floor(Date.now() / 1000);
-      const secondsUntilReset = this.rateLimitStatus.resetTimeEpoch - nowEpoch;
-      if (secondsUntilReset > 0 && secondsUntilReset <= 3600) {
-        this.isPaused = true;
-        this.pauseUntilTimestamp = Date.now() + secondsUntilReset * 1000;
-        if (this.pauseTimer) clearTimeout(this.pauseTimer);
-        this.pauseTimer = setTimeout(() => {
-          this.pauseTimer = null;
-          this.isPaused = false;
-          this.rateLimitStatus.remaining = this.rateLimitStatus.limit;
-          this.processQueue();
-        }, secondsUntilReset * 1000);
-
-        if (this.onRateLimitWarning) {
-          this.onRateLimitWarning(
-            this.rateLimitStatus,
-            `Pre-emptive throttle: ${this.rateLimitStatus.remaining} requests remaining. Pausing until reset at ${this.rateLimitStatus.resetTimeIso}.`,
-            false
-          );
-        }
-      }
-    }
   }
 
   public schedule<T>(fn: () => Promise<T>, cacheKey?: string): Promise<T> {
@@ -217,6 +150,8 @@ export class ForensicRequestScheduler {
     const headers = errorObj.headers || errorObj.response?.headers || {};
     const message = errorObj.response?.data?.message || errorObj.message || "Unknown error";
 
+    // Rate Limit Parsing — only from ERROR responses (403/429), never from
+    // successful responses. No pre-emptive throttling.
     const remaining = headers["x-ratelimit-remaining"];
     const resetEpoch = headers["x-ratelimit-reset"];
     const retryAfter = headers["retry-after"];
@@ -256,13 +191,9 @@ export class ForensicRequestScheduler {
       this.rateLimitStatus.isThrottled = true;
       this.pauseUntilTimestamp = Date.now() + pauseDurationSeconds * 1000;
 
-      const warningMsg = isSecondaryRateLimit
-        ? "GitHub secondary rate limit triggered. Forensic scheduler is throttling requests."
-        : "GitHub primary API rate limit reached. Analysis pausing temporarily.";
-
-      // If the pause is too long (e.g. 1 hour for primary rate limit reset),
-      // don't block the worker. Instead, reject all tasks with a resumable
-      // error so the worker can save a checkpoint and let the user resume later.
+      // If the pause is too long (e.g. 1 hour for primary reset), don't block
+      // the worker — reject all tasks with a resumable error so the worker
+      // can save a checkpoint and let the user resume later.
       const isLongPause = pauseDurationSeconds >= this.longPauseThresholdSeconds;
 
       if (isLongPause) {
@@ -281,7 +212,7 @@ export class ForensicRequestScheduler {
           );
         }
 
-        // Reject this task
+        // Reject this task with a resumable error
         task.reject(
           new ForensicRateLimitError(
             resumableMsg,
@@ -317,6 +248,11 @@ export class ForensicRequestScheduler {
         }
         return;
       }
+
+      // Short pause — retry with backoff
+      const warningMsg = isSecondaryRateLimit
+        ? "GitHub secondary rate limit triggered. Forensic scheduler is throttling requests."
+        : "GitHub primary API rate limit reached. Analysis pausing temporarily.";
 
       const willRetry = task.retries < this.maxRetries;
 
@@ -357,6 +293,7 @@ export class ForensicRequestScheduler {
       }
     }
 
+    // Transient server errors (500, 502, 503, 504) -> Exponential Backoff + Jitter
     if (status && status >= 500 && status < 600 && task.retries < this.maxRetries) {
       task.retries++;
       const jitter = Math.random() * 200;
@@ -368,6 +305,7 @@ export class ForensicRequestScheduler {
       return;
     }
 
+    // Non-retryable error
     task.reject(
       new ForensicGitHubError(message, {
         statusCode: status,

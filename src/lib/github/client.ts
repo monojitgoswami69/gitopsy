@@ -83,13 +83,6 @@ export class ForensicGitHubClient {
         responseHeaders[key.toLowerCase()] = val;
       });
 
-      // Feed successful-response headers to the scheduler so it always
-      // knows the true remaining budget and can pre-emptively throttle
-      // before GitHub returns a hard 403/429.
-      if (response.ok) {
-        this.scheduler.updateRateLimitFromHeaders(path, responseHeaders);
-      }
-
       if (!response.ok) {
         if (response.status === 401) {
           throw new ForensicAuthError();
@@ -182,10 +175,6 @@ export class ForensicGitHubClient {
       response.headers.forEach((val, key) => {
         responseHeaders[key.toLowerCase()] = val;
       });
-
-      if (response.ok) {
-        this.scheduler.updateRateLimitFromHeaders("/graphql", responseHeaders);
-      }
 
       if (!response.ok) {
         if (response.status === 401) {

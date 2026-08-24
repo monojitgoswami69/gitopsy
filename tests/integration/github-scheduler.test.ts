@@ -116,45 +116,4 @@ describe("Forensic Request Scheduler — Hardened Behavior", () => {
     const scheduler = new ForensicRequestScheduler();
     expect(() => scheduler.clearQueue()).not.toThrow();
   });
-
-  it("should pre-emptively throttle when remaining budget is low on successful responses", () => {
-    const onRateLimitWarning = vi.fn();
-    const scheduler = new ForensicRequestScheduler({
-      maxConcurrency: 4,
-      lowRemainingThreshold: 100,
-      onRateLimitWarning,
-    });
-
-    const resetEpoch = Math.floor(Date.now() / 1000) + 60;
-    scheduler.updateRateLimitFromHeaders("/user/repos", {
-      "x-ratelimit-remaining": "50",
-      "x-ratelimit-reset": String(resetEpoch),
-      "x-ratelimit-limit": "5000",
-    });
-
-    const status = scheduler.getRateLimitStatus();
-    expect(status.remaining).toBe(50);
-    expect(status.limit).toBe(5000);
-
-    expect(onRateLimitWarning).toHaveBeenCalledTimes(1);
-    expect(onRateLimitWarning.mock.calls[0][2]).toBe(false);
-    expect(onRateLimitWarning.mock.calls[0][1]).toContain("Pre-emptive throttle");
-  });
-
-  it("should not pre-emptively throttle when remaining budget is healthy", () => {
-    const onRateLimitWarning = vi.fn();
-    const scheduler = new ForensicRequestScheduler({
-      lowRemainingThreshold: 100,
-      onRateLimitWarning,
-    });
-
-    scheduler.updateRateLimitFromHeaders("/user/repos", {
-      "x-ratelimit-remaining": "4500",
-      "x-ratelimit-reset": String(Math.floor(Date.now() / 1000) + 3600),
-      "x-ratelimit-limit": "5000",
-    });
-
-    expect(onRateLimitWarning).not.toHaveBeenCalled();
-    expect(scheduler.getRateLimitStatus().remaining).toBe(4500);
-  });
 });

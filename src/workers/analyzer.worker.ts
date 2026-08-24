@@ -604,7 +604,6 @@ async function runAnalysisPipeline(
       maxConcurrency: state.concurrency,
       baseDelayMs: 600,
       maxPages: 50,
-      lowRemainingThreshold: 0,
       longPauseThresholdSeconds: 300,
       onRateLimitWarning: (status, message, isTerminal) => {
         if (!isTerminal) state.rateLimitHitCount++;
