@@ -1,0 +1,245 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-space-grotesk), var(--font-jetbrains-mono), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), var(--font-space-mono), ui-monospace, monospace;
+  --font-space: var(--font-space-mono), var(--font-jetbrains-mono), monospace;
+  --font-jetbrains: var(--font-jetbrains-mono), monospace;
+  --font-display: var(--font-space-mono), var(--font-space-grotesk), monospace;
+}
+
+@layer base {
+  :root {
+    --main: #FFDC58;
+    --main-accent: #FD9745;
+    --main-coral: #FF6B6B;
+    --main-cyan: #4D96FF;
+    --main-lime: #6BCB77;
+    --main-purple: #C084FC;
+    --main-foreground: #000000;
+    
+    --background: #F4EFE6;
+    --foreground: #121212;
+    
+    --secondary-background: #FFFFFF;
+    --muted-background: #E8E2D5;
+    --card-background: #FFFFFF;
+    
+    --border: #000000;
+    --border-width: 3px;
+    --border-radius: 6px;
+    
+    --shadow-color: #000000;
+    --shadow-x: 4px;
+    --shadow-y: 4px;
+    --shadow-lg-x: 8px;
+    --shadow-lg-y: 8px;
+    
+    --shadow-box: 4px 4px 0px 0px var(--shadow-color);
+    --shadow-box-lg: 8px 8px 0px 0px var(--shadow-color);
+    --shadow-box-sm: 2px 2px 0px 0px var(--shadow-color);
+  }
+
+  .dark {
+    --main: #FFDC58;
+    --main-accent: #FD9745;
+    --main-coral: #FF6B6B;
+    --main-cyan: #4D96FF;
+    --main-lime: #6BCB77;
+    --main-purple: #C084FC;
+    --main-foreground: #000000;
+    
+    --background: #18181B;
+    --foreground: #FAFAFA;
+    
+    --secondary-background: #27272A;
+    --muted-background: #3F3F46;
+    --card-background: #27272A;
+    
+    --border: #FAFAFA;
+    --shadow-color: #FAFAFA;
+  }
+}
+
+html,
+body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+code, kbd, samp, pre, .font-mono {
+  font-family: var(--font-jetbrains-mono), var(--font-space-mono), ui-monospace, monospace;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-space-grotesk), var(--font-jetbrains-mono), system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+/* Custom Neobrutalism Utilities */
+.neo-border {
+  border: 3px solid var(--border);
+}
+
+.neo-border-2 {
+  border: 2px solid var(--border);
+}
+
+.neo-border-4 {
+  border: 4px solid var(--border);
+}
+
+.neo-shadow {
+  box-shadow: 4px 4px 0px 0px var(--shadow-color);
+}
+
+.neo-shadow-sm {
+  box-shadow: 2px 2px 0px 0px var(--shadow-color);
+}
+
+.neo-shadow-lg {
+  box-shadow: 8px 8px 0px 0px var(--shadow-color);
+}
+
+.neo-shadow-coral {
+  box-shadow: 5px 5px 0px 0px #FF6B6B;
+}
+
+.neo-shadow-cyan {
+  box-shadow: 5px 5px 0px 0px #4D96FF;
+}
+
+.neo-shadow-lime {
+  box-shadow: 5px 5px 0px 0px #6BCB77;
+}
+
+.neo-shadow-purple {
+  box-shadow: 5px 5px 0px 0px #C084FC;
+}
+
+/* Interactive Tactile Hover States */
+.neo-btn {
+  border: 3px solid var(--border);
+  box-shadow: 4px 4px 0px 0px var(--shadow-color);
+  transition: all 0.1s ease-in-out;
+  font-weight: 700;
+  border-radius: var(--border-radius);
+}
+
+.neo-btn:hover:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0px 0px var(--shadow-color);
+}
+
+.neo-btn:active:not(:disabled) {
+  transform: translate(4px, 4px);
+  box-shadow: 0px 0px 0px 0px var(--shadow-color);
+}
+
+.neo-card {
+  border: 3px solid var(--border);
+  box-shadow: 6px 6px 0px 0px var(--shadow-color);
+  background-color: var(--card-background);
+  border-radius: var(--border-radius);
+}
+
+.neo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border: 2px solid var(--border);
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 4px;
+  box-shadow: 2px 2px 0px 0px var(--shadow-color);
+}
+
+/* Tape and Forensic Stamp effects */
+.forensic-tape {
+  position: relative;
+  background: repeating-linear-gradient(
+    -45deg,
+    #FFDC58,
+    #FFDC58 10px,
+    #121212 10px,
+    #121212 20px
+  );
+  color: #121212;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.stamp-classified {
+  border: 3px dashed #FF6B6B;
+  color: #FF6B6B;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  transform: rotate(-3deg);
+  display: inline-block;
+  padding: 2px 8px;
+}
+
+.stamp-verdict {
+  border: 4px solid #121212;
+  background-color: #FF6B6B;
+  color: #FFFFFF;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transform: rotate(4deg);
+  display: inline-block;
+  padding: 4px 12px;
+  box-shadow: 3px 3px 0px 0px #000;
+}
+
+/* Fine & ultra-faint background grid texture (12px micro-grid) */
+.bg-grid-pattern {
+  background-size: 12px 12px;
+  background-image: 
+    linear-gradient(to right, rgba(0, 0, 0, 0.025) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.025) 1px, transparent 1px);
+}
+
+.dark .bg-grid-pattern {
+  background-image: 
+    linear-gradient(to right, rgba(250, 250, 250, 0.025) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(250, 250, 250, 0.025) 1px, transparent 1px);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--muted-background);
+  border: 2px solid var(--border);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--main);
+  border: 2px solid var(--border);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--main-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

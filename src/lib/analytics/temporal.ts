@@ -1,0 +1,136 @@
+import { ForensicCommit } from "@/types/domain";
+
+export interface TemporalAnalytics {
+  activeStreakDays: number;
+  longestStreakDays: number;
+  totalActiveDays: number;
+  busiestHour: number; // 0 - 23
+  busiestWeekday: string;
+  busiestMonth: string;
+  commitsByHour: number[]; // 24 items
+  commitsByWeekday: number[]; // 7 items (0 = Sun .. 6 = Sat)
+  commitsByMonth: { month: string; count: number; additions: number; deletions: number }[];
+  heatmapCalendar: { date: string; count: number; additions: number; deletions: number }[];
+  nightCommitPercentage: number; // 9 PM - 4 AM
+  weekendCommitPercentage: number; // Sat + Sun
+}
+
+export function calculateTemporalAnalytics(commits: ForensicCommit[]): TemporalAnalytics {
+  const hourCounts = new Array(24).fill(0);
+  const weekdayCounts = new Array(7).fill(0);
+  const monthMap = new Map<string, { count: number; additions: number; deletions: number }>();
+  const dateMap = new Map<string, { count: number; additions: number; deletions: number }>();
+
+  let nightCommits = 0;
+  let weekendCommits = 0;
+
+  for (const c of commits) {
+    const d = new Date(c.authorDate);
+    const hour = d.getUTCHours();
+    const weekday = d.getUTCDay();
+    const dateStr = d.toISOString().slice(0, 10);
+    const monthStr = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+
+    hourCounts[hour]++;
+    weekdayCounts[weekday]++;
+
+    if (hour >= 21 || hour <= 4) {
+      nightCommits++;
+    }
+    if (weekday === 0 || weekday === 6) {
+      weekendCommits++;
+    }
+
+    const m = monthMap.get(monthStr) || { count: 0, additions: 0, deletions: 0 };
+    m.count++;
+    m.additions += c.additions;
+    m.deletions += c.deletions;
+    monthMap.set(monthStr, m);
+
+    const day = dateMap.get(dateStr) || { count: 0, additions: 0, deletions: 0 };
+    day.count++;
+    day.additions += c.additions;
+    day.deletions += c.deletions;
+    dateMap.set(dateStr, day);
+  }
+
+  // Calculate Streaks
+  const uniqueDatesSorted = Array.from(dateMap.keys()).sort();
+  let longestStreak = 0;
+  let currentRunningStreak = 0;
+  let activeStreak = 0;
+
+  if (uniqueDatesSorted.length > 0) {
+    let prevEpochDays: number | null = null;
+
+    for (let i = 0; i < uniqueDatesSorted.length; i++) {
+      const parts = uniqueDatesSorted[i].split("-").map(Number);
+      const epochDay = Math.floor(Date.UTC(parts[0], parts[1] - 1, parts[2]) / (1000 * 60 * 60 * 24));
+
+      if (prevEpochDays === null || epochDay === prevEpochDays + 1) {
+        currentRunningStreak++;
+      } else {
+        currentRunningStreak = 1;
+      }
+      longestStreak = Math.max(longestStreak, currentRunningStreak);
+      prevEpochDays = epochDay;
+    }
+
+    // Active streak up to today/yesterday
+    const todayEpoch = Math.floor(Date.now() / (1000 * 60 * 60 * 24));
+    const lastCommitEpoch = prevEpochDays || 0;
+    if (todayEpoch - lastCommitEpoch <= 1) {
+      activeStreak = currentRunningStreak;
+    }
+  }
+
+  // Busiest determinations
+  let maxHour = 0;
+  let maxHourCount = -1;
+  hourCounts.forEach((cnt, hr) => {
+    if (cnt > maxHourCount) {
+      maxHourCount = cnt;
+      maxHour = hr;
+    }
+  });
+
+  const weekdayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  let maxWeekdayIdx = 0;
+  let maxWeekdayCount = -1;
+  weekdayCounts.forEach((cnt, idx) => {
+    if (cnt > maxWeekdayCount) {
+      maxWeekdayCount = cnt;
+      maxWeekdayIdx = idx;
+    }
+  });
+
+  let busiestMonth = "N/A";
+  let maxMonthCount = -1;
+  monthMap.forEach((val, m) => {
+    if (val.count > maxMonthCount) {
+      maxMonthCount = val.count;
+      busiestMonth = m;
+    }
+  });
+
+  const total = Math.max(1, commits.length);
+
+  return {
+    activeStreakDays: activeStreak,
+    longestStreakDays: longestStreak,
+    totalActiveDays: uniqueDatesSorted.length,
+    busiestHour: maxHour,
+    busiestWeekday: weekdayNames[maxWeekdayIdx],
+    busiestMonth,
+    commitsByHour: hourCounts,
+    commitsByWeekday: weekdayCounts,
+    commitsByMonth: Array.from(monthMap.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([month, data]) => ({ month, ...data })),
+    heatmapCalendar: Array.from(dateMap.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([date, data]) => ({ date, ...data })),
+    nightCommitPercentage: Math.round((nightCommits / total) * 100),
+    weekendCommitPercentage: Math.round((weekendCommits / total) * 100),
+  };
+}

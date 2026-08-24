@@ -1,0 +1,259 @@
+"use client";
+
+import React from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { motion } from "framer-motion";
+import {
+  ArrowRight,
+  Lock,
+  Clock,
+  FileCode2,
+  Scale,
+  Sparkles,
+} from "lucide-react";
+import { useAuthStore } from "@/lib/store/authStore";
+import { useAutopsyStore } from "@/lib/store/autopsyStore";
+
+export default function LandingPage() {
+  const { isAuthenticated } = useAuthStore();
+  const { currentAnalysis } = useAutopsyStore();
+
+  const handleScrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
+    e.preventDefault();
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-14 py-6 max-w-6xl mx-auto text-black">
+      {/* ------------------- SECTION 1: HERO ------------------- */}
+      <section id="hero" className="flex flex-col items-center text-center pt-8 pb-4">
+        {/* Headline */}
+        <motion.h1
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className="text-4xl sm:text-6xl lg:text-7xl font-black uppercase tracking-tight max-w-5xl leading-[1.05] mb-6"
+        >
+          Your GitHub,{" "}
+          <motion.span
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.15, duration: 0.4 }}
+            className="bg-[#FFDC58] text-black px-4 py-1 border-[3px] border-black shadow-[4px_4px_0_0_#000] inline-block my-1 rounded-2xl"
+          >
+            forensically examined.
+          </motion.span>
+        </motion.h1>
+
+        {/* Subheadline */}
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className="text-base sm:text-xl font-semibold text-gray-800 max-w-3xl leading-relaxed mb-8"
+        >
+          Gitopsy puts your entire version control history under a clinical microscope. We audit 24-hour UTC habits, code churn blast radius, commit genetics, and developer classifications—with serious data, deterministic math, and ridiculous presentation.
+        </motion.p>
+
+        {/* CTAs */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+          className="flex flex-wrap items-center justify-center gap-4 mb-4"
+        >
+          {isAuthenticated ? (
+            <Link
+              href="/autopsy"
+              className="bg-[#FFDC58] text-black border-[3px] border-black px-8 py-4 text-sm font-black uppercase shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all flex items-center gap-2.5 rounded-2xl"
+            >
+              <span>Visit Your Autopsy</span>
+              <ArrowRight className="size-5 stroke-[3]" />
+            </Link>
+          ) : (
+            <Link
+              href="/api/auth/login"
+              className="bg-[#FFDC58] text-black border-[3px] border-black px-8 py-4 text-sm font-black uppercase shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all flex items-center gap-2.5 rounded-2xl"
+            >
+              <Lock className="size-5" />
+              <span>Connect GitHub (PKCE)</span>
+              <ArrowRight className="size-5 stroke-[3]" />
+            </Link>
+          )}
+        </motion.div>
+      </section>
+
+      {/* ------------------- SECTION 2: HOW IT WORKS ------------------- */}
+      <motion.section
+        id="how-it-works"
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-80px" }}
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        className="max-w-6xl mx-auto w-full"
+      >
+        <div className="text-center mb-8">
+          <h2 className="text-2xl sm:text-4xl font-black uppercase tracking-tight">How It Works</h2>
+          <p className="text-xs sm:text-sm text-gray-700 font-bold max-w-xl mx-auto mt-2">
+            Three simple steps from repository history to a complete forensic autopsy.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Step 1 */}
+          <div className="group bg-white border-[3px] border-black p-6 shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150 rounded-3xl cursor-default">
+            <div className="flex items-center gap-2.5 mb-3">
+              <span className="text-xl font-mono font-black text-[#CA8A04] shrink-0">
+                01
+              </span>
+              <h3 className="text-base sm:text-lg font-black uppercase">
+                Authorize
+              </h3>
+            </div>
+            <p className="text-xs text-gray-700 font-semibold leading-relaxed">
+              Connect your account via read-only GitHub OAuth. No passwords, zero write permissions, and no repository code ever leaves your browser.
+            </p>
+          </div>
+
+          {/* Step 2 */}
+          <div className="group bg-white border-[3px] border-black p-6 shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150 rounded-3xl cursor-default">
+            <div className="flex items-center gap-2.5 mb-3">
+              <span className="text-xl font-mono font-black text-[#DC2626] shrink-0">
+                02
+              </span>
+              <h3 className="text-base sm:text-lg font-black uppercase">
+                Forensic Audit
+              </h3>
+            </div>
+            <p className="text-xs text-gray-700 font-semibold leading-relaxed">
+              A background Web Worker processes commit logs, code churn diffs, author timestamps, and message syntax at 60fps without UI lag.
+            </p>
+          </div>
+
+          {/* Step 3 */}
+          <div className="group bg-white border-[3px] border-black p-6 shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150 rounded-3xl cursor-default">
+            <div className="flex items-center gap-2.5 mb-3">
+              <span className="text-xl font-mono font-black text-[#2563EB] shrink-0">
+                03
+              </span>
+              <h3 className="text-base sm:text-lg font-black uppercase">
+                Autopsy Dossier
+              </h3>
+            </div>
+            <p className="text-xs text-gray-700 font-semibold leading-relaxed">
+              Explore your developer archetype, repository awards (*The Workhorse*, *The Monolith*), interactive courtroom trial, and Wrapped recap.
+            </p>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* ------------------- SECTION 3: FEATURE SPECIFICATIONS ------------------- */}
+      <motion.section
+        id="features"
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-80px" }}
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        className="max-w-6xl mx-auto w-full"
+      >
+        <div className="text-center mb-8">
+          <h2 className="text-2xl sm:text-4xl font-black uppercase tracking-tight">Forensic Specifications</h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Feature 1 */}
+          <div className="group bg-white border-[3px] border-black p-6 shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150 rounded-3xl cursor-default">
+            <div className="flex items-center gap-2.5 mb-3">
+              <Clock className="size-5 sm:size-6 text-[#CA8A04] group-hover:scale-110 transition-transform shrink-0 stroke-[2.5]" />
+              <h3 className="text-lg font-black uppercase">24-Hour Temporal Forensics</h3>
+            </div>
+            <p className="text-xs text-gray-700 font-semibold leading-relaxed">
+              24-hour UTC clocks, weekday cadence matrices, consecutive streaks, and nocturnal ratios calculated from true author commit timestamps.
+            </p>
+          </div>
+
+          {/* Feature 2 */}
+          <div className="group bg-white border-[3px] border-black p-6 shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150 rounded-3xl cursor-default">
+            <div className="flex items-center gap-2.5 mb-3">
+              <FileCode2 className="size-5 sm:size-6 text-[#2563EB] group-hover:scale-110 transition-transform shrink-0 stroke-[2.5]" />
+              <h3 className="text-lg font-black uppercase">Commit Forensics &amp; Churn</h3>
+            </div>
+            <p className="text-xs text-gray-700 font-semibold leading-relaxed">
+              Regex message intent categorization (`feat`, `fix`, `refactor`, `chore`), size spectrum distributions, and monthly code churn blast radius.
+            </p>
+          </div>
+
+          {/* Feature 3 */}
+          <div className="group bg-white border-[3px] border-black p-6 shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150 rounded-3xl cursor-default">
+            <div className="flex items-center gap-2.5 mb-3">
+              <Scale className="size-5 sm:size-6 text-[#16A34A] group-hover:scale-110 transition-transform shrink-0 stroke-[2.5]" />
+              <h3 className="text-lg font-black uppercase">The Gitopsy Courtroom</h3>
+            </div>
+            <p className="text-xs text-gray-700 font-semibold leading-relaxed">
+              An interactive trial simulation (&ldquo;The People vs @username&rdquo;) charging you with verified crimes against sleep and git hygiene.
+            </p>
+          </div>
+
+          {/* Feature 4 */}
+          <div className="group bg-white border-[3px] border-black p-6 shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150 rounded-3xl cursor-default">
+            <div className="flex items-center gap-2.5 mb-3">
+              <Sparkles className="size-5 sm:size-6 text-[#9333EA] group-hover:scale-110 transition-transform shrink-0 stroke-[2.5]" />
+              <h3 className="text-lg font-black uppercase">15-Chapter Gitopsy Wrapped</h3>
+            </div>
+            <p className="text-xs text-gray-700 font-semibold leading-relaxed">
+              A full-screen audiovisual narrative journey celebrating your annual/lifetime records, primary specimen, and developer diagnosis with confetti.
+            </p>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* ------------------- FOOTER ------------------- */}
+      <footer className="max-w-5xl mx-auto w-full text-center mt-6">
+        <div className="pt-6 border-t-2 border-black/20 flex flex-col sm:flex-row items-center justify-between text-xs font-bold uppercase text-gray-700 gap-4">
+          <div className="flex items-center gap-2">
+            <div className="relative size-5 shrink-0">
+              <Image
+                src="/gitopsy-logo.png"
+                alt="Gitopsy Logo"
+                width={20}
+                height={20}
+                className="object-contain"
+              />
+            </div>
+            <span>© Gitopsy 2026</span>
+            <span className="text-black/40">•</span>
+            <a
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-black transition-colors flex items-center gap-1.5 hover:underline"
+              title="GitHub Repository"
+            >
+              <svg className="size-4 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                  d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+                />
+              </svg>
+              <span>GitHub</span>
+            </a>
+          </div>
+          <div className="flex items-center gap-4">
+            <a
+              href="#hero"
+              onClick={(e) => handleScrollToSection(e, "hero")}
+              className="hover:underline hover:text-black transition-colors"
+            >
+              Back to top ↑
+            </a>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
