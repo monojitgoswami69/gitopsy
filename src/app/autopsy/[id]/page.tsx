@@ -437,7 +437,7 @@ export default function AutopsyReportDetailPage() {
           )}
 
         {/* 02. Contribution Activity & Heatmap */}
-        <div id="section-activity" className="border-[4px] border-black bg-white rounded-[12px] p-5 shadow-[6px_6px_0_0_#000] flex flex-col gap-2.5 text-black">
+        <div id="section-activity" className="border-[4px] border-black bg-white rounded-[12px] p-5 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-2.5 text-black">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b-[3px] border-black pb-3">
             <div>
               <div className="flex items-center gap-2">
@@ -494,7 +494,7 @@ export default function AutopsyReportDetailPage() {
         </div>
 
         {/* 03. Temporal Forensics */}
-        <div id="section-temporal" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[8px_8px_0_0_#000] flex flex-col gap-6 text-black">
+        <div id="section-temporal" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-6 text-black">
           <div className="flex items-center justify-between border-b-[3px] border-black pb-4">
             <div>
               <div className="flex items-center gap-2">
@@ -510,25 +510,25 @@ export default function AutopsyReportDetailPage() {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="border-[2px] border-black bg-amber-50 p-3 rounded">
+            <div className="border-[2px] border-black bg-amber-50 p-3 rounded-[6px] text-center">
               <span className="text-[10px] font-black uppercase text-gray-500">NOCTURNAL RATIO (21:00-04:59 {tzAbbr})</span>
               <div className="text-2xl font-black font-mono mt-1 text-purple-700">
                 {analysis.summary.nightCommitPercentage}%
               </div>
             </div>
-            <div className="border-[2px] border-black bg-amber-50 p-3 rounded">
+            <div className="border-[2px] border-black bg-amber-50 p-3 rounded-[6px] text-center">
               <span className="text-[10px] font-black uppercase text-gray-500">WEEKEND CADENCE (SAT &amp; SUN)</span>
               <div className="text-2xl font-black font-mono mt-1 text-blue-700">
                 {analysis.summary.weekendCommitPercentage}%
               </div>
             </div>
-            <div className="border-[2px] border-black bg-amber-50 p-3 rounded">
+            <div className="border-[2px] border-black bg-amber-50 p-3 rounded-[6px] text-center">
               <span className="text-[10px] font-black uppercase text-gray-500">LONGEST STREAK</span>
               <div className="text-2xl font-black font-mono mt-1 text-amber-600">
                 {analysis.summary.longestStreakDays} DAYS
               </div>
             </div>
-            <div className="border-[2px] border-black bg-amber-50 p-3 rounded">
+            <div className="border-[2px] border-black bg-amber-50 p-3 rounded-[6px] text-center">
               <span className="text-[10px] font-black uppercase text-gray-500">TOTAL ACTIVE DAYS</span>
               <div className="text-2xl font-black font-mono mt-1 text-emerald-700">
                 {analysis.summary.totalActiveDays} DAYS
@@ -550,7 +550,7 @@ export default function AutopsyReportDetailPage() {
         />
 
         {/* 06. Language DNA & Dialects */}
-        <div id="section-languages" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[8px_8px_0_0_#000] flex flex-col gap-6 text-black">
+        <div id="section-languages" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-6 text-black">
           <div className="flex items-center justify-between border-b-[3px] border-black pb-4">
             <div>
               <div className="flex items-center gap-2">
@@ -593,11 +593,6 @@ export default function AutopsyReportDetailPage() {
                         <span className="font-black text-xs sm:text-[13px] uppercase text-black tracking-tight truncate">
                           {lang.name}
                         </span>
-                        {lang.isFunctional === false && (
-                          <span className="text-[8px] font-mono font-bold text-gray-500 bg-gray-100 px-1 rounded border border-gray-300 shrink-0">
-                            DOC
-                          </span>
-                        )}
                       </div>
 
                       <span className="font-mono font-black text-xs sm:text-[13px] text-black shrink-0 pl-1.5">
@@ -630,7 +625,7 @@ export default function AutopsyReportDetailPage() {
         <CommitForensicsSection commitForensics={analysis.commitForensics} />
 
         {/* 08. Code Churn Blast Radius */}
-        <div id="section-churn" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[8px_8px_0_0_#000] flex flex-col gap-6 text-black">
+        <div id="section-churn" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-6 text-black">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b-[3px] border-black pb-4">
             <div>
               <div className="flex items-center gap-2">
@@ -656,7 +651,7 @@ export default function AutopsyReportDetailPage() {
         </div>
 
         {/* 09. Collaboration Record */}
-        <div id="section-collaboration" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[8px_8px_0_0_#000] flex flex-col gap-6 text-black">
+        <div id="section-collaboration" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-6 text-black">
           <div className="flex items-center justify-between border-b-[3px] border-black pb-4">
             <div>
               <div className="flex items-center gap-2">
@@ -710,7 +705,7 @@ export default function AutopsyReportDetailPage() {
         <ClassificationsSection classifications={analysis.classifications} />
 
         {/* 11. Verified Findings */}
-        <div id="section-findings" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[8px_8px_0_0_#000] flex flex-col gap-6 text-black">
+        <div id="section-findings" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-6 text-black">
           <div className="flex items-center justify-between border-b-[3px] border-black pb-4">
             <div>
               <div className="flex items-center gap-2">
@@ -755,7 +750,7 @@ export default function AutopsyReportDetailPage() {
 
         {/* 13. Special Findings & Case Notes */}
         {analysis.easterEggs.length > 0 && (
-          <div id="section-case-notes" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[8px_8px_0_0_#000] flex flex-col gap-6 text-black">
+          <div id="section-case-notes" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-6 text-black">
             <div className="flex items-center justify-between border-b-[3px] border-black pb-4">
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
@@ -791,7 +786,7 @@ export default function AutopsyReportDetailPage() {
         )}
 
         {/* 14. Wrapped Recap & Launcher */}
-        <div id="section-wrapped" className="border-[4px] border-black bg-[#FFDC58] rounded-[12px] p-6 shadow-[8px_8px_0_0_#000] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 text-black">
+        <div id="section-wrapped" className="border-[4px] border-black bg-[#FFDC58] rounded-[12px] p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 text-black">
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
               <Badge variant="coral">EXAMINATION SUMMARY</Badge>

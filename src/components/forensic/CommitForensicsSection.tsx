@@ -33,7 +33,7 @@ export function CommitForensicsSection({ commitForensics }: CommitForensicsSecti
 
   return (
     <div id="section-commits" className="flex flex-col gap-8">
-      <div className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[8px_8px_0_0_#000] flex flex-col gap-6 text-black">
+      <div className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-6 text-black">
         <div className="flex items-center justify-between border-b-[3px] border-black pb-4">
           <div>
             <h2 className="text-xl font-black uppercase tracking-tight flex items-center gap-2">

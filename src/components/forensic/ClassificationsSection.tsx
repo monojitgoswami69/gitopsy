@@ -33,7 +33,7 @@ export function ClassificationsSection({ classifications }: ClassificationsSecti
           return (
             <div
               key={arch.id}
-              className={`border-[4px] border-black rounded-[12px] p-6 shadow-[6px_6px_0_0_#000] flex flex-col justify-between gap-5 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] active:translate-x-[6px] active:translate-y-[6px] active:shadow-none transition-all duration-150 ${
+              className={`border-[4px] border-black rounded-[12px] p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col justify-between gap-5 hover:translate-x-[1.5px] hover:translate-y-[1.5px] hover:shadow-[2px_2px_0_0_#000] active:translate-x-[3.5px] active:translate-y-[3.5px] active:shadow-none transition-all duration-150 ${
                 allSatisfied ? "bg-white" : "bg-gray-50/70 opacity-75"
               }`}
             >

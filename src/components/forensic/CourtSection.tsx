@@ -12,7 +12,7 @@ interface CourtSectionProps {
 
 export function CourtSection({ charges, defendantLogin }: CourtSectionProps) {
   return (
-    <div id="section-court" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[8px_8px_0_0_#000] flex flex-col gap-6 text-black">
+    <div id="section-court" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-6 text-black">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b-[3px] border-black pb-4">
         <div>
           <div className="flex items-center gap-2">

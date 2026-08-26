@@ -58,7 +58,7 @@ export default function RepositoryAutopsyPage({
       </div>
 
       {/* Header Banner */}
-      <div className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[8px_8px_0_0_#000] flex flex-col md:flex-row items-start md:items-center justify-between gap-6 text-black">
+      <div className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col md:flex-row items-start md:items-center justify-between gap-6 text-black">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 flex-wrap">
             <Badge variant="purple">SPECIMEN DOSSIER</Badge>
@@ -92,21 +92,21 @@ export default function RepositoryAutopsyPage({
 
       {/* Activity Overview Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="border-[3px] border-black bg-white p-4 rounded-[10px] shadow-[4px_4px_0_0_#000]">
+        <div className="border-[3px] border-black bg-white p-4 rounded-[10px] shadow-[3px_3px_0_0_#000]">
           <span className="text-[10px] font-black uppercase text-gray-500">ANALYZED COMMITS</span>
           <div className="text-2xl font-black font-mono mt-1 text-black">{specimen.commitCount}</div>
         </div>
-        <div className="border-[3px] border-black bg-white p-4 rounded-[10px] shadow-[4px_4px_0_0_#000]">
+        <div className="border-[3px] border-black bg-white p-4 rounded-[10px] shadow-[3px_3px_0_0_#000]">
           <span className="text-[10px] font-black uppercase text-gray-500">NET CHANGE</span>
           <div className="text-2xl font-black font-mono mt-1 text-emerald-700">
             {specimen.netLines >= 0 ? "+" : ""}{specimen.netLines.toLocaleString()}
           </div>
         </div>
-        <div className="border-[3px] border-black bg-white p-4 rounded-[10px] shadow-[4px_4px_0_0_#000]">
+        <div className="border-[3px] border-black bg-white p-4 rounded-[10px] shadow-[3px_3px_0_0_#000]">
           <span className="text-[10px] font-black uppercase text-gray-500">ACTIVITY SPAN</span>
           <div className="text-2xl font-black font-mono mt-1 text-blue-700">{specimen.activitySpanDays} DAYS</div>
         </div>
-        <div className="border-[3px] border-black bg-white p-4 rounded-[10px] shadow-[4px_4px_0_0_#000]">
+        <div className="border-[3px] border-black bg-white p-4 rounded-[10px] shadow-[3px_3px_0_0_#000]">
           <span className="text-[10px] font-black uppercase text-gray-500">STATUS</span>
           <div className="text-base font-black uppercase mt-2">
             <Badge variant={isDormant ? "coral" : "lime"}>
@@ -118,7 +118,7 @@ export default function RepositoryAutopsyPage({
 
       {/* Language Breakdown */}
       {specimen.languages.length > 0 && (
-        <div className="border-[3px] border-black bg-white rounded-[10px] p-6 shadow-[6px_6px_0_0_#000] flex flex-col gap-4 text-black">
+        <div className="border-[3px] border-black bg-white rounded-[10px] p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-4 text-black">
           <h3 className="text-base font-black uppercase tracking-tight">
             REPORTED LANGUAGE BYTES IN REPOSITORY
           </h3>

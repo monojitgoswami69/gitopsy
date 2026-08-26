@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { EChartContainer } from "./EChartContainer";
 import type { EChartsOption } from "echarts";
+import type * as echarts from "echarts";
 
 export interface HeatmapDataPoint {
   date: string;
@@ -19,6 +20,93 @@ export function HeatmapChart({
   data: HeatmapDataPoint[];
   metricLabel?: string;
 }) {
+  const [lockedIndex, setLockedIndex] = useState<number | null>(null);
+  const lockedIndexRef = useRef<number | null>(null);
+  lockedIndexRef.current = lockedIndex;
+
+  const chartInstanceRef = useRef<echarts.ECharts | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const isLockingJustNowRef = useRef(false);
+
+  // Surgically toggle tooltip tracking and focus-dimming on the live instance.
+  // This does NOT rebuild chart options — the tooltip stays exactly where it is.
+  const freezeTooltip = useCallback((index: number) => {
+    const instance = chartInstanceRef.current;
+    if (!instance || instance.isDisposed()) return;
+    instance.setOption({
+      tooltip: { triggerOn: "none", alwaysShowContent: true },
+      series: [
+        {
+          emphasis: {
+            focus: "self",
+            itemStyle: {
+              borderColor: "#000000",
+              borderWidth: 2,
+              opacity: 1,
+            },
+          },
+        },
+      ],
+    });
+    instance.dispatchAction({ type: "highlight", seriesIndex: 0, dataIndex: index });
+    instance.dispatchAction({ type: "showTip", seriesIndex: 0, dataIndex: index });
+  }, []);
+
+  const unfreezeTooltip = useCallback(() => {
+    const instance = chartInstanceRef.current;
+    if (!instance || instance.isDisposed()) return;
+    instance.setOption({
+      tooltip: { triggerOn: "mousemove", alwaysShowContent: false },
+      series: [
+        {
+          emphasis: {
+            focus: "none",
+            itemStyle: {
+              borderColor: "#000000",
+              borderWidth: 1.5,
+              opacity: 0.85,
+            },
+          },
+        },
+      ],
+    });
+    instance.dispatchAction({ type: "downplay" });
+    instance.dispatchAction({ type: "hideTip" });
+    instance.dispatchAction({ type: "updateAxisPointer", currTrigger: "leave" });
+
+    // Safety RAF to guarantee tooltip DOM element is dismissed immediately on outside clicks
+    requestAnimationFrame(() => {
+      if (!instance || instance.isDisposed()) return;
+      instance.dispatchAction({ type: "hideTip" });
+      instance.dispatchAction({ type: "downplay" });
+    });
+  }, []);
+
+  // When lockedIndex changes, freeze or unfreeze — nothing else
+  useEffect(() => {
+    if (lockedIndex !== null) {
+      freezeTooltip(lockedIndex);
+    } else {
+      unfreezeTooltip();
+    }
+  }, [lockedIndex, freezeTooltip, unfreezeTooltip]);
+
+  // Release locking when clicking anywhere outside the chart container
+  useEffect(() => {
+    if (lockedIndex === null) return;
+
+    function handleOutsideClick(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setLockedIndex(null);
+      }
+    }
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, [lockedIndex]);
+
   const dataMap = useMemo(() => {
     const map = new Map<string, HeatmapDataPoint>();
     for (const d of data) {
@@ -27,6 +115,7 @@ export function HeatmapChart({
     return map;
   }, [data]);
 
+  // Chart options are ONLY rebuilt when data, dataMap or metricLabel change — never on lock/unlock
   const chartOptions: EChartsOption = useMemo(() => {
     if (!data || data.length === 0) {
       return {
@@ -71,13 +160,15 @@ export function HeatmapChart({
     const q3 = Math.max(q2 + 1, Math.round(maxVal * 0.75));
 
     return {
+      animationDurationUpdate: 0,
       visualMap: {
         show: true,
         type: "piecewise",
         dimension: 1, // Explicitly map numeric count (index 1 in [date, count])
         orient: "horizontal",
         left: "center",
-        bottom: 0,
+        bottom: 2,
+        padding: 0,
         itemWidth: 10,
         itemHeight: 10,
         itemGap: 14,
@@ -99,7 +190,7 @@ export function HeatmapChart({
         },
       },
       calendar: {
-        top: 24,
+        top: 22,
         left: 36,
         right: 16,
         cellSize: ["auto", 12.5],
@@ -127,46 +218,170 @@ export function HeatmapChart({
           type: "heatmap",
           coordinateSystem: "calendar",
           data: formattedData,
+          cursor: "pointer",
+          emphasis: {
+            focus: "none",
+            itemStyle: {
+              borderColor: "#000000",
+              borderWidth: 1.5,
+              opacity: 0.85,
+            },
+          },
+          blur: {
+            itemStyle: {
+              opacity: 0.58,
+            },
+          },
         },
       ],
       tooltip: {
-        backgroundColor: "#FFFFFF",
-        borderColor: "#000000",
-        borderWidth: 1.5,
-        extraCssText: "border-radius: 6px; padding: 7px 11px;",
+        show: true,
+        trigger: "item",
+        triggerOn: "mousemove",
+        alwaysShowContent: false,
+        confine: false,
+        appendTo: "body",
+        transitionDuration: 0,
+        position: (point: any, params: any, el: any, rect: any, size: any) => {
+          const contentW = size?.contentSize?.[0] || 230;
+          const contentH = size?.contentSize?.[1] || 110;
+          const viewW = size?.viewSize?.[0] || 800;
+
+          const targetX = rect && typeof rect.x === "number" ? rect.x : point[0];
+          const targetW = rect && typeof rect.width === "number" ? rect.width : 12.5;
+          const targetY = rect && typeof rect.y === "number" ? rect.y : point[1];
+          const targetH = rect && typeof rect.height === "number" ? rect.height : 12.5;
+
+          // 10.5px gap from cell to card edge gives a clear 2.5-3px gap to the arrow tip
+          let x = targetX + targetW + 10.5;
+
+          // If placing to the right would overflow, place to the left instead
+          if (x + contentW > viewW - 4) {
+            x = targetX - contentW - 10.5;
+          }
+
+          x = Math.max(4, Math.min(viewW - contentW - 4, x));
+
+          // Align vertically with the center of the cell
+          const y = targetY + targetH / 2 - contentH / 2;
+
+          return [x, y];
+        },
+        backgroundColor: "transparent",
+        borderColor: "transparent",
+        borderWidth: 0,
+        extraCssText: "background: transparent !important; border: none !important; padding: 0 !important; box-shadow: none !important; pointer-events: none;",
         textStyle: {
           color: "#000000",
           fontFamily: "monospace",
           fontSize: 11,
         },
         formatter: (params: any) => {
-          const [date, count] = params.value;
+          const [date, count] = params.value || [];
+          if (!date) return "";
           const entry = dataMap.get(date);
           const commits = entry?.commits ?? (metricLabel === "COMMITS" ? count : 0);
           const adds = entry?.additions ?? 0;
           const dels = entry?.deletions ?? 0;
-          const totalChurn = adds + dels;
+          const net = adds - dels;
+          const totalVolume = adds + dels;
+
+          const dateObj = new Date(date + "T00:00:00");
+          const humanDate = !isNaN(dateObj.getTime())
+            ? dateObj.toLocaleDateString("en-US", {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })
+            : date;
+
+          const isLeft = (typeof params.dataIndex === "number" && data.length > 0)
+            ? params.dataIndex >= data.length * 0.72
+            : false;
 
           return `
-            <div style="display:flex; flex-direction:column; gap:5px; min-width:210px;">
-              <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:1.5px solid #000; padding-bottom:3px; gap:8px;">
-                <span style="font-weight:900; font-size:12px; color:#000;">${date}</span>
-                <span style="font-size:10px; font-weight:800; color:#4B5563; font-family:monospace;">${commits} ${commits === 1 ? "commit" : "commits"}</span>
-              </div>
-              <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:11px;">
-                <span style="color:#4B5563; font-weight:700;">Gross Churn:</span>
-                <strong style="color:#000;">${totalChurn.toLocaleString()} lines</strong>
-              </div>
-              <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:10.5px; font-family:monospace; background:#F8FAFC; padding:2px 6px; border-radius:4px; border:1px solid #E2E8F0;">
-                <span style="color:#059669; font-weight:800;">+${adds.toLocaleString()} added</span>
-                <span style="color:#DC2626; font-weight:800;">-${dels.toLocaleString()} deleted</span>
+            <div style="position:relative; background:#FFFFFF; border:1.5px solid #000000; border-radius:6px; padding:7px 11px; font-family:monospace; min-width:210px; box-shadow:3px 3px 0 0 rgba(0,0,0,0.15);">
+              ${isLeft ? `
+                <div style="position:absolute; right:-6px; top:50%; width:10px; height:10px; background:#FFFFFF; border-top:1.5px solid #000000; border-right:1.5px solid #000000; transform:translateY(-50%) rotate(45deg); z-index:10; box-sizing:border-box;"></div>
+              ` : `
+                <div style="position:absolute; left:-6px; top:50%; width:10px; height:10px; background:#FFFFFF; border-left:1.5px solid #000000; border-bottom:1.5px solid #000000; transform:translateY(-50%) rotate(45deg); z-index:10; box-sizing:border-box;"></div>
+              `}
+              <div style="display:flex; flex-direction:column; gap:5px; position:relative; z-index:1;">
+                <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:1.5px solid #000; padding-bottom:3px; gap:8px;">
+                  <span style="font-weight:900; font-size:12px; color:#000;">${humanDate}</span>
+                  <span style="font-size:10px; font-weight:800; color:#4B5563; font-family:monospace;">${commits} ${commits === 1 ? "commit" : "commits"}</span>
+                </div>
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:11px;">
+                  <span style="color:#4B5563; font-weight:700;">Net Growth:</span>
+                  <strong style="color:${net >= 0 ? "#16A34A" : "#DC2626"}; font-family:monospace;">
+                    ${net >= 0 ? "+" : ""}${net.toLocaleString()} lines
+                  </strong>
+                </div>
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:10.5px; font-family:monospace; background:#F8FAFC; padding:2px 6px; border-radius:4px; border:1px solid #E2E8F0;">
+                  <span style="color:#059669; font-weight:800;">+${adds.toLocaleString()} added</span>
+                  <span style="color:#DC2626; font-weight:800;">-${dels.toLocaleString()} deleted</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:9.5px; color:#64748B; font-family:monospace; padding-top:1px;">
+                  <span>Gross Volume:</span>
+                  <span>${totalVolume.toLocaleString()} lines</span>
+                </div>
               </div>
             </div>
           `;
         },
       },
     };
-  }, [data, dataMap, metricLabel]);
+  }, [data, dataMap, metricLabel]); // lockedIndex is NOT a dependency — locking never rebuilds options
 
-  return <EChartContainer options={chartOptions} height="144px" />;
+  return (
+    <div ref={containerRef} className="w-full flex flex-col items-center">
+      <EChartContainer
+        options={chartOptions}
+        height="136px"
+        onChartReady={(instance) => {
+          chartInstanceRef.current = instance;
+
+          instance.getZr().on("click", () => {
+            // If a day card is already persisted, any click strictly unpersists
+            if (lockedIndexRef.current !== null) {
+              setLockedIndex(null);
+              isLockingJustNowRef.current = true;
+              setTimeout(() => {
+                isLockingJustNowRef.current = false;
+              }, 0);
+            }
+          });
+
+          instance.on("click", (params: any) => {
+            if (isLockingJustNowRef.current) return;
+            if (params.componentType === "series" && typeof params.dataIndex === "number") {
+              setLockedIndex(params.dataIndex);
+            }
+          });
+
+          // Hold highlight and background dimming while a day is locked
+          instance.getZr().on("mousemove", () => {
+            if (lockedIndexRef.current !== null) {
+              instance.dispatchAction({
+                type: "highlight",
+                seriesIndex: 0,
+                dataIndex: lockedIndexRef.current,
+              });
+            }
+          });
+
+          instance.getZr().on("globalout", () => {
+            if (lockedIndexRef.current !== null) {
+              instance.dispatchAction({
+                type: "highlight",
+                seriesIndex: 0,
+                dataIndex: lockedIndexRef.current,
+              });
+            }
+          });
+        }}
+      />
+    </div>
+  );
 }

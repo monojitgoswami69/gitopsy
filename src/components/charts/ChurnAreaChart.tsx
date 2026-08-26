@@ -29,29 +29,85 @@ export function ChurnAreaChart({
 
   // Surgically toggle tooltip tracking on the live instance.
   // This does NOT rebuild chart options — the tooltip stays exactly where it is.
-  const freezeTooltip = useCallback(() => {
+  const freezeTooltip = useCallback((index?: number) => {
     const instance = chartInstanceRef.current;
-    if (!instance) return;
+    if (!instance || instance.isDisposed()) return;
     instance.setOption({
       tooltip: { triggerOn: "none", alwaysShowContent: true },
+      series: [
+        {
+          emphasis: {
+            focus: "series",
+            itemStyle: {
+              color: "#22C55E",
+              borderColor: "#000000",
+              borderWidth: 2,
+            },
+          },
+        },
+        {
+          emphasis: {
+            focus: "series",
+            itemStyle: {
+              color: "#EF4444",
+              borderColor: "#000000",
+              borderWidth: 2,
+            },
+          },
+        },
+      ],
     });
+    if (typeof index === "number") {
+      instance.dispatchAction({ type: "highlight", seriesIndex: 0, dataIndex: index });
+      instance.dispatchAction({ type: "highlight", seriesIndex: 1, dataIndex: index });
+      instance.dispatchAction({ type: "showTip", seriesIndex: 0, dataIndex: index });
+    }
   }, []);
 
   const unfreezeTooltip = useCallback(() => {
     const instance = chartInstanceRef.current;
-    if (!instance) return;
+    if (!instance || instance.isDisposed()) return;
     instance.setOption({
       tooltip: { triggerOn: "mousemove", alwaysShowContent: false },
+      series: [
+        {
+          emphasis: {
+            focus: "none",
+            itemStyle: {
+              color: "#22C55E",
+              borderColor: "#000000",
+              borderWidth: 2,
+            },
+          },
+        },
+        {
+          emphasis: {
+            focus: "none",
+            itemStyle: {
+              color: "#EF4444",
+              borderColor: "#000000",
+              borderWidth: 2,
+            },
+          },
+        },
+      ],
     });
+    instance.dispatchAction({ type: "downplay" });
     instance.dispatchAction({ type: "hideTip" });
     instance.dispatchAction({ type: "updateAxisPointer", currTrigger: "leave" });
-    instance.dispatchAction({ type: "downplay" });
+
+    // Safety RAF to guarantee tooltip DOM element is dismissed immediately on outside clicks
+    requestAnimationFrame(() => {
+      if (!instance || instance.isDisposed()) return;
+      instance.dispatchAction({ type: "hideTip" });
+      instance.dispatchAction({ type: "downplay" });
+    });
   }, []);
 
   // When lockedIndex changes, freeze or unfreeze — nothing else
   useEffect(() => {
     if (lockedIndex !== null) {
-      freezeTooltip();
+      freezeTooltip(lockedIndex);
     } else {
       unfreezeTooltip();
     }
@@ -209,10 +265,16 @@ export function ChurnAreaChart({
             borderRadius: [4, 4, 0, 0],
           },
           emphasis: {
+            focus: "none",
             itemStyle: {
               color: "#22C55E",
               borderColor: "#000000",
               borderWidth: 2,
+            },
+          },
+          blur: {
+            itemStyle: {
+              opacity: 0.58,
             },
           },
         },
@@ -231,10 +293,16 @@ export function ChurnAreaChart({
             borderRadius: [0, 0, 4, 4],
           },
           emphasis: {
+            focus: "none",
             itemStyle: {
               color: "#EF4444",
               borderColor: "#000000",
               borderWidth: 2,
+            },
+          },
+          blur: {
+            itemStyle: {
+              opacity: 0.58,
             },
           },
         },
@@ -284,6 +352,37 @@ export function ChurnAreaChart({
               }
             }
             setLockedIndex(null);
+          });
+
+          // Hold highlight and background dimming while a bar column is locked
+          instance.getZr().on("mousemove", () => {
+            if (lockedIndexRef.current !== null) {
+              instance.dispatchAction({
+                type: "highlight",
+                seriesIndex: 0,
+                dataIndex: lockedIndexRef.current,
+              });
+              instance.dispatchAction({
+                type: "highlight",
+                seriesIndex: 1,
+                dataIndex: lockedIndexRef.current,
+              });
+            }
+          });
+
+          instance.getZr().on("globalout", () => {
+            if (lockedIndexRef.current !== null) {
+              instance.dispatchAction({
+                type: "highlight",
+                seriesIndex: 0,
+                dataIndex: lockedIndexRef.current,
+              });
+              instance.dispatchAction({
+                type: "highlight",
+                seriesIndex: 1,
+                dataIndex: lockedIndexRef.current,
+              });
+            }
           });
         }}
       />
