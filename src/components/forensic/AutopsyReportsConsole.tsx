@@ -138,7 +138,7 @@ export function AutopsyReportsConsole({
       ) : (
         <div className="grid grid-cols-1 gap-3.5">
           {reports.map((r) => {
-            const examinedDate = new Date(r.generatedAt).toLocaleString("en-US", {
+            const examinedDate = new Date(r.generatedAt).toLocaleString(undefined, {
               month: "short",
               day: "numeric",
               year: "numeric",

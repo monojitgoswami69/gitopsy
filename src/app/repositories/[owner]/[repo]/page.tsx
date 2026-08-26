@@ -136,7 +136,7 @@ export default function RepositoryAutopsyPage({
                   </div>
                 </div>
                 <div className="font-mono font-black text-base bg-white px-2 py-0.5 border border-black rounded shadow-[1px_1px_0_0_#000]">
-                  {lang.percentage}%
+                  {lang.percentage > 0 ? `${lang.percentage}%` : lang.bytes > 0 ? "<1%" : "0%"}
                 </div>
               </div>
             ))}

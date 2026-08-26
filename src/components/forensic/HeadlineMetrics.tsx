@@ -105,7 +105,7 @@ export function HeadlineMetrics({ summary, topLanguage }: HeadlineMetricsProps) 
     <div id="section-headlines" className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-black uppercase tracking-tight text-black">
-          01. EXECUTIVE HEADLINE METRICS
+          02. EXECUTIVE HEADLINE METRICS
         </h2>
       </div>
 

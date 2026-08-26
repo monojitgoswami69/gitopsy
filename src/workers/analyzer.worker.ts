@@ -94,6 +94,8 @@ interface AnalysisState {
   rateLimitResetEpoch: number;
   resumeAtIso: string;
   resumeReason: string;
+  timezone?: string;
+  timezoneAbbr?: string;
 }
 
 function newState(checkpointId: string, subjectLogin: string, concurrency: number): AnalysisState {
@@ -121,6 +123,8 @@ function newState(checkpointId: string, subjectLogin: string, concurrency: numbe
     rateLimitResetEpoch: 0,
     resumeAtIso: "",
     resumeReason: "",
+    timezone: undefined,
+    timezoneAbbr: undefined,
   };
 }
 
@@ -165,6 +169,8 @@ async function saveCheckpoint(state: AnalysisState): Promise<void> {
     rateLimitResetEpoch: state.rateLimitResetEpoch,
     resumeAt: state.resumeAtIso,
     resumeReason: state.resumeReason,
+    timezone: state.timezone,
+    timezoneAbbr: state.timezoneAbbr,
   };
 
   try {
@@ -200,6 +206,8 @@ function restoreFromCheckpoint(checkpoint: AnalysisCheckpoint): AnalysisState {
   state.rateLimitHitCount = checkpoint.rateLimitHitCount;
   state.diagnosticsWarnings = [...checkpoint.diagnosticsWarnings];
   state.graphqlContributionCalendarAvailable = checkpoint.graphqlContributionCalendarAvailable;
+  state.timezone = checkpoint.timezone;
+  state.timezoneAbbr = checkpoint.timezoneAbbr;
   return state;
 }
 
@@ -452,7 +460,7 @@ async function aggregateAndComplete(
     state.diagnosticsWarnings.push("Reviews count truncated at 1000 (GitHub Search API cap).");
   }
 
-  const temporal = calculateTemporalAnalytics(allCommits, allWeeks);
+  const temporal = calculateTemporalAnalytics(allCommits, allWeeks, state.timezone);
   const churn = calculateCodeChurnAnalytics(allCommits);
   if (totalLinesAdded > 0 || totalLinesDeleted > 0) {
     churn.totalAdditions = totalLinesAdded;
@@ -465,6 +473,12 @@ async function aggregateAndComplete(
     commitForensics.churnRatio = churn.churnRatio;
   }
 
+  const NON_FUNCTIONAL_LANGUAGES = new Set([
+    "HTML", "CSS", "SCSS", "Less", "Markdown", "JSON", "JSON5", "JSON with Comments",
+    "YAML", "XML", "SVG", "Text", "Plain Text", "Dockerfile", "Shell", "Batchfile",
+    "PowerShell", "Makefile", "CMake", "Ignore List"
+  ]);
+
   const totalBytes = Array.from(languageMap.values()).reduce((acc, v) => acc + v.bytes, 0);
   const languageAnalysis = Array.from(languageMap.entries())
     .map(([name, data]) => ({
@@ -472,6 +486,7 @@ async function aggregateAndComplete(
       bytes: data.bytes,
       percentage: totalBytes > 0 ? Math.round((data.bytes / totalBytes) * 100) : 0,
       repoCount: data.repoCount,
+      isFunctional: !NON_FUNCTIONAL_LANGUAGES.has(name),
     }))
     .sort((a, b) => b.bytes - a.bytes);
 
@@ -489,6 +504,10 @@ async function aggregateAndComplete(
   }
 
   const mergeRatePercentage = totalPrsAuthored > 0 ? Math.round((totalPrsMerged / totalPrsAuthored) * 100) : null;
+  const averageDailyCommits = temporal.totalActiveDays > 0 ? Math.round((totalCommits / temporal.totalActiveDays) * 10) / 10 : 0;
+  const multiContributorRepoCount = processedRepos.filter((r) => r.prsAuthored > 0 || r.stars > 0 || r.forks > 0).length;
+  const multiContributorRepoShare = processedRepos.length > 0 ? Math.round((multiContributorRepoCount / processedRepos.length) * 100) : 0;
+  const functionalLanguageCount = languageAnalysis.filter((l) => l.isFunctional && l.percentage >= 5).length;
 
   const summary = {
     totalCommits,
@@ -509,11 +528,18 @@ async function aggregateAndComplete(
     longestStreakDays: temporal.longestStreakDays,
     activeStreakDays: temporal.activeStreakDays,
     totalActiveDays: temporal.totalActiveDays,
+    longestInactiveGapDays: temporal.longestInactiveGapDays,
+    peakDailyCommits: temporal.peakDailyCommits,
+    averageDailyCommits,
+    multiContributorRepoShare,
+    functionalLanguageCount,
     busiestHour: temporal.busiestHour,
     busiestWeekday: temporal.busiestWeekday,
     busiestMonth: temporal.busiestMonth,
     nightCommitPercentage: temporal.nightCommitPercentage,
     weekendCommitPercentage: temporal.weekendCommitPercentage,
+    timezone: temporal.timezone,
+    timezoneAbbr: temporal.timezoneAbbr,
   };
 
   const classifications = computeDeveloperClassifications({
@@ -529,6 +555,10 @@ async function aggregateAndComplete(
         additions: m.additions,
         deletions: m.deletions,
       })),
+      longestInactiveGapDays: temporal.longestInactiveGapDays,
+      peakDailyCommits: temporal.peakDailyCommits,
+      timezone: temporal.timezone,
+      timezoneAbbr: temporal.timezoneAbbr,
     },
     summary,
     churn: {
@@ -536,7 +566,15 @@ async function aggregateAndComplete(
       totalDeletions: totalLinesDeleted,
       totalAdditions: totalLinesAdded,
     },
-    languageCount: languageAnalysis.length,
+    commitForensics: {
+      medianCommitSize: commitForensics.medianCommitSize,
+      averageMessageLength: commitForensics.averageMessageLength,
+      shortMessageCount: commitForensics.shortMessageCount,
+      longMessageCount: commitForensics.longMessageCount,
+      conventionalCommitCount: commitForensics.conventionalCommitCount,
+      detailedCommitsCount: commitForensics.detailedCommitsCount,
+    },
+    languages: languageAnalysis,
     commitCategories: commitForensics.messageCategories,
   });
 
@@ -581,6 +619,10 @@ async function aggregateAndComplete(
         additions: m.additions,
         deletions: m.deletions,
       })),
+      longestInactiveGapDays: temporal.longestInactiveGapDays,
+      peakDailyCommits: temporal.peakDailyCommits,
+      timezone: temporal.timezone,
+      timezoneAbbr: temporal.timezoneAbbr,
     },
     repositories: processedRepos,
     languages: languageAnalysis,
@@ -592,6 +634,8 @@ async function aggregateAndComplete(
     findings,
     easterEggs,
     diagnostics,
+    timezone: temporal.timezone,
+    timezoneAbbr: temporal.timezoneAbbr,
   };
 
   try {
@@ -753,22 +797,24 @@ self.onmessage = async (event: MessageEvent<WorkerInMessage>) => {
 
   if (data.type === "START_ANALYSIS") {
     cancelled = false;
-    const { token, username, sinceDate, isIncremental, maxConcurrency } = data.payload;
+    const { token, username, sinceDate, isIncremental, maxConcurrency, timezone } = data.payload;
     const concurrency = Math.max(1, Math.min(maxConcurrency ?? 15, 15));
     const checkpointId = `dossier-${username || "viewer"}-${Date.now()}`;
     const state = newState(checkpointId, username || "", concurrency);
     state.sinceDate = sinceDate;
     state.isIncremental = Boolean(isIncremental && sinceDate);
+    state.timezone = timezone;
     await runAnalysisPipeline(state, token, false);
     return;
   }
 
   if (data.type === "RESUME") {
     cancelled = false;
-    const { token, checkpoint, maxConcurrency } = data.payload;
+    const { token, checkpoint, maxConcurrency, timezone } = data.payload;
     const state = restoreFromCheckpoint(checkpoint);
     state.concurrency = Math.max(1, Math.min(maxConcurrency ?? state.concurrency, 15));
     state.checkpointTriggered = false;
+    if (timezone) state.timezone = timezone;
     postLog("info", `Resuming analysis from checkpoint ${checkpoint.checkpointId}. ${state.processedRepoFullNames.size}/${state.reposToScan.length} repos already processed.`);
     await runAnalysisPipeline(state, token, true);
     return;

@@ -15,11 +15,14 @@ export function ClassificationsSection({ classifications }: ClassificationsSecti
       <div className="flex items-center gap-2">
         <ShieldAlert className="size-6 text-black" />
         <div>
-          <h2 className="text-xl font-black uppercase tracking-tight text-black">
-            08. DETERMINISTIC DEVELOPER CLASSIFICATIONS ({classifications.length})
-          </h2>
-          <p className="text-xs font-bold text-gray-600">
-            Rule-based classifications derived strictly from verified timestamps, churn ratios, and language distributions.
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="text-xl font-black uppercase tracking-tight text-black">
+              11. DEVELOPER ASSESSMENTS
+            </h2>
+            <Badge variant="cyan">{classifications.length}</Badge>
+          </div>
+          <p className="text-xs font-bold text-gray-600 mt-0.5">
+            Evidence-based behavioral patterns derived strictly from verified timestamps, churn ratios, and repository distributions.
           </p>
         </div>
       </div>
@@ -31,10 +34,10 @@ export function ClassificationsSection({ classifications }: ClassificationsSecti
             <div
               key={arch.id}
               className={`border-[4px] border-black rounded-[12px] p-6 shadow-[6px_6px_0_0_#000] flex flex-col justify-between gap-5 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] active:translate-x-[6px] active:translate-y-[6px] active:shadow-none transition-all duration-150 ${
-                allSatisfied ? "bg-white" : "bg-gray-50/70 opacity-80"
+                allSatisfied ? "bg-white" : "bg-gray-50/70 opacity-75"
               }`}
             >
-              {/* Top Row: Title & Evidence Strength */}
+              {/* Top Row: Title & Status */}
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between gap-2">
                   <div
@@ -44,18 +47,8 @@ export function ClassificationsSection({ classifications }: ClassificationsSecti
                     {arch.title}
                   </div>
 
-                  <Badge
-                    variant={
-                      arch.evidenceStrength === "VERY HIGH"
-                        ? "lime"
-                        : arch.evidenceStrength === "HIGH"
-                        ? "cyan"
-                        : arch.evidenceStrength === "MODERATE"
-                        ? "main"
-                        : "neutral"
-                    }
-                  >
-                    EVIDENCE: {arch.evidenceStrength}
+                  <Badge variant={allSatisfied ? "lime" : "neutral"}>
+                    {allSatisfied ? "OBSERVED" : "INSUFFICIENT DATA"}
                   </Badge>
                 </div>
 
@@ -66,7 +59,7 @@ export function ClassificationsSection({ classifications }: ClassificationsSecti
               {/* Evidence Checklist Drawer */}
               <div className="border-t-[2px] border-black/15 pt-3 flex flex-col gap-2 bg-amber-50/60 p-3 rounded-[6px] border border-black/10">
                 <span className="text-[10px] font-black uppercase tracking-wider text-gray-600">
-                  VERIFIED DATA EVIDENCE:
+                  OBSERVED EVIDENCE:
                 </span>
 
                 {arch.evidence.map((item, idx) => (

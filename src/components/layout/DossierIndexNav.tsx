@@ -10,18 +10,22 @@ interface SectionItem {
 }
 
 const SECTIONS: SectionItem[] = [
-  { id: "section-headlines", label: "01. Executive Metrics" },
-  { id: "section-activity", label: "02. Contribution Heatmap" },
-  { id: "section-temporal", label: "03. Temporal Forensics" },
-  { id: "section-repositories", label: "04. Repositories & Awards" },
-  { id: "section-languages", label: "05. Language DNA" },
-  { id: "section-commits", label: "06. Commit Forensics" },
-  { id: "section-churn", label: "07. Monthly Code Churn" },
-  { id: "section-classifications", label: "08. Classifications" },
-  { id: "section-court", label: "09. Gitopsy Courtroom" },
-  { id: "section-findings", label: "10. Findings & Easter Eggs" },
-  { id: "section-wrapped", label: "11. Wrapped Recap" },
-  { id: "section-data", label: "12. Export & Storage" },
+  { id: "section-subject", label: "01. Subject Dossier" },
+  { id: "section-headlines", label: "02. Case Summary" },
+  { id: "section-activity", label: "03. Activity Heatmap" },
+  { id: "section-temporal", label: "04. Temporal Profile" },
+  { id: "section-repositories", label: "05. Repositories" },
+  { id: "section-distinctions", label: "06. Distinctions" },
+  { id: "section-languages", label: "07. Language DNA" },
+  { id: "section-commits", label: "08. Commit Forensics" },
+  { id: "section-churn", label: "09. Monthly Churn" },
+  { id: "section-collaboration", label: "10. Collaboration" },
+  { id: "section-classifications", label: "11. Assessments" },
+  { id: "section-findings", label: "12. Findings" },
+  { id: "section-court", label: "13. Courtroom" },
+  { id: "section-case-notes", label: "14. Case Notes" },
+  { id: "section-wrapped", label: "15. Wrapped Recap" },
+  { id: "section-data", label: "16. Data & Privacy" },
 ];
 
 interface DossierIndexNavProps {
@@ -218,7 +222,7 @@ export function DossierIndexNav({ onLaunchWrapped }: DossierIndexNavProps) {
           >
             <span className="flex items-center gap-1.5 truncate">
               <List className="size-3.5 shrink-0" />
-              <span className="truncate">INDEX: {SECTIONS.find((s) => s.id === activeSection)?.label || "01. Executive Metrics"}</span>
+              <span className="truncate">INDEX: {SECTIONS.find((s) => s.id === activeSection)?.label || "01. Subject Dossier"}</span>
             </span>
             <ChevronRight className={`size-3.5 shrink-0 transition-transform ${isMobileOpen ? "rotate-90" : ""}`} />
           </button>

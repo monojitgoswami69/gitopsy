@@ -19,7 +19,7 @@ export function EasterEggModal({
   if (!egg) return null;
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} title="CLASSIFIED EVIDENCE UNLOCKED">
+    <Dialog isOpen={isOpen} onClose={onClose} title="SPECIAL FINDING DISCOVERED">
       <div className="flex flex-col items-center text-center gap-4 py-2">
         <div className="p-4 bg-[#FFDC58] border-[3px] border-black rounded-full shadow-[4px_4px_0_0_#000]">
           <Zap className="size-10 text-black fill-black animate-bounce" />
@@ -28,7 +28,7 @@ export function EasterEggModal({
         <h3 className="text-xl font-black uppercase tracking-tight">{egg.title}</h3>
 
         <div className="border-[2px] border-black bg-amber-50 p-4 rounded-[6px] text-xs font-mono font-bold text-gray-800 w-full text-left">
-          <div className="text-[10px] uppercase text-gray-500 mb-1">TRIGGER CRITERIA:</div>
+          <div className="text-[10px] uppercase text-gray-500 mb-1">OBSERVED BASIS:</div>
           <div>{egg.trigger}</div>
         </div>
 
@@ -44,7 +44,7 @@ export function EasterEggModal({
             onClose();
           }}
         >
-          <Sparkles className="size-4" /> ACKNOWLEDGE CLASSIFIED FILE
+          <Sparkles className="size-4" /> ACKNOWLEDGE CASE NOTE
         </Button>
       </div>
     </Dialog>

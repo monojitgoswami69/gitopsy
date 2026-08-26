@@ -1,15 +1,13 @@
-/**
- * COMMIT MESSAGE FORENSICS ENGINE
- * Categorizes commit messages using deterministic pattern matching and verifiable metrics.
- * Strictly analytical: categorizes message intent, lengths, prefixes, repeated patterns, and size distribution.
- *
- * Size-based metrics (averages, distribution, median, largest commit) are computed
- * ONLY from commits with hasDetails === true (i.e., real additions/deletions from
- * the GitHub API). Message-based metrics (categories, short messages, repeated,
- * conventional) are computed from ALL commits since they don't depend on churn data.
- */
+import { ForensicCommit, CommitForensics, CommitMessageCategory, CommitRemark } from "@/types/domain";
 
-import { ForensicCommit, CommitForensics, CommitMessageCategory } from "@/types/domain";
+function stableHash(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
 
 export function analyzeCommitForensics(
   commits: ForensicCommit[],
@@ -23,12 +21,15 @@ export function analyzeCommitForensics(
       averageAdditionsPerCommit: 0,
       averageDeletionsPerCommit: 0,
       medianCommitSize: 0,
+      averageMessageLength: 0,
       churnRatio: 0,
       sizeDistribution: { tiny: 0, small: 0, medium: 0, large: 0, monster: 0 },
       messageCategories: [],
       shortMessageCount: 0,
+      longMessageCount: 0,
       repeatedMessageCount: 0,
       conventionalCommitCount: 0,
+      remarks: [],
       largestCommit: null,
     };
   }
@@ -40,6 +41,8 @@ export function analyzeCommitForensics(
   let totalAdditions = 0;
   let totalDeletions = 0;
   let shortMessageCount = 0;
+  let longMessageCount = 0;
+  let totalMessageLength = 0;
   let conventionalCommitCount = 0;
 
   const categoryCounts: Record<string, number> = {
@@ -61,11 +64,13 @@ export function analyzeCommitForensics(
   const sizeDistribution = { tiny: 0, small: 0, medium: 0, large: 0, monster: 0 };
   let largestCommit: CommitForensics["largestCommit"] = null;
   let maxLines = 0;
+  const candidateRemarks: CommitRemark[] = [];
 
   // Message-based metrics: iterate ALL commits (not just detailed ones)
   for (const c of commits) {
     const msg = c.message.trim();
     const msgLower = msg.toLowerCase();
+    totalMessageLength += msg.length;
 
     // Track repeated messages
     const count = messageMap.get(msgLower) || 0;
@@ -73,9 +78,11 @@ export function analyzeCommitForensics(
 
     // Short message check (< 10 chars)
     if (msg.length < 10) shortMessageCount++;
+    if (msg.length >= 80) longMessageCount++;
 
     // Conventional commit check (e.g. feat:, fix(scope):, docs:)
-    if (/^[a-z]+(\([a-z0-9_.-]+\))?!?:/i.test(msg)) {
+    const isConventional = /^[a-z]+(\([a-z0-9_.-]+\))?!?:/i.test(msg);
+    if (isConventional) {
       conventionalCommitCount++;
     }
 
@@ -102,6 +109,47 @@ export function analyzeCommitForensics(
       categoryCounts.REVERT++;
     } else {
       categoryCounts.OTHER++;
+    }
+
+    // Deterministic forensic note candidate evaluation
+    if (/^wip\b|work in progress/i.test(msg)) {
+      const hashIdx = stableHash(authorLogin + c.sha) % 2;
+      const templates = [
+        `Checkpoint commit pushed to ${c.repoFullName}.`,
+        `Direct snapshot commit logged during active engineering.`,
+      ];
+      candidateRemarks.push({
+        id: `remark-${c.sha}`,
+        sha: c.sha,
+        repoFullName: c.repoFullName,
+        authorDate: c.authorDate,
+        message: msg,
+        remarkTitle: "WIP Checkpoint",
+        remarkText: templates[hashIdx],
+        type: "WIP",
+      });
+    } else if (/^fix(\(.*\))?:/i.test(msg) && c.filesChanged > 0) {
+      candidateRemarks.push({
+        id: `remark-${c.sha}`,
+        sha: c.sha,
+        repoFullName: c.repoFullName,
+        authorDate: c.authorDate,
+        message: msg,
+        remarkTitle: "Correctional Patch",
+        remarkText: `Applied patch across ${c.filesChanged} file(s) in ${c.repoFullName}.`,
+        type: "FIX_SPAM",
+      });
+    } else if (msg.length < 6) {
+      candidateRemarks.push({
+        id: `remark-${c.sha}`,
+        sha: c.sha,
+        repoFullName: c.repoFullName,
+        authorDate: c.authorDate,
+        message: msg,
+        remarkTitle: "Minimalist Description",
+        remarkText: `Terse commit log entry (${msg.length} characters).`,
+        type: "MINIMALIST",
+      });
     }
   }
 
@@ -161,6 +209,10 @@ export function analyzeCommitForensics(
   const avgBase = Math.max(1, detailedCount);
   const averageAdditions = Math.round(totalAdditions / avgBase);
   const averageDeletions = Math.round(totalDeletions / avgBase);
+  const averageMessageLength = Math.round(totalMessageLength / totalAnalyzed);
+
+  // Pick top 4 distinct remarks
+  const remarks = candidateRemarks.slice(0, 4);
 
   return {
     totalAnalyzed,
@@ -168,12 +220,15 @@ export function analyzeCommitForensics(
     averageAdditionsPerCommit: averageAdditions,
     averageDeletionsPerCommit: averageDeletions,
     medianCommitSize,
+    averageMessageLength,
     churnRatio,
     sizeDistribution,
     messageCategories,
     shortMessageCount,
+    longMessageCount,
     repeatedMessageCount,
     conventionalCommitCount,
+    remarks,
     largestCommit,
   };
 }

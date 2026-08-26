@@ -1,24 +1,182 @@
 import { ForensicCommit } from "@/types/domain";
 
 export interface TemporalAnalytics {
+  timezone: string;
+  timezoneAbbr: string;
   activeStreakDays: number;
   longestStreakDays: number;
   totalActiveDays: number;
-  busiestHour: number; // 0 - 23
+  longestInactiveGapDays: number;
+  peakDailyCommits: number;
+  busiestHour: number; // 0 - 23 in local timezone
   busiestWeekday: string;
   busiestMonth: string;
   commitsByHour: number[]; // 24 items
   commitsByWeekday: number[]; // 7 items (0 = Sun .. 6 = Sat)
   commitsByMonth: { month: string; count: number; additions: number; deletions: number }[];
   heatmapCalendar: { date: string; count: number; additions: number; deletions: number }[];
-  nightCommitPercentage: number; // 9 PM - 4 AM
-  weekendCommitPercentage: number; // Sat + Sun
+  nightCommitPercentage: number; // 21:00 - 04:59 in local timezone
+  weekendCommitPercentage: number; // Sat + Sun in local timezone
+}
+
+export interface LocalTimeParts {
+  hour: number; // 0 - 23
+  weekday: number; // 0 (Sun) - 6 (Sat)
+  dateStr: string; // YYYY-MM-DD
+  monthStr: string; // YYYY-MM
+}
+
+const TIMEZONE_ABBR_MAP: Record<string, string> = {
+  "Asia/Kolkata": "IST",
+  "Asia/Calcutta": "IST",
+  "Asia/Colombo": "IST",
+  "Asia/Dhaka": "BST",
+  "Asia/Dubai": "GST",
+  "Asia/Karachi": "PKT",
+  "Asia/Kathmandu": "NPT",
+  "Asia/Singapore": "SGT",
+  "Asia/Hong_Kong": "HKT",
+  "Asia/Tokyo": "JST",
+  "Asia/Seoul": "KST",
+  "Asia/Shanghai": "CST",
+  "Asia/Bangkok": "ICT",
+  "Asia/Jakarta": "WIB",
+  "Australia/Sydney": "AEST",
+  "Australia/Melbourne": "AEST",
+  "Australia/Brisbane": "AEST",
+  "Australia/Perth": "AWST",
+  "Europe/London": "GMT",
+  "Europe/Paris": "CET",
+  "Europe/Berlin": "CET",
+  "Europe/Rome": "CET",
+  "Europe/Madrid": "CET",
+  "Europe/Amsterdam": "CET",
+  "Europe/Zurich": "CET",
+  "Europe/Athens": "EET",
+  "America/New_York": "EST",
+  "America/Chicago": "CST",
+  "America/Denver": "MST",
+  "America/Los_Angeles": "PST",
+  "America/Phoenix": "MST",
+  "America/Toronto": "EST",
+  "America/Vancouver": "PST",
+  "America/Sao_Paulo": "BRT",
+  "America/Buenos_Aires": "ART",
+  "Africa/Cairo": "EEST",
+  "Africa/Johannesburg": "SAST",
+  "Africa/Lagos": "WAT",
+  "UTC": "UTC",
+};
+
+export function getTimezoneInfo(userTz?: string): { timezone: string; timezoneAbbr: string } {
+  let timezone = "UTC";
+  try {
+    timezone =
+      userTz ||
+      (typeof Intl !== "undefined" && Intl.DateTimeFormat
+        ? Intl.DateTimeFormat().resolvedOptions().timeZone
+        : "UTC") ||
+      "UTC";
+  } catch {
+    timezone = "UTC";
+  }
+
+  if (TIMEZONE_ABBR_MAP[timezone]) {
+    return { timezone, timezoneAbbr: TIMEZONE_ABBR_MAP[timezone] };
+  }
+
+  let timezoneAbbr = timezone;
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      timeZoneName: "short",
+    }).formatToParts(new Date());
+    timezoneAbbr = parts.find((p) => p.type === "timeZoneName")?.value || timezone;
+  } catch {
+    timezoneAbbr = timezone;
+  }
+
+  return { timezone, timezoneAbbr };
+}
+
+export function createLocalDateExtractor(timezone: string) {
+  let dtf: Intl.DateTimeFormat | null = null;
+  try {
+    dtf = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "numeric",
+      hourCycle: "h23",
+      weekday: "short",
+    });
+  } catch {
+    dtf = null;
+  }
+
+  const weekdayMap: Record<string, number> = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+  };
+
+  return function extractLocalParts(date: Date): LocalTimeParts {
+    if (dtf) {
+      try {
+        const parts = dtf.formatToParts(date);
+        let year = "1970";
+        let month = "01";
+        let day = "01";
+        let hour = 0;
+        let weekday = 0;
+
+        for (let i = 0; i < parts.length; i++) {
+          const p = parts[i];
+          if (p.type === "hour") {
+            hour = parseInt(p.value, 10) % 24;
+          } else if (p.type === "day") {
+            day = p.value;
+          } else if (p.type === "month") {
+            month = p.value;
+          } else if (p.type === "year") {
+            year = p.value;
+          } else if (p.type === "weekday") {
+            weekday = weekdayMap[p.value] ?? 0;
+          }
+        }
+
+        return {
+          hour,
+          weekday,
+          dateStr: `${year}-${month}-${day}`,
+          monthStr: `${year}-${month}`,
+        };
+      } catch {
+        // Fall back to UTC
+      }
+    }
+
+    const hour = date.getUTCHours();
+    const weekday = date.getUTCDay();
+    const dateStr = date.toISOString().slice(0, 10);
+    const monthStr = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+    return { hour, weekday, dateStr, monthStr };
+  };
 }
 
 export function calculateTemporalAnalytics(
   commits: ForensicCommit[],
-  weeklyStats?: { w: number; a: number; d: number; c: number }[]
+  weeklyStats?: { w: number; a: number; d: number; c: number }[],
+  targetTimezone?: string
 ): TemporalAnalytics {
+  const { timezone, timezoneAbbr } = getTimezoneInfo(targetTimezone);
+  const extractLocalParts = createLocalDateExtractor(timezone);
+
   const hourCounts = new Array(24).fill(0);
   const weekdayCounts = new Array(7).fill(0);
   const monthMap = new Map<string, { count: number; additions: number; deletions: number }>();
@@ -29,18 +187,16 @@ export function calculateTemporalAnalytics(
 
   for (const c of commits) {
     const d = new Date(c.authorDate);
-    const hour = d.getUTCHours();
-    const weekday = d.getUTCDay();
-    const dateStr = d.toISOString().slice(0, 10);
-    const monthStr = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+    const { hour, weekday, dateStr, monthStr } = extractLocalParts(d);
 
     hourCounts[hour]++;
     weekdayCounts[weekday]++;
 
-    // Night window: 21:00 - 04:59 UTC (8-hour band)
+    // Night window: 21:00 - 04:59 in the developer's local timezone (8-hour band)
     if (hour >= 21 || hour <= 4) {
       nightCommits++;
     }
+    // Weekend window: Saturday & Sunday in developer's local timezone
     if (weekday === 0 || weekday === 6) {
       weekendCommits++;
     }
@@ -59,8 +215,7 @@ export function calculateTemporalAnalytics(
   }
 
   // If authoritative weekly stats from GitHub contributor endpoints are available,
-  // synchronize the monthly AND daily additions/deletions so the charts reflect
-  // total churn accurately — not just the 5 detailed commits per repo.
+  // synchronize the monthly AND daily additions/deletions so charts reflect total churn.
   if (weeklyStats && weeklyStats.length > 0) {
     const totalWeeklyAdditions = weeklyStats.reduce((acc, w) => acc + (w.a || 0), 0);
     const totalWeeklyDeletions = weeklyStats.reduce((acc, w) => acc + (w.d || 0), 0);
@@ -75,7 +230,7 @@ export function calculateTemporalAnalytics(
       for (const w of weeklyStats) {
         if ((w.a || 0) > 0 || (w.d || 0) > 0 || (w.c || 0) > 0) {
           const weekDate = new Date(w.w * 1000);
-          const monthStr = `${weekDate.getUTCFullYear()}-${String(weekDate.getUTCMonth() + 1).padStart(2, "0")}`;
+          const { monthStr } = extractLocalParts(weekDate);
           const m = monthMap.get(monthStr) || { count: 0, additions: 0, deletions: 0 };
           m.additions += w.a || 0;
           m.deletions += w.d || 0;
@@ -84,37 +239,28 @@ export function calculateTemporalAnalytics(
       }
 
       // --- Sync daily heatmap data ---
-      // Distribute each week's additions/deletions proportionally across
-      // the days that have commits in that week. This gives every active
-      // day real churn data instead of zeros from un-detailed commits.
       for (const w of weeklyStats) {
         const weekAdditions = w.a || 0;
         const weekDeletions = w.d || 0;
         const weekCommits = w.c || 0;
         if ((weekAdditions === 0 && weekDeletions === 0) || weekCommits === 0) continue;
 
-        // Find the date range for this week (7 days starting from w.w)
         const weekStart = new Date(w.w * 1000);
-        const weekStartStr = weekStart.toISOString().slice(0, 10);
-
-        // Collect all days in this week that have commits
         const weekDays: string[] = [];
         const weekDayCommitCounts: number[] = [];
         let totalWeekDayCommits = 0;
 
         for (let d = 0; d < 7; d++) {
-          const day = new Date(weekStart);
-          day.setUTCDate(day.getUTCDate() + d);
-          const dayStr = day.toISOString().slice(0, 10);
-          const dayData = dateMap.get(dayStr);
+          const day = new Date(weekStart.getTime() + d * 86400000);
+          const { dateStr } = extractLocalParts(day);
+          const dayData = dateMap.get(dateStr);
           if (dayData && dayData.count > 0) {
-            weekDays.push(dayStr);
+            weekDays.push(dateStr);
             weekDayCommitCounts.push(dayData.count);
             totalWeekDayCommits += dayData.count;
           }
         }
 
-        // Distribute the week's churn proportionally across active days
         if (totalWeekDayCommits > 0 && weekDays.length > 0) {
           for (let i = 0; i < weekDays.length; i++) {
             const ratio = weekDayCommitCounts[i] / totalWeekDayCommits;
@@ -143,7 +289,6 @@ export function calculateTemporalAnalytics(
       if (prevEpochDays === null || epochDay === prevEpochDays + 1) {
         currentRunningStreak++;
       } else if (epochDay === prevEpochDays) {
-        // Same day (duplicate, already deduped via dateMap) — skip
         continue;
       } else {
         currentRunningStreak = 1;
@@ -152,14 +297,36 @@ export function calculateTemporalAnalytics(
       prevEpochDays = epochDay;
     }
 
-    // Active streak: the streak ending at the most recent commit date.
-    // Only counts if the last commit was today or yesterday (within 1 day of now).
-    const todayEpoch = Math.floor(Date.now() / (1000 * 60 * 60 * 24));
+    const todayDateStr = extractLocalParts(new Date()).dateStr;
+    const todayParts = todayDateStr.split("-").map(Number);
+    const todayEpoch = Math.floor(Date.UTC(todayParts[0], todayParts[1] - 1, todayParts[2]) / (1000 * 60 * 60 * 24));
     const lastCommitEpoch = prevEpochDays || 0;
     if (todayEpoch - lastCommitEpoch <= 1) {
       activeStreak = currentRunningStreak;
     }
   }
+
+  // Calculate Inactivity Hiatus & Peak Daily Commits
+  let longestInactiveGapDays = 0;
+  if (uniqueDatesSorted.length > 1) {
+    for (let i = 1; i < uniqueDatesSorted.length; i++) {
+      const prevParts = uniqueDatesSorted[i - 1].split("-").map(Number);
+      const currParts = uniqueDatesSorted[i].split("-").map(Number);
+      const prevEpoch = Math.floor(Date.UTC(prevParts[0], prevParts[1] - 1, prevParts[2]) / (1000 * 60 * 60 * 24));
+      const currEpoch = Math.floor(Date.UTC(currParts[0], currParts[1] - 1, currParts[2]) / (1000 * 60 * 60 * 24));
+      const gap = Math.max(0, currEpoch - prevEpoch - 1);
+      if (gap > longestInactiveGapDays) {
+        longestInactiveGapDays = gap;
+      }
+    }
+  }
+
+  let peakDailyCommits = 0;
+  dateMap.forEach((val) => {
+    if (val.count > peakDailyCommits) {
+      peakDailyCommits = val.count;
+    }
+  });
 
   // Busiest determinations
   let maxHour = 0;
@@ -193,9 +360,13 @@ export function calculateTemporalAnalytics(
   const total = Math.max(1, commits.length);
 
   return {
+    timezone,
+    timezoneAbbr,
     activeStreakDays: activeStreak,
     longestStreakDays: longestStreak,
     totalActiveDays: uniqueDatesSorted.length,
+    longestInactiveGapDays,
+    peakDailyCommits,
     busiestHour: maxHour,
     busiestWeekday: weekdayNames[maxWeekdayIdx],
     busiestMonth,

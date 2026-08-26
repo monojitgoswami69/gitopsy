@@ -40,11 +40,18 @@ export interface SummaryMetrics {
   longestStreakDays: number;
   activeStreakDays: number;
   totalActiveDays: number;
-  busiestHour: number; // 0-23 UTC
+  longestInactiveGapDays: number;
+  peakDailyCommits: number;
+  averageDailyCommits: number;
+  multiContributorRepoShare: number;
+  functionalLanguageCount: number;
+  busiestHour: number; // 0-23 in local timezone
   busiestWeekday: string;
   busiestMonth: string;
-  nightCommitPercentage: number; // 21:00 - 04:59 UTC
+  nightCommitPercentage: number; // 21:00 - 04:59 local timezone
   weekendCommitPercentage: number; // Sat & Sun
+  timezone?: string; // e.g. "Asia/Kolkata"
+  timezoneAbbr?: string; // e.g. "IST"
 }
 
 export interface HeatmapDay {
@@ -59,6 +66,10 @@ export interface TemporalActivity {
   byHour: number[]; // 24 items
   byWeekday: number[]; // 7 items (0=Sun .. 6=Sat)
   byMonth: { month: string; commits: number; additions: number; deletions: number }[];
+  longestInactiveGapDays: number;
+  peakDailyCommits: number;
+  timezone?: string;
+  timezoneAbbr?: string;
 }
 
 export interface RepositoryAnalysis {
@@ -95,6 +106,7 @@ export interface LanguageAnalysis {
   bytes: number;
   percentage: number;
   repoCount: number;
+  isFunctional: boolean;
 }
 
 export interface CommitMessageCategory {
@@ -103,12 +115,24 @@ export interface CommitMessageCategory {
   percentage: number;
 }
 
+export interface CommitRemark {
+  id: string;
+  sha: string;
+  repoFullName: string;
+  authorDate: string;
+  message: string;
+  remarkTitle: string;
+  remarkText: string;
+  type: "WIP" | "FIX_SPAM" | "MINIMALIST" | "NOVELIST" | "MEGA_DIFF" | "NOCTURNAL" | "CONVENTIONAL";
+}
+
 export interface CommitForensics {
   totalAnalyzed: number;
   detailedCommitsCount: number;
   averageAdditionsPerCommit: number;
   averageDeletionsPerCommit: number;
   medianCommitSize: number;
+  averageMessageLength: number;
   churnRatio: number;
   sizeDistribution: {
     tiny: number; // < 10 lines
@@ -119,8 +143,10 @@ export interface CommitForensics {
   };
   messageCategories: CommitMessageCategory[];
   shortMessageCount: number;
+  longMessageCount: number;
   repeatedMessageCount: number;
   conventionalCommitCount: number;
+  remarks: CommitRemark[];
   largestCommit: {
     sha: string;
     repoFullName: string;
@@ -170,7 +196,7 @@ export interface DeterministicFinding {
   icon: string;
   title: string;
   evidence: string;
-  category: "TEMPORAL" | "CHURN" | "LANGUAGES" | "BEHAVIOR";
+  category: "TEMPORAL" | "CHURN" | "LANGUAGES" | "BEHAVIOR" | "COLLABORATION";
 }
 
 export interface DeterministicEasterEgg {
@@ -241,6 +267,8 @@ export interface AnalysisCheckpoint {
   rateLimitResetEpoch: number;
   resumeAt: string;
   resumeReason: string;
+  timezone?: string;
+  timezoneAbbr?: string;
 }
 
 export interface GitopsyAnalysis {
@@ -262,6 +290,8 @@ export interface GitopsyAnalysis {
   findings: DeterministicFinding[];
   easterEggs: DeterministicEasterEgg[];
   diagnostics: AnalysisDiagnostics;
+  timezone?: string;
+  timezoneAbbr?: string;
 }
 
 export interface ForensicCommit {
@@ -282,8 +312,8 @@ export interface ForensicCommit {
 }
 
 export type WorkerInMessage =
-  | { type: "START_ANALYSIS"; payload: { token: string; username?: string; isIncremental?: boolean; sinceDate?: string; maxConcurrency?: number } }
-  | { type: "RESUME"; payload: { token: string; checkpoint: AnalysisCheckpoint; maxConcurrency?: number } }
+  | { type: "START_ANALYSIS"; payload: { token: string; username?: string; isIncremental?: boolean; sinceDate?: string; maxConcurrency?: number; timezone?: string } }
+  | { type: "RESUME"; payload: { token: string; checkpoint: AnalysisCheckpoint; maxConcurrency?: number; timezone?: string } }
   | { type: "CANCEL" };
 
 export type WorkerOutMessage =

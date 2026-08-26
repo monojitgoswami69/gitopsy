@@ -64,6 +64,7 @@ export class ForensicWorkerClient {
       sinceDate?: string;
       isIncremental?: boolean;
       maxConcurrency?: number;
+      timezone?: string;
     },
     callbacks: AnalysisCallbacks = {}
   ): Promise<GitopsyAnalysis> {
@@ -78,6 +79,13 @@ export class ForensicWorkerClient {
     }
 
     this.isCancelled = false;
+
+    const detectedTimezone =
+      options.timezone ||
+      (typeof Intl !== "undefined" && Intl.DateTimeFormat
+        ? Intl.DateTimeFormat().resolvedOptions().timeZone
+        : "UTC") ||
+      "UTC";
 
     return new Promise<GitopsyAnalysis>((resolve, reject) => {
       this.activeReject = reject;
@@ -128,15 +136,6 @@ export class ForensicWorkerClient {
             break;
           case "RESUME_AVAILABLE":
             callbacks.onResumeAvailable?.(msg.payload);
-            // Resolve with null-like value? No — the analysis is not complete.
-            // The promise stays pending until the user resumes and gets COMPLETE.
-            // But the worker has exited, so no COMPLETE will come. We need to
-            // resolve the promise in a special way.
-            // The caller should handle onResumeAvailable to call resumeAnalysis.
-            // We resolve with a special "resumable" marker.
-            // Actually, we should keep the promise pending and let the caller
-            // decide. But the worker has exited. So we terminate and let the
-            // caller start a new resume.
             this.cleanup();
             resolve(null as unknown as GitopsyAnalysis);
             break;
@@ -188,6 +187,7 @@ export class ForensicWorkerClient {
           sinceDate: options.sinceDate,
           isIncremental: options.isIncremental,
           maxConcurrency: options.maxConcurrency,
+          timezone: detectedTimezone,
         },
       };
       this.worker.postMessage(payload);
@@ -199,6 +199,7 @@ export class ForensicWorkerClient {
       token: string;
       checkpoint: AnalysisCheckpoint;
       maxConcurrency?: number;
+      timezone?: string;
     },
     callbacks: AnalysisCallbacks = {}
   ): Promise<GitopsyAnalysis> {
@@ -213,6 +214,14 @@ export class ForensicWorkerClient {
     }
 
     this.isCancelled = false;
+
+    const detectedTimezone =
+      options.timezone ||
+      options.checkpoint.timezone ||
+      (typeof Intl !== "undefined" && Intl.DateTimeFormat
+        ? Intl.DateTimeFormat().resolvedOptions().timeZone
+        : "UTC") ||
+      "UTC";
 
     return new Promise<GitopsyAnalysis>((resolve, reject) => {
       this.activeReject = reject;
@@ -306,6 +315,7 @@ export class ForensicWorkerClient {
           token: options.token,
           checkpoint: options.checkpoint,
           maxConcurrency: options.maxConcurrency,
+          timezone: detectedTimezone,
         },
       };
       this.worker.postMessage(payload);

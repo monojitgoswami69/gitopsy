@@ -63,15 +63,15 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
 
   return (
     <div id="section-repositories" className="flex flex-col gap-8">
-      {/* 05. Repository Roster Table */}
+      {/* 05. Repository Portfolio */}
       <div className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[8px_8px_0_0_#000] flex flex-col gap-6 text-black">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b-[3px] border-black pb-4">
           <div>
             <h2 className="text-xl font-black uppercase tracking-tight flex items-center gap-2">
-              <FolderGit2 className="size-6 text-black" /> 04. REPOSITORY ROSTER & DEEP AUTOPSY
+              <FolderGit2 className="size-6 text-black" /> 05. REPOSITORY PORTFOLIO
             </h2>
             <p className="text-xs font-bold text-gray-600">
-              Examined {repositories.length} accessible specimens across public and authorized private scopes.
+              Examined {repositories.length} accessible repositories across public and authorized private scopes.
             </p>
           </div>
 
@@ -114,159 +114,143 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
           <table className="w-full text-left border-collapse bg-white">
             <thead>
               <tr className="border-b-[3px] border-black bg-[#FFDC58] text-xs font-black uppercase tracking-wider text-black">
-                <th className="p-3">Specimen</th>
+                <th className="p-3">Repository</th>
                 <th className="p-3">Commits</th>
                 <th className="p-3">Add / Del Churn</th>
                 <th className="p-3">Primary Language</th>
-                <th className="p-3">Stars / Forks</th>
                 <th className="p-3">PRs / Issues</th>
-                <th className="p-3">Status</th>
-                <th className="p-3 text-right">Details</th>
+                <th className="p-3">Stars / Forks</th>
+                <th className="p-3">Activity Lifespan</th>
+                <th className="p-3">Details</th>
               </tr>
             </thead>
-            <tbody className="divide-y-[2px] divide-black/20 text-xs font-semibold">
+            <tbody>
               {sortedRepos.map((repo) => {
                 const isExpanded = expandedRepoId === repo.id;
-                const isDormant = repo.daysSinceLastPush > 180;
                 return (
-                  <React.Fragment key={repo.fullName}>
+                  <React.Fragment key={repo.id}>
                     <tr
-                      className={`hover:bg-amber-50/70 transition-all cursor-pointer ${
+                      onClick={() => setExpandedRepoId(isExpanded ? null : repo.id)}
+                      className={`border-b-[2px] border-black text-xs font-bold hover:bg-amber-50 cursor-pointer transition-colors ${
                         isExpanded ? "bg-amber-50" : ""
                       }`}
-                      onClick={() => setExpandedRepoId(isExpanded ? null : repo.id)}
                     >
-                      <td className="p-3 font-bold">
+                      <td className="p-3">
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-sm text-black">{repo.name}</span>
-                          {repo.isPrivate && <Badge variant="neutral"><Lock className="size-2.5" /> PRIV</Badge>}
-                          {repo.isArchived && <Badge variant="dark">ARCHIVED</Badge>}
+                          <span className="font-black text-black">{repo.name}</span>
+                          {repo.isPrivate && (
+                            <Badge variant="neutral" className="text-[9px] py-0 px-1">
+                              <Lock className="size-2.5 mr-0.5" /> PRIVATE
+                            </Badge>
+                          )}
+                          {repo.isFork && (
+                            <Badge variant="neutral" className="text-[9px] py-0 px-1">
+                              FORK
+                            </Badge>
+                          )}
+                          {repo.isArchived && (
+                            <Badge variant="coral" className="text-[9px] py-0 px-1">
+                              ARCHIVED
+                            </Badge>
+                          )}
                         </div>
-                        <div className="text-[10px] text-gray-500 font-mono truncate max-w-xs">
+                        <div className="text-[10px] text-gray-500 font-mono font-normal">
                           {repo.fullName}
                         </div>
                       </td>
-                      <td className="p-3 font-mono font-black text-sm">{repo.commitCount}</td>
-                      <td className="p-3 font-mono">
-                        <span className="text-emerald-700 font-bold">+{repo.additions.toLocaleString()}</span> /{" "}
-                        <span className="text-rose-700 font-bold">-{repo.deletions.toLocaleString()}</span>
-                      </td>
-                      <td className="p-3 font-bold uppercase">{repo.primaryLanguage || "—"}</td>
-                      <td className="p-3 font-mono font-bold">
-                        <span className="inline-flex items-center gap-2">
-                          <span className="inline-flex items-center gap-1">
-                            <Star className="size-3.5 text-amber-500 fill-amber-400 stroke-[2.5]" />
-                            <span>{repo.stars}</span>
-                          </span>
-                          <span className="text-gray-400">•</span>
-                          <span className="inline-flex items-center gap-1">
-                            <GitFork className="size-3.5 text-black stroke-[2.5]" />
-                            <span>{repo.forks}</span>
-                          </span>
-                        </span>
-                      </td>
-                      <td className="p-3 font-mono font-bold">
-                        {repo.prsMerged}/{repo.prsAuthored} PRs • {repo.issuesAuthored} issues
+                      <td className="p-3 font-mono font-black">{repo.commitCount.toLocaleString()}</td>
+                      <td className="p-3 font-mono text-[11px]">
+                        <span className="text-emerald-700 font-black">+{repo.additions.toLocaleString()}</span>{" "}
+                        <span className="text-rose-700 font-black">-{repo.deletions.toLocaleString()}</span>
                       </td>
                       <td className="p-3">
-                        <div className="flex flex-col gap-1">
-                          <Badge variant={isDormant ? "coral" : repo.daysSinceLastPush <= 30 ? "lime" : "main"}>
-                            {isDormant ? `DORMANT (${repo.daysSinceLastPush}d)` : `ACTIVE (${repo.daysSinceLastPush}d ago)`}
+                        {repo.primaryLanguage ? (
+                          <Badge variant="main" className="text-[10px]">
+                            {repo.primaryLanguage}
                           </Badge>
-                          {repo.fetchStatus === "partial" && (
-                            <span className="text-[9px] font-black uppercase text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-400" title={repo.fetchWarnings.join("; ")}>
-                              PARTIAL
-                            </span>
-                          )}
-                          {repo.fetchStatus === "failed" && (
-                            <span className="text-[9px] font-black uppercase text-red-700 bg-red-100 px-1.5 py-0.5 rounded border border-red-400" title={repo.fetchWarnings.join("; ")}>
-                              FAILED
-                            </span>
-                          )}
+                        ) : (
+                          <span className="text-gray-400 font-mono text-[11px]">—</span>
+                        )}
+                      </td>
+                      <td className="p-3 font-mono text-[11px]">
+                        <span className="text-blue-700 font-bold">{repo.prsAuthored} PRs</span>
+                        {repo.prsMerged > 0 && <span className="text-emerald-700 font-bold"> ({repo.prsMerged} m)</span>} •{" "}
+                        <span className="text-amber-700 font-bold">{repo.issuesAuthored} Iss</span>
+                      </td>
+                      <td className="p-3 font-mono text-[11px]">
+                        <span className="font-bold">★ {repo.stars}</span> • <span>🍴 {repo.forks}</span>
+                      </td>
+                      <td className="p-3 text-[11px] font-mono">
+                        <div>{repo.activitySpanDays} days span</div>
+                        <div className="text-[10px] text-gray-500">
+                          {repo.daysSinceLastPush === 0 ? "Pushed today" : `${repo.daysSinceLastPush}d ago`}
                         </div>
                       </td>
-                      <td className="p-3 text-right">
-                        <button
+                      <td className="p-3 text-center">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="p-1 h-auto"
                           onClick={(e) => {
                             e.stopPropagation();
                             setExpandedRepoId(isExpanded ? null : repo.id);
                           }}
-                          className="p-1 rounded border border-black hover:bg-white transition-all shadow-[1px_1px_0_0_#000]"
-                          aria-label="Toggle repository details"
                         >
                           {isExpanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
-                        </button>
+                        </Button>
                       </td>
                     </tr>
 
-                    {/* Expandable Detail Drawer */}
+                    {/* Expandable Deep Inspection Drawer */}
                     {isExpanded && (
-                      <tr className="bg-amber-50/80 border-b-[2px] border-black">
-                        <td colSpan={8} className="p-5">
-                          <div className="border-[2px] border-black bg-white rounded-[8px] p-4 shadow-[3px_3px_0_0_#000] flex flex-col gap-4">
-                            <div className="flex items-center justify-between border-b-[2px] border-black/10 pb-2">
-                              <h4 className="font-black uppercase text-sm font-mono flex items-center gap-2">
+                      <tr className="border-b-[3px] border-black bg-amber-50/80">
+                        <td colSpan={8} className="p-4">
+                          <div className="flex flex-col gap-3 bg-white p-4 border-[2px] border-black rounded-[6px] shadow-[2px_2px_0_0_#000]">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-black uppercase text-black">
                                 SPECIMEN DOSSIER: {repo.fullName}
-                              </h4>
+                              </span>
                               <a
                                 href={`https://github.com/${repo.fullName}`}
                                 target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex items-center gap-1 text-xs font-black bg-[#FFDC58] hover:bg-[#FD9745] px-2.5 py-1 border border-black rounded shadow-[1px_1px_0_0_#000] transition-all"
+                                rel="noopener noreferrer"
+                                className="text-xs font-black text-blue-700 hover:underline flex items-center gap-1"
                               >
-                                VIEW ON GITHUB <ExternalLink className="size-3" />
+                                OPEN ON GITHUB <ExternalLink className="size-3" />
                               </a>
                             </div>
 
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                              <div className="bg-gray-50 border border-black/20 p-2.5 rounded">
-                                <span className="text-[10px] font-black uppercase text-gray-500">ACTIVITY SPAN</span>
-                                <div className="font-mono font-bold text-sm mt-0.5">{repo.activitySpanDays} days</div>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-bold">
+                              <div>
+                                <span className="text-gray-500 text-[10px] uppercase">CREATED:</span>
+                                <div>{repo.createdAt.slice(0, 10)}</div>
                               </div>
-                              <div className="bg-gray-50 border border-black/20 p-2.5 rounded">
-                                <span className="text-[10px] font-black uppercase text-gray-500">NET CODE PRODUCED</span>
-                                <div className="font-mono font-bold text-sm mt-0.5">
-                                  {repo.netLines >= 0 ? "+" : ""}{repo.netLines.toLocaleString()} lines
+                              <div>
+                                <span className="text-gray-500 text-[10px] uppercase">LAST ACTIVITY:</span>
+                                <div>{repo.lastPushedAt.slice(0, 10)}</div>
+                              </div>
+                              <div>
+                                <span className="text-gray-500 text-[10px] uppercase">NET CODE BALANCE:</span>
+                                <div className={repo.netLines >= 0 ? "text-emerald-700" : "text-rose-700"}>
+                                  {repo.netLines >= 0 ? `+${repo.netLines.toLocaleString()}` : repo.netLines.toLocaleString()} lines
                                 </div>
                               </div>
-                              <div className="bg-gray-50 border border-black/20 p-2.5 rounded">
-                                <span className="text-[10px] font-black uppercase text-gray-500">DEFAULT BRANCH</span>
-                                <div className="font-mono font-bold text-sm mt-0.5">{repo.defaultBranch}</div>
-                              </div>
-                              <div className="bg-gray-50 border border-black/20 p-2.5 rounded">
-                                <span className="text-[10px] font-black uppercase text-gray-500">CREATED AT</span>
-                                <div className="font-mono font-bold text-sm mt-0.5">
-                                  {new Date(repo.createdAt).toLocaleDateString()}
-                                </div>
+                              <div>
+                                <span className="text-gray-500 text-[10px] uppercase">DEFAULT BRANCH:</span>
+                                <div className="font-mono">{repo.defaultBranch}</div>
                               </div>
                             </div>
 
-                            {/* Fetch warnings if any */}
-                            {repo.fetchWarnings.length > 0 && (
-                              <div className="border-[2px] border-amber-400 bg-amber-50 p-2.5 rounded text-[11px] font-mono font-bold text-amber-800">
-                                <div className="font-black uppercase mb-1">FETCH DIAGNOSTICS ({repo.fetchStatus}):</div>
-                                <ul className="list-disc list-inside space-y-0.5">
-                                  {repo.fetchWarnings.map((w, i) => (
-                                    <li key={i}>{w}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-
-                            {/* Languages detected */}
                             {repo.languages.length > 0 && (
-                              <div className="flex flex-col gap-1.5">
-                                <span className="text-[10px] font-black uppercase text-gray-600">
-                                  REPORTED LANGUAGE BYTES:
+                              <div className="border-t border-black/10 pt-2 flex flex-col gap-1.5">
+                                <span className="text-[10px] font-black uppercase text-gray-500">
+                                  LANGUAGE COMPOSITION:
                                 </span>
-                                <div className="flex flex-wrap items-center gap-2">
-                                  {repo.languages.map((lang) => (
-                                    <div
-                                      key={lang.name}
-                                      className="border border-black bg-amber-100 px-2 py-0.5 rounded text-[11px] font-mono font-bold"
-                                    >
-                                      {lang.name}: {lang.percentage}% ({(lang.bytes / 1024).toFixed(1)} KB)
-                                    </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {repo.languages.map((l) => (
+                                    <Badge key={l.name} variant="cyan" className="text-[10px]">
+                                      {l.name}: {l.percentage > 0 ? `${l.percentage}%` : l.bytes > 0 ? "<1%" : "0%"} ({(l.bytes / 1024).toFixed(1)} KB)
+                                    </Badge>
                                   ))}
                                 </div>
                               </div>
@@ -283,17 +267,20 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
         </div>
       </div>
 
-      {/* 06. Repository Awards & Honors */}
+      {/* 06. Repository Distinctions */}
       {awards.length > 0 && (
-        <div className="flex flex-col gap-4">
+        <div id="section-distinctions" className="flex flex-col gap-4">
           <div className="flex items-center gap-2">
             <Trophy className="size-6 text-[#FD9745]" />
             <div>
-              <h2 className="text-xl font-black uppercase tracking-tight text-black">
-                06. REPOSITORY AWARDS & HONORS
-              </h2>
-              <p className="text-xs font-bold text-gray-600">
-                Deterministic forensic medals awarded based on verifiable commit, churn, and longevity thresholds.
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-xl font-black uppercase tracking-tight text-black">
+                  06. REPOSITORY DISTINCTIONS
+                </h2>
+                <Badge variant="coral">{awards.length}</Badge>
+              </div>
+              <p className="text-xs font-bold text-gray-600 mt-0.5">
+                Evidence-based repository distinctions awarded based on verifiable commit, churn, and longevity milestones.
               </p>
             </div>
           </div>

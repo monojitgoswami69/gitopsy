@@ -132,7 +132,7 @@ export function WrappedViewer({
         <div className="flex flex-col items-center text-center gap-3">
           <span className="text-base font-black uppercase">Peak Activity Hour</span>
           <div className="text-6xl md:text-8xl font-black font-mono my-2 text-black">
-            {report.summary.busiestHour}:00 UTC
+            {report.summary.busiestHour}:00 {report.summary.timezoneAbbr || "local"}
           </div>
           <p className="text-xl font-black">
             {report.summary.nightCommitPercentage}% of your total commits occurred late at night.

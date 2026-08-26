@@ -51,7 +51,7 @@ export function EChartContainer({
           fontWeight: "bold",
           fontSize: 12,
         },
-        extraCssText: "box-shadow: 4px 4px 0px 0px #000; border-radius: 6px;",
+        extraCssText: "border-radius: 6px;",
       },
       ...options,
     };
@@ -80,7 +80,7 @@ export function EChartContainer({
     <div
       ref={chartRef}
       style={{ height, width: "100%" }}
-      className={`min-h-[200px] w-full ${className}`}
+      className={`w-full ${className}`}
     />
   );
 }

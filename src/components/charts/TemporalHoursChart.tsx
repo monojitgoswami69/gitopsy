@@ -7,10 +7,13 @@ import type { EChartsOption } from "echarts";
 export function TemporalHoursChart({
   commitsByHour,
   commitsByWeekday,
+  timezoneAbbr,
 }: {
   commitsByHour: number[];
   commitsByWeekday: number[];
+  timezoneAbbr?: string;
 }) {
+  const tzLabel = timezoneAbbr || "Local";
   const hours = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")}:00`);
   const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -51,14 +54,14 @@ export function TemporalHoursChart({
           const item = params[0];
           const isNight = item.dataIndex >= 21 || item.dataIndex <= 4;
           return `
-            <div style="font-weight:900;">${item.name} UTC</div>
+            <div style="font-weight:900;">${item.name} ${tzLabel}</div>
             <div>Commits: <strong>${item.value}</strong></div>
             ${isNight ? '<div style="color:#9333ea; font-size:11px; font-weight:bold;">🌙 Night Shift Window</div>' : ""}
           `;
         },
       },
     };
-  }, [commitsByHour]);
+  }, [commitsByHour, tzLabel, hours]);
 
   const weekdayOptions: EChartsOption = useMemo(() => {
     return {
@@ -103,13 +106,13 @@ export function TemporalHoursChart({
         },
       },
     };
-  }, [commitsByWeekday]);
+  }, [commitsByWeekday, weekdays]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
       <div className="border-[3px] border-black bg-white p-4 rounded-[8px] shadow-[4px_4px_0_0_#000]">
         <h4 className="text-xs font-black uppercase tracking-wider mb-2 flex items-center justify-between">
-          <span>24-Hour Forensic Clock (UTC)</span>
+          <span>24-Hour Forensic Clock ({tzLabel})</span>
           <span className="text-[10px] bg-[#C084FC] px-2 py-0.5 border border-black rounded">
             Purple = Night Owl
           </span>

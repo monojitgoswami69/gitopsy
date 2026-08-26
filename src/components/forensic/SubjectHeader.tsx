@@ -19,7 +19,7 @@ export function SubjectHeader({
   subject,
   primaryClassification,
 }: SubjectHeaderProps) {
-  const memberSince = new Date(subject.createdAt).toLocaleDateString("en-US", {
+  const memberSince = new Date(subject.createdAt).toLocaleDateString(undefined, {
     month: "short",
     year: "numeric",
   });
@@ -33,6 +33,16 @@ export function SubjectHeader({
 
   return (
     <div id="section-subject" className="w-full flex flex-col items-center justify-center text-black">
+      {/* 01. Subject Dossier Section Header */}
+      <div className="w-full flex items-center justify-between mb-4 pb-2 border-b-[2px] border-black/15">
+        <h2 className="text-xs font-black uppercase tracking-wider text-gray-700">
+          01. SUBJECT DOSSIER
+        </h2>
+        <span className="text-[10px] font-mono font-bold bg-amber-100 border border-black px-2 py-0.5 rounded shadow-[1px_1px_0_0_#000]">
+          CASE ID: @{subject.login.toUpperCase()}
+        </span>
+      </div>
+
       {/* Profile & Identity Block (Image on Left, details on right) */}
       <div className="flex flex-col sm:flex-row items-center sm:items-start md:items-center justify-center gap-5 sm:gap-6 text-center sm:text-left">
         {/* Left: Avatar sized to match text column height */}
