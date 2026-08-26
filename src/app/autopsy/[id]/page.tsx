@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { gitopsyDb } from "@/lib/db";
@@ -51,6 +51,7 @@ export default function AutopsyReportDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [heatmapMetric, setHeatmapMetric] = useState<"COMMITS" | "LINES">("COMMITS");
+  const [churnGranularity, setChurnGranularity] = useState<"WEEKLY" | "MONTHLY">("WEEKLY");
   const [isWrappedOpen, setIsWrappedOpen] = useState(false);
   const [selectedEgg, setSelectedEgg] = useState<DeterministicEasterEgg | null>(null);
 
@@ -77,6 +78,238 @@ export default function AutopsyReportDetailPage() {
 
     loadReport();
   }, [reportId]);
+
+  const heatmapData = useMemo(() => {
+    if (!analysis) return [];
+    return heatmapMetric === "LINES"
+      ? analysis.activity.heatmapCalendar.map((d) => {
+          const grossChurn = Math.abs(d.additions) + Math.abs(d.deletions);
+          // If commits occurred on this day but diff stats were 0, maintain baseline 1 so day is marked active
+          const count = grossChurn > 0 ? grossChurn : d.count > 0 ? 1 : 0;
+          return {
+            date: d.date,
+            count,
+            commits: d.count,
+            additions: d.additions,
+            deletions: d.deletions,
+          };
+        })
+      : analysis.activity.heatmapCalendar.map((d) => ({
+          date: d.date,
+          count: d.count,
+          commits: d.count,
+          additions: d.additions,
+          deletions: d.deletions,
+        }));
+  }, [analysis, heatmapMetric]);
+
+  const churnData = useMemo(() => {
+    if (!analysis) return [];
+    if (churnGranularity === "WEEKLY") {
+      const dayMap = new Map<
+        string,
+        { additions: number; deletions: number; count: number }
+      >();
+      if (analysis.activity?.heatmapCalendar) {
+        for (const d of analysis.activity.heatmapCalendar) {
+          if (d.date) {
+            dayMap.set(d.date, {
+              additions: d.additions || 0,
+              deletions: d.deletions || 0,
+              count: d.count || 0,
+            });
+          }
+        }
+      }
+
+      // Determine full timeline range from byMonth or heatmapCalendar
+      let startDate: Date;
+      let endDate: Date;
+
+      if (analysis.activity?.byMonth && analysis.activity.byMonth.length > 0) {
+        const sortedMonths = [...analysis.activity.byMonth].sort((a, b) =>
+          a.month.localeCompare(b.month)
+        );
+        const [startYear, startMonth] = sortedMonths[0].month.split("-").map(Number);
+        const [endYear, endMonth] = sortedMonths[sortedMonths.length - 1].month
+          .split("-")
+          .map(Number);
+
+        startDate = new Date(startYear, startMonth - 1, 1);
+        endDate = new Date(endYear, endMonth, 0); // Last day of ending month
+      } else {
+        const today = new Date();
+        startDate = new Date(today.getFullYear() - 1, today.getMonth(), 1);
+        endDate = today;
+      }
+
+      // Align startDate to Monday of that week
+      const startDay = startDate.getDay();
+      const diffToMonday = (startDay === 0 ? -6 : 1) - startDay;
+      const current = new Date(startDate);
+      current.setDate(startDate.getDate() + diffToMonday);
+
+      const weeks: {
+        key: string;
+        label: string;
+        additions: number;
+        deletions: number;
+        count: number;
+        monthKey: string;
+      }[] = [];
+
+      let weekIndex = 0;
+
+      while (current <= endDate) {
+        let weekAdds = 0;
+        let weekDels = 0;
+        let weekCommits = 0;
+
+        // Thursday of this 7-day rolling window defines representative date & month (ISO-8601)
+        const midWeek = new Date(current);
+        midWeek.setDate(current.getDate() + 3);
+
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(current);
+          d.setDate(current.getDate() + i);
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, "0");
+          const dayStr = String(d.getDate()).padStart(2, "0");
+          const dateIso = `${y}-${m}-${dayStr}`;
+
+          const data = dayMap.get(dateIso);
+          if (data) {
+            weekAdds += data.additions;
+            weekDels += data.deletions;
+            weekCommits += data.count;
+          }
+        }
+
+        const midYear = midWeek.getFullYear();
+        const midMonth = midWeek.getMonth();
+        const monthKey = `${midYear}-${String(midMonth + 1).padStart(2, "0")}`;
+
+        // Compute ISO-8601 week number and year
+        const targetDate = new Date(
+          Date.UTC(midWeek.getFullYear(), midWeek.getMonth(), midWeek.getDate())
+        );
+        const dayNum = targetDate.getUTCDay() || 7;
+        targetDate.setUTCDate(targetDate.getUTCDate() + 4 - dayNum);
+        const yearStart = new Date(Date.UTC(targetDate.getUTCFullYear(), 0, 1));
+        const weekNum = Math.ceil(
+          ((targetDate.getTime() - yearStart.getTime()) / 86400000 + 1) / 7
+        );
+        const isoYear = targetDate.getUTCFullYear();
+
+        // Show month label every 4 weeks
+        const showMonthLabel = weekIndex % 4 === 0;
+        const monthLabel = midWeek.toLocaleDateString("en-US", {
+          month: "short",
+          year: "2-digit",
+        });
+
+        weeks.push({
+          key: `${isoYear}, Week ${weekNum}`,
+          label: showMonthLabel ? monthLabel : "",
+          additions: weekAdds,
+          deletions: weekDels,
+          count: weekCommits,
+          monthKey,
+        });
+
+        weekIndex++;
+        // Advance 7 days for next rolling bar
+        current.setDate(current.getDate() + 7);
+      }
+
+      // Reconcile each month's total additions and deletions with authoritative byMonth stats
+      const byMonthMap = new Map<
+        string,
+        { additions: number; deletions: number; commits: number }
+      >();
+      if (analysis.activity?.byMonth) {
+        for (const m of analysis.activity.byMonth) {
+          byMonthMap.set(m.month, {
+            additions: m.additions || 0,
+            deletions: m.deletions || 0,
+            commits: m.commits || 0,
+          });
+        }
+      }
+
+      const monthToWeeks = new Map<string, typeof weeks>();
+      for (const w of weeks) {
+        const list = monthToWeeks.get(w.monthKey) || [];
+        list.push(w);
+        monthToWeeks.set(w.monthKey, list);
+      }
+
+      for (const [mKey, mWeeks] of monthToWeeks.entries()) {
+        const target = byMonthMap.get(mKey);
+        if (!target) continue;
+
+        const currentAdds = mWeeks.reduce((acc, w) => acc + w.additions, 0);
+        const currentDels = mWeeks.reduce((acc, w) => acc + w.deletions, 0);
+        const currentCommits = mWeeks.reduce((acc, w) => acc + w.count, 0);
+
+        if (
+          currentAdds === 0 &&
+          currentDels === 0 &&
+          currentCommits === 0 &&
+          (target.additions > 0 || target.deletions > 0 || target.commits > 0)
+        ) {
+          const n = mWeeks.length;
+          if (n > 0) {
+            const addPerWeek = Math.round(target.additions / n);
+            const delPerWeek = Math.round(target.deletions / n);
+            const commitsPerWeek = Math.max(1, Math.round(target.commits / n));
+            for (const w of mWeeks) {
+              w.additions = addPerWeek;
+              w.deletions = delPerWeek;
+              w.count = commitsPerWeek;
+            }
+          }
+        } else if (currentAdds > 0 || currentDels > 0) {
+          const addRatio =
+            target.additions > 0 && currentAdds > 0
+              ? target.additions / currentAdds
+              : 1;
+          const delRatio =
+            target.deletions > 0 && currentDels > 0
+              ? target.deletions / currentDels
+              : 1;
+          for (const w of mWeeks) {
+            if (target.additions > 0 && currentAdds > 0) {
+              w.additions = Math.round(w.additions * addRatio);
+            }
+            if (target.deletions > 0 && currentDels > 0) {
+              w.deletions = Math.round(w.deletions * delRatio);
+            }
+          }
+        }
+      }
+
+      return weeks.map(({ monthKey, ...rest }) => rest);
+    } else {
+      return analysis.activity.byMonth.map((m) => {
+        const [year, month] = m.month.split("-").map(Number);
+        const date = new Date(year, (month || 1) - 1, 1);
+        const label = !isNaN(date.getTime())
+          ? date.toLocaleDateString("en-US", { month: "short", year: "2-digit" })
+          : m.month;
+        const fullLabel = !isNaN(date.getTime())
+          ? date.toLocaleDateString("en-US", { month: "long", year: "numeric" })
+          : m.month;
+        return {
+          key: fullLabel,
+          label,
+          additions: m.additions,
+          deletions: m.deletions,
+          count: m.commits,
+        };
+      });
+    }
+  }, [analysis, churnGranularity]);
 
   if (isLoading) {
     return (
@@ -124,29 +357,6 @@ export default function AutopsyReportDetailPage() {
     );
   }
 
-  // Format heatmap data based on selected metric
-  const heatmapData =
-    heatmapMetric === "LINES"
-      ? analysis.activity.heatmapCalendar.map((d) => {
-          const grossChurn = Math.abs(d.additions) + Math.abs(d.deletions);
-          // If commits occurred on this day but diff stats were 0, maintain baseline 1 so day is marked active
-          const count = grossChurn > 0 ? grossChurn : d.count > 0 ? 1 : 0;
-          return {
-            date: d.date,
-            count,
-            commits: d.count,
-            additions: d.additions,
-            deletions: d.deletions,
-          };
-        })
-      : analysis.activity.heatmapCalendar.map((d) => ({
-          date: d.date,
-          count: d.count,
-          commits: d.count,
-          additions: d.additions,
-          deletions: d.deletions,
-        }));
-
   const userTz =
     analysis.summary.timezone ||
     analysis.activity?.timezone ||
@@ -182,7 +392,7 @@ export default function AutopsyReportDetailPage() {
           primaryClassification={analysis.primaryClassification}
         />
 
-        {/* 02. Executive Headline Metrics / Case Summary */}
+        {/* 01. Executive Headline Metrics / Case Summary */}
         <HeadlineMetrics
           summary={analysis.summary}
           topLanguage={analysis.languages[0]}
@@ -226,14 +436,14 @@ export default function AutopsyReportDetailPage() {
             </div>
           )}
 
-        {/* 03. Contribution Activity & Heatmap */}
+        {/* 02. Contribution Activity & Heatmap */}
         <div id="section-activity" className="border-[4px] border-black bg-white rounded-[12px] p-5 shadow-[6px_6px_0_0_#000] flex flex-col gap-2.5 text-black">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b-[3px] border-black pb-3">
             <div>
               <div className="flex items-center gap-2">
                 <Calendar className="size-5 sm:size-6 text-black" />
                 <h2 className="text-lg sm:text-xl font-black uppercase tracking-tight">
-                  03. CONTRIBUTION ACTIVITY &amp; ANNUAL HEATMAP
+                  02. CONTRIBUTION ACTIVITY &amp; ANNUAL HEATMAP
                 </h2>
               </div>
               <p className="text-xs font-bold text-gray-600 mt-0.5">
@@ -283,14 +493,14 @@ export default function AutopsyReportDetailPage() {
           </div>
         </div>
 
-        {/* 04. Temporal Forensics */}
+        {/* 03. Temporal Forensics */}
         <div id="section-temporal" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[8px_8px_0_0_#000] flex flex-col gap-6 text-black">
           <div className="flex items-center justify-between border-b-[3px] border-black pb-4">
             <div>
               <div className="flex items-center gap-2">
                 <Clock className="size-6 text-black" />
                 <h2 className="text-xl font-black uppercase tracking-tight">
-                  04. TEMPORAL PROFILE &amp; CADENCE
+                  03. TEMPORAL PROFILE &amp; CADENCE
                 </h2>
               </div>
               <p className="text-xs font-bold text-gray-600 mt-0.5">
@@ -333,20 +543,20 @@ export default function AutopsyReportDetailPage() {
           />
         </div>
 
-        {/* 05. Repositories & 06. Repository Distinctions */}
+        {/* 04. Repositories & 05. Repository Distinctions */}
         <RepositorySection
           repositories={analysis.repositories}
           awards={analysis.awards}
         />
 
-        {/* 07. Language DNA & Dialects */}
+        {/* 06. Language DNA & Dialects */}
         <div id="section-languages" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[8px_8px_0_0_#000] flex flex-col gap-6 text-black">
           <div className="flex items-center justify-between border-b-[3px] border-black pb-4">
             <div>
               <div className="flex items-center gap-2">
                 <Globe2 className="size-6 text-black" />
                 <h2 className="text-xl font-black uppercase tracking-tight">
-                  07. PROGRAMMING LANGUAGE DNA &amp; COMPOSITION
+                  06. PROGRAMMING LANGUAGE DNA &amp; COMPOSITION
                 </h2>
               </div>
               <p className="text-xs font-bold text-gray-600 mt-0.5">
@@ -416,36 +626,43 @@ export default function AutopsyReportDetailPage() {
           </div>
         </div>
 
-        {/* 08. Commit Message Forensics & Churn */}
+        {/* 07. Commit Message Forensics & Churn */}
         <CommitForensicsSection commitForensics={analysis.commitForensics} />
 
-        {/* 09. Code Churn Blast Radius */}
+        {/* 08. Code Churn Blast Radius */}
         <div id="section-churn" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[8px_8px_0_0_#000] flex flex-col gap-6 text-black">
-          <div className="flex items-center justify-between border-b-[3px] border-black pb-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b-[3px] border-black pb-4">
             <div>
               <div className="flex items-center gap-2">
                 <FileCode2 className="size-6 text-black" />
                 <h2 className="text-xl font-black uppercase tracking-tight">
-                  09. HISTORICAL MONTHLY CODE CHURN
+                  08. HISTORICAL CODE CHURN TIMELINE
                 </h2>
               </div>
               <p className="text-xs font-bold text-gray-600 mt-0.5">
-                Net additions (+lines) and deletions (-lines) plotted across time from historical commit diffs.
+                Gross additions (+lines) and deletions (-lines) plotted across time from version control diffs.
               </p>
             </div>
+
+            <Tabs value={churnGranularity} onValueChange={(v) => setChurnGranularity(v as any)}>
+              <TabsList>
+                <TabsTrigger value="WEEKLY">WEEKLY</TabsTrigger>
+                <TabsTrigger value="MONTHLY">MONTHLY</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
 
-          <ChurnAreaChart monthlyData={analysis.activity.byMonth.map((m) => ({ ...m, count: m.commits }))} />
+          <ChurnAreaChart data={churnData} granularity={churnGranularity} />
         </div>
 
-        {/* 10. Collaboration Record */}
+        {/* 09. Collaboration Record */}
         <div id="section-collaboration" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[8px_8px_0_0_#000] flex flex-col gap-6 text-black">
           <div className="flex items-center justify-between border-b-[3px] border-black pb-4">
             <div>
               <div className="flex items-center gap-2">
                 <GitPullRequest className="size-6 text-black" />
                 <h2 className="text-xl font-black uppercase tracking-tight">
-                  10. COLLABORATION RECORD &amp; PULL REQUESTS
+                  09. COLLABORATION RECORD &amp; PULL REQUESTS
                 </h2>
               </div>
               <p className="text-xs font-bold text-gray-600 mt-0.5">
@@ -489,17 +706,17 @@ export default function AutopsyReportDetailPage() {
           </div>
         </div>
 
-        {/* 11. Deterministic Developer Classifications */}
+        {/* 10. Deterministic Developer Classifications */}
         <ClassificationsSection classifications={analysis.classifications} />
 
-        {/* 12. Verified Findings */}
+        {/* 11. Verified Findings */}
         <div id="section-findings" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[8px_8px_0_0_#000] flex flex-col gap-6 text-black">
           <div className="flex items-center justify-between border-b-[3px] border-black pb-4">
             <div>
               <div className="flex items-center gap-2">
                 <Lightbulb className="size-6 text-[#FD9745]" />
                 <h2 className="text-xl font-black uppercase tracking-tight">
-                  12. VERIFIED FINDINGS &amp; OBSERVATIONS
+                  11. VERIFIED FINDINGS &amp; OBSERVATIONS
                 </h2>
               </div>
               <p className="text-xs font-bold text-gray-600 mt-0.5">
@@ -530,13 +747,13 @@ export default function AutopsyReportDetailPage() {
           </div>
         </div>
 
-        {/* 13. Gitopsy Courtroom */}
+        {/* 12. Gitopsy Courtroom */}
         <CourtSection
           charges={analysis.courtCharges}
           defendantLogin={analysis.subject.login}
         />
 
-        {/* 14. Special Findings & Case Notes */}
+        {/* 13. Special Findings & Case Notes */}
         {analysis.easterEggs.length > 0 && (
           <div id="section-case-notes" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[8px_8px_0_0_#000] flex flex-col gap-6 text-black">
             <div className="flex items-center justify-between border-b-[3px] border-black pb-4">
@@ -544,7 +761,7 @@ export default function AutopsyReportDetailPage() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <Zap className="size-6 text-purple-700" />
                   <h2 className="text-xl font-black uppercase tracking-tight">
-                    14. SPECIAL FINDINGS &amp; CASE NOTES
+                    13. SPECIAL FINDINGS &amp; CASE NOTES
                   </h2>
                   <Badge variant="purple">{analysis.easterEggs.length}</Badge>
                 </div>
@@ -573,13 +790,13 @@ export default function AutopsyReportDetailPage() {
           </div>
         )}
 
-        {/* 15. Wrapped Recap & Launcher */}
+        {/* 14. Wrapped Recap & Launcher */}
         <div id="section-wrapped" className="border-[4px] border-black bg-[#FFDC58] rounded-[12px] p-6 shadow-[8px_8px_0_0_#000] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 text-black">
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
               <Badge variant="coral">EXAMINATION SUMMARY</Badge>
               <h2 className="text-2xl font-black uppercase tracking-tight">
-                15. GITOPSY FORENSIC WRAPPED
+                14. GITOPSY FORENSIC WRAPPED
               </h2>
             </div>
             <p className="text-xs font-bold text-gray-800 max-w-lg leading-relaxed">
@@ -598,7 +815,7 @@ export default function AutopsyReportDetailPage() {
           </Button>
         </div>
 
-        {/* 16. Data Management & Privacy */}
+        {/* 15. Data Management & Privacy */}
         <DataManagementSection
           analysis={analysis}
           onAnalysisUpdated={(a) => setAnalysis(a)}

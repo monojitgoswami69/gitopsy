@@ -37,7 +37,7 @@ export function CommitForensicsSection({ commitForensics }: CommitForensicsSecti
         <div className="flex items-center justify-between border-b-[3px] border-black pb-4">
           <div>
             <h2 className="text-xl font-black uppercase tracking-tight flex items-center gap-2">
-              <FileCode2 className="size-6 text-black" /> 08. COMMIT FORENSICS &amp; MESSAGE HYGIENE
+              <FileCode2 className="size-6 text-black" /> 07. COMMIT FORENSICS &amp; MESSAGE HYGIENE
             </h2>
             <p className="text-xs font-bold text-gray-600">
               Examined {totalAnalyzed.toLocaleString()} historical commits across message intent, character length, and size spectrums.

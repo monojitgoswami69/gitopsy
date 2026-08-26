@@ -25,7 +25,7 @@ const SECTIONS: SectionItem[] = [
 
 export function FloatingIndexNav() {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState<string>("section-subject");
+  const [activeSection, setActiveSection] = useState<string>("section-headlines");
 
   useEffect(() => {
     const handleScroll = () => {

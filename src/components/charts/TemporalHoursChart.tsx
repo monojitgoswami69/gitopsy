@@ -109,20 +109,20 @@ export function TemporalHoursChart({
   }, [commitsByWeekday, weekdays]);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
-      <div className="border-[3px] border-black bg-white p-4 rounded-[8px] shadow-[4px_4px_0_0_#000]">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 w-full">
+      <div className="border-[2px] border-black bg-white p-3.5 rounded-[8px]">
         <h4 className="text-xs font-black uppercase tracking-wider mb-2 flex items-center justify-between">
           <span>24-Hour Forensic Clock ({tzLabel})</span>
-          <span className="text-[10px] bg-[#C084FC] px-2 py-0.5 border border-black rounded">
+          <span className="text-[10px] font-bold bg-[#C084FC] px-2 py-0.5 border border-black rounded">
             Purple = Night Owl
           </span>
         </h4>
         <EChartContainer options={hourOptions} height="240px" />
       </div>
-      <div className="border-[3px] border-black bg-white p-4 rounded-[8px] shadow-[4px_4px_0_0_#000]">
+      <div className="border-[2px] border-black bg-white p-3.5 rounded-[8px]">
         <h4 className="text-xs font-black uppercase tracking-wider mb-2 flex items-center justify-between">
           <span>Weekday Cadence Distribution</span>
-          <span className="text-[10px] bg-[#4D96FF] px-2 py-0.5 border border-black rounded text-black">
+          <span className="text-[10px] font-bold bg-[#4D96FF] px-2 py-0.5 border border-black rounded text-black">
             Blue = Weekend
           </span>
         </h4>

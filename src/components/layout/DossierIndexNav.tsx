@@ -10,22 +10,21 @@ interface SectionItem {
 }
 
 const SECTIONS: SectionItem[] = [
-  { id: "section-subject", label: "01. Subject Dossier" },
-  { id: "section-headlines", label: "02. Case Summary" },
-  { id: "section-activity", label: "03. Activity Heatmap" },
-  { id: "section-temporal", label: "04. Temporal Profile" },
-  { id: "section-repositories", label: "05. Repositories" },
-  { id: "section-distinctions", label: "06. Distinctions" },
-  { id: "section-languages", label: "07. Language DNA" },
-  { id: "section-commits", label: "08. Commit Forensics" },
-  { id: "section-churn", label: "09. Monthly Churn" },
-  { id: "section-collaboration", label: "10. Collaboration" },
-  { id: "section-classifications", label: "11. Assessments" },
-  { id: "section-findings", label: "12. Findings" },
-  { id: "section-court", label: "13. Courtroom" },
-  { id: "section-case-notes", label: "14. Case Notes" },
-  { id: "section-wrapped", label: "15. Wrapped Recap" },
-  { id: "section-data", label: "16. Data & Privacy" },
+  { id: "section-headlines", label: "01. Case Summary" },
+  { id: "section-activity", label: "02. Activity Heatmap" },
+  { id: "section-temporal", label: "03. Temporal Profile" },
+  { id: "section-repositories", label: "04. Repositories" },
+  { id: "section-distinctions", label: "05. Distinctions" },
+  { id: "section-languages", label: "06. Language DNA" },
+  { id: "section-commits", label: "07. Commit Forensics" },
+  { id: "section-churn", label: "08. Code Churn" },
+  { id: "section-collaboration", label: "09. Collaboration" },
+  { id: "section-classifications", label: "10. Assessments" },
+  { id: "section-findings", label: "11. Findings" },
+  { id: "section-court", label: "12. Courtroom" },
+  { id: "section-case-notes", label: "13. Case Notes" },
+  { id: "section-wrapped", label: "14. Wrapped Recap" },
+  { id: "section-data", label: "15. Data & Privacy" },
 ];
 
 interface DossierIndexNavProps {
@@ -222,7 +221,7 @@ export function DossierIndexNav({ onLaunchWrapped }: DossierIndexNavProps) {
           >
             <span className="flex items-center gap-1.5 truncate">
               <List className="size-3.5 shrink-0" />
-              <span className="truncate">INDEX: {SECTIONS.find((s) => s.id === activeSection)?.label || "01. Subject Dossier"}</span>
+              <span className="truncate">INDEX: {SECTIONS.find((s) => s.id === activeSection)?.label || "01. Case Summary"}</span>
             </span>
             <ChevronRight className={`size-3.5 shrink-0 transition-transform ${isMobileOpen ? "rotate-90" : ""}`} />
           </button>

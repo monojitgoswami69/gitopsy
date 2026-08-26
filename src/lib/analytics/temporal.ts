@@ -268,6 +268,18 @@ export function calculateTemporalAnalytics(
             dayData.additions = Math.round(weekAdditions * ratio);
             dayData.deletions = Math.round(weekDeletions * ratio);
           }
+        } else if (weekAdditions > 0 || weekDeletions > 0 || weekCommits > 0) {
+          // If no daily commit objects exist for this week in the sampled commits,
+          // distribute the authoritative weekly churn across the week's days
+          for (let d = 0; d < 7; d++) {
+            const day = new Date(weekStart.getTime() + d * 86400000);
+            const { dateStr } = extractLocalParts(day);
+            const dayData = dateMap.get(dateStr) || { count: 0, additions: 0, deletions: 0 };
+            dayData.count = Math.max(dayData.count, Math.round(weekCommits / 7));
+            dayData.additions += Math.round(weekAdditions / 7);
+            dayData.deletions += Math.round(weekDeletions / 7);
+            dateMap.set(dateStr, dayData);
+          }
         }
       }
     }

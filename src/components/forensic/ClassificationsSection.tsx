@@ -17,7 +17,7 @@ export function ClassificationsSection({ classifications }: ClassificationsSecti
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <h2 className="text-xl font-black uppercase tracking-tight text-black">
-              11. DEVELOPER ASSESSMENTS
+              10. DEVELOPER ASSESSMENTS
             </h2>
             <Badge variant="cyan">{classifications.length}</Badge>
           </div>

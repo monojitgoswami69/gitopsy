@@ -1,85 +1,292 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { EChartContainer } from "./EChartContainer";
 import type { EChartsOption } from "echarts";
+import type * as echarts from "echarts";
+
+export interface ChurnItem {
+  key: string;
+  label: string;
+  additions: number;
+  deletions: number;
+  count: number;
+}
 
 export function ChurnAreaChart({
-  monthlyData,
+  data,
+  granularity = "WEEKLY",
 }: {
-  monthlyData: { month: string; additions: number; deletions: number; count: number }[];
+  data: ChurnItem[];
+  granularity?: "WEEKLY" | "MONTHLY";
 }) {
+  const [lockedIndex, setLockedIndex] = useState<number | null>(null);
+  const lockedIndexRef = useRef<number | null>(null);
+  lockedIndexRef.current = lockedIndex;
+
+  const chartInstanceRef = useRef<echarts.ECharts | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Surgically toggle tooltip tracking on the live instance.
+  // This does NOT rebuild chart options — the tooltip stays exactly where it is.
+  const freezeTooltip = useCallback(() => {
+    const instance = chartInstanceRef.current;
+    if (!instance) return;
+    instance.setOption({
+      tooltip: { triggerOn: "none", alwaysShowContent: true },
+    });
+  }, []);
+
+  const unfreezeTooltip = useCallback(() => {
+    const instance = chartInstanceRef.current;
+    if (!instance) return;
+    instance.setOption({
+      tooltip: { triggerOn: "mousemove", alwaysShowContent: false },
+    });
+    instance.dispatchAction({ type: "hideTip" });
+    instance.dispatchAction({ type: "updateAxisPointer", currTrigger: "leave" });
+    instance.dispatchAction({ type: "downplay" });
+  }, []);
+
+  // When lockedIndex changes, freeze or unfreeze — nothing else
+  useEffect(() => {
+    if (lockedIndex !== null) {
+      freezeTooltip();
+    } else {
+      unfreezeTooltip();
+    }
+  }, [lockedIndex, freezeTooltip, unfreezeTooltip]);
+
+  // Release locking when clicking anywhere outside
+  useEffect(() => {
+    if (lockedIndex === null) return;
+
+    function handleOutsideClick(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setLockedIndex(null);
+      }
+    }
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, [lockedIndex]);
+
+  // Chart options are ONLY rebuilt when data or granularity change — never on lock/unlock
   const chartOptions: EChartsOption = useMemo(() => {
-    const months = monthlyData.map((d) => d.month);
-    const additions = monthlyData.map((d) => d.additions);
-    const deletions = monthlyData.map((d) => -d.deletions); // Negative for symmetric bi-directional timeline
+    if (!data || data.length === 0) {
+      return {
+        title: { text: "No churn data recorded", left: "center" },
+      };
+    }
+
+    const labels = data.map((d) => d.label);
+    const additions = data.map((d) => (d.additions > 0 ? d.additions : null));
+    const deletions = data.map((d) => (d.deletions > 0 ? -Math.abs(d.deletions) : null));
 
     return {
-      grid: { left: 60, right: 30, top: 40, bottom: 40 },
+      animationDurationUpdate: 0,
+      grid: {
+        left: 55,
+        right: 25,
+        top: 28,
+        bottom: 36,
+      },
       legend: {
-        data: ["Additions (+)", "Deletions (-)"],
-        textStyle: { fontWeight: "bold", color: "#000" },
-        top: 0,
+        show: false,
+      },
+      tooltip: {
+        show: true,
+        trigger: "axis",
+        triggerOn: "mousemove",
+        alwaysShowContent: false,
+        transitionDuration: 0,
+        axisPointer: {
+          type: "shadow",
+          animation: false,
+          shadowStyle: {
+            color: "rgba(0, 0, 0, 0.06)",
+          },
+        },
+        backgroundColor: "#FFFFFF",
+        borderColor: "#000000",
+        borderWidth: 1.5,
+        extraCssText: "border-radius: 6px; padding: 7px 11px; pointer-events: none;",
+        textStyle: {
+          color: "#000000",
+          fontFamily: "monospace",
+          fontSize: 11,
+        },
+        formatter: (params: any) => {
+          const idx = params[0]?.dataIndex ?? 0;
+          const item = data[idx];
+          if (!item) return "";
+
+          const adds = item.additions || 0;
+          const dels = item.deletions || 0;
+          const net = adds - dels;
+          const totalVolume = adds + dels;
+
+          return `
+            <div style="display:flex; flex-direction:column; gap:5px; min-width:210px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:1.5px solid #000; padding-bottom:3px; gap:8px;">
+                <span style="font-weight:900; font-size:12px; color:#000;">${item.key}</span>
+                <span style="font-size:10px; font-weight:800; color:#4B5563; font-family:monospace;">${item.count} ${item.count === 1 ? "commit" : "commits"}</span>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:11px;">
+                <span style="color:#4B5563; font-weight:700;">Net Growth:</span>
+                <strong style="color:${net >= 0 ? "#16A34A" : "#DC2626"}; font-family:monospace;">
+                  ${net >= 0 ? "+" : ""}${net.toLocaleString()} lines
+                </strong>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:10.5px; font-family:monospace; background:#F8FAFC; padding:2px 6px; border-radius:4px; border:1px solid #E2E8F0;">
+                <span style="color:#059669; font-weight:800;">+${adds.toLocaleString()} added</span>
+                <span style="color:#DC2626; font-weight:800;">-${dels.toLocaleString()} deleted</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; font-size:9.5px; color:#64748B; font-family:monospace; padding-top:1px;">
+                <span>Total Volume:</span>
+                <span>${totalVolume.toLocaleString()} lines</span>
+              </div>
+            </div>
+          `;
+        },
       },
       xAxis: {
         type: "category",
-        data: months,
-        axisLine: { lineStyle: { color: "#000", width: 2 } },
-        axisLabel: { color: "#000", fontWeight: "bold", fontSize: 11 },
+        data: labels,
+        axisLine: {
+          onZero: true,
+          lineStyle: { color: "#000000", width: 1.5 },
+        },
+        axisTick: {
+          alignWithLabel: true,
+          lineStyle: { color: "#000000" },
+        },
+        axisLabel: {
+          color: "#000000",
+          fontWeight: "bold",
+          fontSize: 10,
+          interval: 0,
+          hideOverlap: true,
+        },
       },
       yAxis: {
         type: "value",
-        axisLine: { lineStyle: { color: "#000", width: 2 } },
-        splitLine: { lineStyle: { color: "#E5E7EB", width: 1.5 } },
+        axisLine: {
+          show: true,
+          lineStyle: { color: "#000000", width: 1.5 },
+        },
+        splitLine: {
+          lineStyle: { color: "#E2E8F0", width: 1.5, type: "dashed" },
+        },
         axisLabel: {
-          color: "#000",
+          color: "#000000",
           fontWeight: "bold",
-          formatter: (v: number) => `${Math.abs(v).toLocaleString()}`,
+          fontSize: 10,
+          formatter: (v: number) => {
+            const abs = Math.abs(v);
+            if (abs === 0) return "0";
+            if (abs >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
+            if (abs >= 1_000) return `${(v / 1_000).toFixed(0)}k`;
+            return `${v}`;
+          },
         },
       },
       series: [
         {
           name: "Additions (+)",
           type: "bar",
-          stack: "Total",
           data: additions,
+          barGap: "-100%",
+          barMaxWidth: granularity === "WEEKLY" ? 16 : 28,
+          barMinHeight: 6,
+          cursor: "pointer",
           itemStyle: {
-            color: "#6BCB77",
-            borderColor: "#000",
-            borderWidth: 2,
+            color: "#4ADE80",
+            borderColor: "#000000",
+            borderWidth: 1.5,
+            borderRadius: [4, 4, 0, 0],
+          },
+          emphasis: {
+            itemStyle: {
+              color: "#22C55E",
+              borderColor: "#000000",
+              borderWidth: 2,
+            },
           },
         },
         {
           name: "Deletions (-)",
           type: "bar",
-          stack: "Total",
           data: deletions,
+          barGap: "-100%",
+          barMaxWidth: granularity === "WEEKLY" ? 16 : 28,
+          barMinHeight: 6,
+          cursor: "pointer",
           itemStyle: {
-            color: "#FF6B6B",
-            borderColor: "#000",
-            borderWidth: 2,
+            color: "#F87171",
+            borderColor: "#000000",
+            borderWidth: 1.5,
+            borderRadius: [0, 0, 4, 4],
+          },
+          emphasis: {
+            itemStyle: {
+              color: "#EF4444",
+              borderColor: "#000000",
+              borderWidth: 2,
+            },
           },
         },
       ],
-      tooltip: {
-        trigger: "axis",
-        formatter: (params: any) => {
-          const month = params[0]?.name;
-          const add = params[0]?.value || 0;
-          const del = Math.abs(params[1]?.value || 0);
-          const net = add - del;
-          return `
-            <div style="font-weight:900; margin-bottom:4px;">${month}</div>
-            <div style="color:#16a34a;">+${add.toLocaleString()} lines added</div>
-            <div style="color:#dc2626;">-${del.toLocaleString()} lines deleted</div>
-            <div style="font-weight:bold; border-top:1px solid #000; margin-top:4px; padding-top:2px;">
-              Net: ${net >= 0 ? "+" : ""}${net.toLocaleString()} lines
-            </div>
-          `;
-        },
-      },
     };
-  }, [monthlyData]);
+  }, [data, granularity]); // lockedIndex is NOT a dependency — locking never rebuilds options
 
-  return <EChartContainer options={chartOptions} height="280px" />;
+  return (
+    <div ref={containerRef} className="w-full flex flex-col items-center">
+      <div className="flex items-center justify-center gap-5 text-xs font-bold text-black mb-1">
+        <div className="flex items-center gap-1.5">
+          <span className="size-2.5 rounded-[3px] border-[1.5px] border-black bg-[#4ADE80] shrink-0" />
+          <span>Additions (+)</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="size-2.5 rounded-[3px] border-[1.5px] border-black bg-[#F87171] shrink-0" />
+          <span>Deletions (-)</span>
+        </div>
+      </div>
+
+      <EChartContainer
+        options={chartOptions}
+        height="280px"
+        onChartReady={(instance) => {
+          chartInstanceRef.current = instance;
+          instance.getZr().on("click", (event) => {
+            // If a card is already persisted, any click strictly unpersists
+            if (lockedIndexRef.current !== null) {
+              setLockedIndex(null);
+              return;
+            }
+
+            // If no card is persisted, lock onto the bar the user clicked in
+            const pointInPixel = [event.offsetX, event.offsetY];
+            if (instance.containPixel({ gridIndex: 0 }, pointInPixel)) {
+              try {
+                const converted = instance.convertFromPixel({ gridIndex: 0 }, pointInPixel);
+                if (Array.isArray(converted) && typeof converted[0] === "number") {
+                  const dataIndex = Math.round(converted[0]);
+                  if (dataIndex >= 0 && dataIndex < data.length) {
+                    setLockedIndex(dataIndex);
+                    return;
+                  }
+                }
+              } catch {
+                // Ignore conversion errors
+              }
+            }
+            setLockedIndex(null);
+          });
+        }}
+      />
+    </div>
+  );
 }

@@ -77,7 +77,7 @@ export function HeatmapChart({
         dimension: 1, // Explicitly map numeric count (index 1 in [date, count])
         orient: "horizontal",
         left: "center",
-        bottom: 2,
+        bottom: 0,
         itemWidth: 10,
         itemHeight: 10,
         itemGap: 14,
@@ -99,7 +99,7 @@ export function HeatmapChart({
         },
       },
       calendar: {
-        top: 26,
+        top: 24,
         left: 36,
         right: 16,
         cellSize: ["auto", 12.5],
@@ -168,5 +168,5 @@ export function HeatmapChart({
     };
   }, [data, dataMap, metricLabel]);
 
-  return <EChartContainer options={chartOptions} height="156px" />;
+  return <EChartContainer options={chartOptions} height="144px" />;
 }

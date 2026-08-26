@@ -68,7 +68,7 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b-[3px] border-black pb-4">
           <div>
             <h2 className="text-xl font-black uppercase tracking-tight flex items-center gap-2">
-              <FolderGit2 className="size-6 text-black" /> 05. REPOSITORY PORTFOLIO
+              <FolderGit2 className="size-6 text-black" /> 04. REPOSITORY PORTFOLIO
             </h2>
             <p className="text-xs font-bold text-gray-600">
               Examined {repositories.length} accessible repositories across public and authorized private scopes.
@@ -275,7 +275,7 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-xl font-black uppercase tracking-tight text-black">
-                  06. REPOSITORY DISTINCTIONS
+                  05. REPOSITORY DISTINCTIONS
                 </h2>
                 <Badge variant="coral">{awards.length}</Badge>
               </div>

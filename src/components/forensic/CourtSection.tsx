@@ -18,7 +18,7 @@ export function CourtSection({ charges, defendantLogin }: CourtSectionProps) {
           <div className="flex items-center gap-2">
             <Scale className="size-6 text-black" />
             <h2 className="text-xl font-black uppercase tracking-tight">
-              13. GITOPSY COURTROOM INDICTMENTS
+              12. GITOPSY COURTROOM INDICTMENTS
             </h2>
           </div>
           <p className="text-xs font-bold text-gray-600 mt-0.5">

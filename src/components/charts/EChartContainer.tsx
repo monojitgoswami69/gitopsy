@@ -8,6 +8,7 @@ export interface EChartContainerProps {
   height?: string | number;
   className?: string;
   onEvents?: Record<string, (params: unknown) => void>;
+  onChartReady?: (instance: echarts.ECharts) => void;
 }
 
 export function EChartContainer({
@@ -15,21 +16,28 @@ export function EChartContainer({
   height = "320px",
   className = "",
   onEvents,
+  onChartReady,
 }: EChartContainerProps) {
   const chartRef = useRef<HTMLDivElement | null>(null);
   const instanceRef = useRef<echarts.ECharts | null>(null);
+  const onEventsRef = useRef(onEvents);
+  onEventsRef.current = onEvents;
 
   useEffect(() => {
     if (!chartRef.current) return;
 
     if (!instanceRef.current) {
       instanceRef.current = echarts.init(chartRef.current, undefined, {
-        renderer: "svg",
+        renderer: "canvas",
       });
 
+      onChartReady?.(instanceRef.current);
+
       if (onEvents) {
-        Object.entries(onEvents).forEach(([eventName, handler]) => {
-          instanceRef.current?.on(eventName, handler);
+        Object.keys(onEvents).forEach((eventName) => {
+          instanceRef.current?.on(eventName, (params: unknown) => {
+            onEventsRef.current?.[eventName]?.(params);
+          });
         });
       }
     }

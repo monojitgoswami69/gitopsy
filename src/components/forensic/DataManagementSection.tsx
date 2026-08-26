@@ -55,7 +55,7 @@ export function DataManagementSection({ analysis, onAnalysisUpdated }: DataManag
       <div className="flex items-center justify-between border-b-[3px] border-black pb-4">
         <div>
           <h2 className="text-xl font-black uppercase tracking-tight">
-            16. LOCAL STORAGE & DATA MANAGEMENT
+            15. LOCAL STORAGE & DATA MANAGEMENT
           </h2>
           <p className="text-xs font-bold text-gray-600">
             Control your in-browser Dexie IndexedDB records. 100% token-redacted exports.
