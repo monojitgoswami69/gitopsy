@@ -1,4 +1,5 @@
 import { ForensicGitHubClient } from "./client";
+import { isResumableRateLimitError } from "./errors";
 import { SubjectProfile, ForensicCommit } from "@/types/domain";
 
 export interface RestRepoSummary {
@@ -59,6 +60,8 @@ function ok<T>(data: T, truncated = false): FetchOutcome<T> {
 function fail<T>(defaultValue: T, error: string): FetchOutcome<T> {
   return { data: defaultValue, ok: false, error, truncated: false };
 }
+
+const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 function isValidIsoDate(dateStr: string | undefined): boolean {
   if (!dateStr) return true;
@@ -142,14 +145,17 @@ export class ForensicGitHubRest {
       const repos: RestRepoSummary[] = [];
       let hitMaxPages = false;
 
+      // Manual iteration (not for-await) so the generator's return value —
+      // which carries hitMaxPages — is not discarded.
       const generator = this.client.paginateRest<RawRepo>("/user/repos", {
         affiliation: "owner,collaborator,organization_member",
         sort: "pushed",
         direction: "desc",
       });
 
-      for await (const page of generator) {
-        for (const r of page) {
+      let iterResult = await generator.next();
+      while (!iterResult.done) {
+        for (const r of iterResult.value) {
           if (sinceDate && r.pushed_at && r.pushed_at < sinceDate) {
             continue;
           }
@@ -173,12 +179,10 @@ export class ForensicGitHubRest {
             topics: r.topics || [],
           });
         }
+        iterResult = await generator.next();
       }
 
-      const result = await generator.next();
-      if (result.done && typeof result.value === "object" && result.value !== null) {
-        hitMaxPages = (result.value as { hitMaxPages?: boolean }).hitMaxPages === true;
-      }
+      hitMaxPages = iterResult.value?.hitMaxPages === true;
 
       return ok(repos, hitMaxPages);
     } catch (err) {
@@ -191,6 +195,10 @@ export class ForensicGitHubRest {
   ): Promise<FetchOutcome<{ name: string; bytes: number; percentage: number }[]>> {
     try {
       const data = await this.client.fetchRest<Record<string, number>>(`/repos/${fullName}/languages`);
+      // Empty repos legitimately answer 204/empty body — that is "no
+      // languages", not an error.
+      if (!data || typeof data !== "object") return ok([]);
+
       const totalBytes = Object.values(data).reduce((acc, bytes) => acc + bytes, 0);
 
       if (totalBytes === 0) return ok([]);
@@ -209,11 +217,16 @@ export class ForensicGitHubRest {
     }
   }
 
+  /**
+   * Fetches the user's commits for a repo. By default there is NO cap: every
+   * page is fetched until exhausted. Pass maxCommits only where a bounded
+   * sample is explicitly wanted.
+   */
   public async getRepoCommits(
     fullName: string,
     author: string,
     sinceDate?: string,
-    maxCommits: number = 100
+    maxCommits?: number
   ): Promise<FetchOutcome<ForensicCommit[]>> {
     if (!isValidIsoDate(sinceDate)) {
       return fail([], `Invalid sinceDate format: "${sinceDate}". Expected ISO 8601.`);
@@ -233,12 +246,15 @@ export class ForensicGitHubRest {
       let count = 0;
       let truncated = false;
 
-      for await (const page of this.client.paginateRest<RawCommit>(`/repos/${fullName}/commits`, {
+      const commitGenerator = this.client.paginateRest<RawCommit>(`/repos/${fullName}/commits`, {
         author,
         since: sinceDate,
-      })) {
-        for (const c of page) {
-          if (count >= maxCommits) {
+      });
+
+      let iterResult = await commitGenerator.next();
+      while (!iterResult.done) {
+        for (const c of iterResult.value) {
+          if (maxCommits !== undefined && count >= maxCommits) {
             truncated = true;
             break;
           }
@@ -268,10 +284,17 @@ export class ForensicGitHubRest {
           });
           count++;
         }
-        if (count >= maxCommits) {
+        if (maxCommits !== undefined && count >= maxCommits) {
           truncated = true;
           break;
         }
+        iterResult = await commitGenerator.next();
+      }
+
+      // Generator exhausted due to its own page cap rather than running out
+      // of data: mark truncated so the UI/diagnostics know history is short.
+      if (!truncated && iterResult.done && iterResult.value?.hitMaxPages === true) {
+        truncated = true;
       }
 
       return ok(commits, truncated);
@@ -297,23 +320,72 @@ export class ForensicGitHubRest {
       weeks: { w: number; a: number; d: number; c: number }[];
     }
 
+    // GitHub returns "202 Accepted" with an EMPTY body the first time(s)
+    // this endpoint is hit while it computes statistics server-side. A single
+    // attempt therefore silently loses all weekly churn data for the repo —
+    // retry with backoff until a real payload (200) or a hard error arrives.
+    const MAX_ATTEMPTS = 3;
+    let lastErrorLabel = "";
+
+    const httpStatusOf = (err: unknown): number | undefined => {
+      const obj = err as { status?: number; statusCode?: number } | null;
+      return obj?.status ?? obj?.statusCode;
+    };
+
     try {
-      const stats = await this.client.fetchRest<ContributorStats[]>(
-        `/repos/${fullName}/stats/contributors`
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        let stats: ContributorStats[] | undefined;
+        try {
+          stats = await this.client.fetchRest<ContributorStats[]>(
+            `/repos/${fullName}/stats/contributors`
+          );
+        } catch (err) {
+          // Rate-limit aborts drive the checkpoint/resume flow — rethrow so
+          // the worker stops cleanly instead of firing more requests at an
+          // exhausted limit.
+          if (isResumableRateLimitError(err)) throw err;
+
+          const status = httpStatusOf(err);
+          // Hard client errors (404 empty stats, 401, 403 permission, 422…)
+          // will not heal by retrying: fail immediately.
+          if (status !== undefined && status >= 400 && status < 500) {
+            return fail(null, err instanceof Error ? err.message : String(err));
+          }
+          // Transient 5xx / unknown transport error: retry with backoff.
+          if (attempt >= MAX_ATTEMPTS) {
+            return fail(null, err instanceof Error ? err.message : String(err));
+          }
+          lastErrorLabel = err instanceof Error ? err.message : String(err);
+          await delay(1500 * attempt);
+          continue;
+        }
+
+        if (Array.isArray(stats)) {
+          const userStats = stats.find(
+            (s) => s.author?.login?.toLowerCase() === author.toLowerCase()
+          );
+          if (!userStats) return ok(null);
+
+          const additions = userStats.weeks.reduce((acc, w) => acc + (w.a || 0), 0);
+          const deletions = userStats.weeks.reduce((acc, w) => acc + (w.d || 0), 0);
+          const commits = userStats.total || userStats.weeks.reduce((acc, w) => acc + (w.c || 0), 0);
+
+          return ok({ additions, deletions, commits, weeks: userStats.weeks || [] });
+        }
+
+        // Non-array result means empty body (202 warm-up). Retry.
+        if (attempt < MAX_ATTEMPTS) {
+          await delay(1500 * attempt);
+        }
+      }
+
+      return fail(
+        null,
+        `Contributor stats unavailable after ${MAX_ATTEMPTS} attempts${lastErrorLabel ? ` (${lastErrorLabel})` : ""}.`
       );
-      if (!Array.isArray(stats)) return ok(null);
-
-      const userStats = stats.find(
-        (s) => s.author?.login?.toLowerCase() === author.toLowerCase()
-      );
-      if (!userStats) return ok(null);
-
-      const additions = userStats.weeks.reduce((acc, w) => acc + (w.a || 0), 0);
-      const deletions = userStats.weeks.reduce((acc, w) => acc + (w.d || 0), 0);
-      const commits = userStats.total || userStats.weeks.reduce((acc, w) => acc + (w.c || 0), 0);
-
-      return ok({ additions, deletions, commits, weeks: userStats.weeks || [] });
     } catch (err) {
+      // isResumableRateLimitError re-throws land here and must keep flying.
+      if (isResumableRateLimitError(err)) throw err;
       return fail(null, err instanceof Error ? err.message : String(err));
     }
   }
@@ -368,12 +440,23 @@ export class ForensicGitHubRest {
       let truncated = false;
       let stopPagination = false;
 
-      for await (const page of this.client.paginateRest<RawPR>(`/repos/${fullName}/pulls`, {
-        state: "all",
-        sort: "created",
-        direction: "desc",
-      })) {
-        for (const pr of page) {
+      // /pulls has no author filter, so every page costs requests for repos
+      // with heavy non-author activity. Cap deep pagination at 10 pages
+      // (1000 newest PRs) and record truncation instead of burning up to
+      // 50 pages per repo and triggering secondary rate limits.
+      const generator = this.client.paginateRest<RawPR>(
+        `/repos/${fullName}/pulls`,
+        {
+          state: "all",
+          sort: "created",
+          direction: "desc",
+        },
+        10
+      );
+
+      let iterResult = await generator.next();
+      while (!iterResult.done && !stopPagination) {
+        for (const pr of iterResult.value) {
           if (pr.user?.login !== author) continue;
 
           if (sinceDate && pr.created_at < sinceDate) {
@@ -394,8 +477,15 @@ export class ForensicGitHubRest {
             commentsCount: pr.comments ?? 0,
           });
         }
-        if (stopPagination) break;
+        if (!stopPagination) {
+          iterResult = await generator.next();
+        }
       }
+
+      // Truncated only when the generator exhausted its page cap (history
+      // deeper than 1000 PRs); an early stop at sinceDate is intentional
+      // completion, not truncation.
+      truncated = iterResult.done === true && iterResult.value?.hitMaxPages === true;
 
       return ok(prs, truncated);
     } catch (err) {
@@ -463,7 +553,7 @@ export class ForensicGitHubRest {
     const query = `reviewed-by:${login}` + (sinceDate ? ` created:>=${sinceDate.slice(0, 10)}` : "");
     try {
       const res = await this.client.fetchRest<{ total_count: number }>("/search/issues", { q: query });
-      const count = res.total_count || 0;
+      const count = res?.total_count || 0;
       const truncated = count >= 1000;
       return ok(count, truncated);
     } catch (err) {

@@ -26,6 +26,7 @@ import {
 import { ForensicGitHubClient } from "@/lib/github/client";
 import { ForensicGitHubRest, RestRepoSummary } from "@/lib/github/rest";
 import { ForensicGitHubGraphQL } from "@/lib/github/graphql";
+import { selectDetailIndices } from "@/lib/github/detailSampling";
 import { gitopsyDb } from "@/lib/db";
 import { isResumableRateLimitError } from "@/lib/github/errors";
 import { calculateTemporalAnalytics } from "@/lib/analytics/temporal";
@@ -225,20 +226,24 @@ async function processSingleRepo(
   // whether the user has ANY activity in this repo. If 0 commits, skip
   // all other fetches (PRs, issues, languages, contributor stats, details)
   // to save 4+ API calls per dead repo.
+  // NO commit cap: every page is fetched so totals match GitHub exactly.
   const commitsOutcome = await rest.getRepoCommits(
-    r.fullName!, state.subjectLogin, state.sinceDate, 200
+    r.fullName!, state.subjectLogin, state.sinceDate
   );
 
   if (!commitsOutcome.ok) {
-    fetchStatus = "failed";
+    // A repo whose commits could not be fetched contributes no data at all.
+    // Record it as failed only — do NOT also push it into processedRepos,
+    // which previously double-counted it in reposAnalyzed AND reposSkipped
+    // while silently zeroing every summary total it touched.
     repoWarnings.push(`commits: ${commitsOutcome.error}`);
     postRepoWarning(r.fullName!, "COMMITS", commitsOutcome.error || "unknown");
     state.failedRepos.push({ repoFullName: r.fullName!, phase: "COMMITS", error: commitsOutcome.error || "unknown" });
+    return;
   }
   if (commitsOutcome.truncated) {
-    fetchStatus = fetchStatus === "ok" ? "partial" : fetchStatus;
-    repoWarnings.push("commits truncated at 200");
-    state.truncatedRepos.push({ repoFullName: r.fullName!, phase: "COMMITS", error: "truncated at maxCommits cap" });
+    repoWarnings.push("commits truncated");
+    state.truncatedRepos.push({ repoFullName: r.fullName!, phase: "COMMITS", error: "truncated" });
   }
 
   const repoCommits = commitsOutcome.data;
@@ -281,11 +286,17 @@ async function processSingleRepo(
     issues = issuesOutcome.data;
     languages = languagesOutcome.data;
 
-    // Fetch commit details for the top 5 most recent commits.
-    const commitsToDetail = Math.min(repoCommits.length, 5);
-    if (commitsToDetail > 0 && !cancelled) {
+    // Commit diff details: one API call per commit with no bulk endpoint, so
+    // coverage is bounded deliberately — full details for repos at/below the
+    // cap, stratified samples across the whole history for larger ones.
+    // Summary metrics are unaffected (they come from the uncapped listing and
+    // contributor stats); this only feeds insider stats like median size and
+    // the size distribution.
+    const detailIndices = selectDetailIndices(repoCommits.length);
+    if (detailIndices.length > 0 && !cancelled) {
       await Promise.all(
-        repoCommits.slice(0, commitsToDetail).map(async (c) => {
+        detailIndices.map(async (idx) => {
+          const c = repoCommits[idx];
           const detail = await rest.getCommitDetails(r.fullName!, c.sha);
           if (detail.ok) {
             c.additions = detail.data.additions;

@@ -123,3 +123,87 @@ describe("Temporal Analytics — Hardened Behavior & Timezone Handling", () => {
     expect(result.weekendCommitPercentage).toBe(67);
   });
 });
+
+describe("Temporal Analytics — Weekly Churn Synchronization", () => {
+  const WEEK_START_SUNDAY =
+    Math.floor(new Date("2026-07-05T00:00:00Z").getTime() / 1000); // Sunday
+
+  it("should ACCUMULATE churn from multiple repos contributing in the same week (no last-writer-wins)", () => {
+    // One commit on Wednesday of that week
+    const commits = [makeCommit("2026-07-08T12:00:00Z", "sha-wed")];
+    // Two different repos report weekly stats for the SAME week
+    const weeklyStats = [
+      { w: WEEK_START_SUNDAY, a: 100, d: 0, c: 5 },
+      { w: WEEK_START_SUNDAY, a: 100, d: 50, c: 5 },
+    ];
+
+    const result = calculateTemporalAnalytics(commits, weeklyStats, "UTC");
+
+    // The single active day receives BOTH repos' churn proportionally
+    const day = result.heatmapCalendar.find((d) => d.date === "2026-07-08");
+    expect(day).toBeDefined();
+    expect(day!.additions).toBe(200);
+    expect(day!.deletions).toBe(50);
+
+    const july = result.commitsByMonth.find((m) => m.month === "2026-07");
+    expect(july?.additions).toBe(200);
+    expect(july?.deletions).toBe(50);
+  });
+
+  it("should attribute weekly churn to the months its days actually fall in (boundary weeks)", () => {
+    // Week runs Sun 2026-08-30 .. Sat 2026-09-05; put one commit at the end
+    // of August and one at the start of September.
+    const commits = [
+      makeCommit("2026-08-31T12:00:00Z", "sha-aug"),
+      makeCommit("2026-09-01T12:00:00Z", "sha-sep"),
+    ];
+    const augustSundayWeek =
+      Math.floor(new Date("2026-08-30T00:00:00Z").getTime() / 1000);
+    const weeklyStats = [{ w: augustSundayWeek, a: 200, d: 100, c: 2 }];
+
+    const result = calculateTemporalAnalytics(commits, weeklyStats, "UTC");
+
+    const august = result.commitsByMonth.find((m) => m.month === "2026-08");
+    const september = result.commitsByMonth.find((m) => m.month === "2026-09");
+
+    // Equal-volume days -> churn splits evenly across the month boundary
+    expect(august?.additions).toBe(100);
+    expect(september?.additions).toBe(100);
+    expect(august?.deletions).toBe(50);
+    expect(september?.deletions).toBe(50);
+  });
+
+  it("should never fabricate commit counts when syncing unsampled weeks", () => {
+    // No commits at all during this week, yet GitHub reports churn: the old
+    // implementation invented 7 phantom active days (count >= 1 each),
+    // corrupting streaks and totalActiveDays.
+    const commits = [makeCommit("2026-06-10T12:00:00Z", "sha-june")]; // different week entirely
+    const weeklyStats = [{ w: WEEK_START_SUNDAY, a: 70, d: 35, c: 4 }];
+
+    const result = calculateTemporalAnalytics(commits, weeklyStats, "UTC");
+
+    // Only the genuinely committed date counts as an active day
+    expect(result.totalActiveDays).toBe(1);
+    expect(result.longestStreakDays).toBe(1);
+
+    // Heatmap may carry synced line data, but never invented commit counts
+    const fabricated = result.heatmapCalendar.filter(
+      (d) => d.count > 0 && !d.date.startsWith("2026-06")
+    );
+    expect(fabricated).toHaveLength(0);
+  });
+
+  it("should keep day-level churn consistent when a repo has no contributor stats", () => {
+    // One repo provides weeks, the other none: totals must equal ONLY the
+    // provided weeks (previously untouched-by-sync commits kept their own
+    // stale diff-derived numbers).
+    const commits = [makeCommit("2026-07-08T12:00:00Z", "sha-wed")];
+    const weeklyStats = [{ w: WEEK_START_SUNDAY, a: 300, d: 30, c: 9 }];
+
+    const result = calculateTemporalAnalytics(commits, weeklyStats, "UTC");
+
+    const day = result.heatmapCalendar.find((d) => d.date === "2026-07-08");
+    expect(day!.additions).toBe(300);
+    expect(day!.deletions).toBe(30);
+  });
+});

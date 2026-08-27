@@ -155,7 +155,6 @@ export default function AutopsyReportDetailPage() {
         additions: number;
         deletions: number;
         count: number;
-        monthKey: string;
       }[] = [];
 
       let weekIndex = 0;
@@ -185,10 +184,6 @@ export default function AutopsyReportDetailPage() {
           }
         }
 
-        const midYear = midWeek.getFullYear();
-        const midMonth = midWeek.getMonth();
-        const monthKey = `${midYear}-${String(midMonth + 1).padStart(2, "0")}`;
-
         // Compute ISO-8601 week number and year
         const targetDate = new Date(
           Date.UTC(midWeek.getFullYear(), midWeek.getMonth(), midWeek.getDate())
@@ -214,7 +209,6 @@ export default function AutopsyReportDetailPage() {
           additions: weekAdds,
           deletions: weekDels,
           count: weekCommits,
-          monthKey,
         });
 
         weekIndex++;
@@ -222,74 +216,7 @@ export default function AutopsyReportDetailPage() {
         current.setDate(current.getDate() + 7);
       }
 
-      // Reconcile each month's total additions and deletions with authoritative byMonth stats
-      const byMonthMap = new Map<
-        string,
-        { additions: number; deletions: number; commits: number }
-      >();
-      if (analysis.activity?.byMonth) {
-        for (const m of analysis.activity.byMonth) {
-          byMonthMap.set(m.month, {
-            additions: m.additions || 0,
-            deletions: m.deletions || 0,
-            commits: m.commits || 0,
-          });
-        }
-      }
-
-      const monthToWeeks = new Map<string, typeof weeks>();
-      for (const w of weeks) {
-        const list = monthToWeeks.get(w.monthKey) || [];
-        list.push(w);
-        monthToWeeks.set(w.monthKey, list);
-      }
-
-      for (const [mKey, mWeeks] of monthToWeeks.entries()) {
-        const target = byMonthMap.get(mKey);
-        if (!target) continue;
-
-        const currentAdds = mWeeks.reduce((acc, w) => acc + w.additions, 0);
-        const currentDels = mWeeks.reduce((acc, w) => acc + w.deletions, 0);
-        const currentCommits = mWeeks.reduce((acc, w) => acc + w.count, 0);
-
-        if (
-          currentAdds === 0 &&
-          currentDels === 0 &&
-          currentCommits === 0 &&
-          (target.additions > 0 || target.deletions > 0 || target.commits > 0)
-        ) {
-          const n = mWeeks.length;
-          if (n > 0) {
-            const addPerWeek = Math.round(target.additions / n);
-            const delPerWeek = Math.round(target.deletions / n);
-            const commitsPerWeek = Math.max(1, Math.round(target.commits / n));
-            for (const w of mWeeks) {
-              w.additions = addPerWeek;
-              w.deletions = delPerWeek;
-              w.count = commitsPerWeek;
-            }
-          }
-        } else if (currentAdds > 0 || currentDels > 0) {
-          const addRatio =
-            target.additions > 0 && currentAdds > 0
-              ? target.additions / currentAdds
-              : 1;
-          const delRatio =
-            target.deletions > 0 && currentDels > 0
-              ? target.deletions / currentDels
-              : 1;
-          for (const w of mWeeks) {
-            if (target.additions > 0 && currentAdds > 0) {
-              w.additions = Math.round(w.additions * addRatio);
-            }
-            if (target.deletions > 0 && currentDels > 0) {
-              w.deletions = Math.round(w.deletions * delRatio);
-            }
-          }
-        }
-      }
-
-      return weeks.map(({ monthKey, ...rest }) => rest);
+      return weeks;
     } else {
       return analysis.activity.byMonth.map((m) => {
         const [year, month] = m.month.split("-").map(Number);

@@ -19,15 +19,51 @@ export interface ContributionDay {
 
 /**
  * Merge multiple contribution calendars into one.
- * Sums totalContributions and concatenates weeks in chronological order.
+ *
+ * Windows abut exactly (the next window starts at the previous window's end
+ * instant), so GitHub's from/to inclusivity semantics are unknowable here.
+ * Rather than guessing, dedupe by calendar date: each day is counted exactly
+ * once and totalContributions is recomputed from the unique days. This is
+ * correct whether GitHub treats the window endpoints as inclusive or
+ * exclusive — no double-counted days, no skipped days.
  */
 function mergeCalendars(calendars: (GraphQLContributionCalendar | null)[]): GraphQLContributionCalendar | null {
   const valid = calendars.filter((c): c is GraphQLContributionCalendar => c !== null);
   if (valid.length === 0) return null;
 
-  const totalContributions = valid.reduce((sum, c) => sum + c.totalContributions, 0);
-  const weeks = valid.flatMap((c) => c.weeks);
+  const dayMap = new Map<string, { contributionCount: number; date: string; weekday: number }>();
+  for (const cal of valid) {
+    for (const week of cal.weeks) {
+      for (const day of week.contributionDays) {
+        if (!dayMap.has(day.date)) {
+          dayMap.set(day.date, day);
+        }
+      }
+    }
+  }
 
+  const days = Array.from(dayMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+
+  // Rebuild Sunday-anchored weekly buckets from the sorted unique days.
+  const weeks: GraphQLContributionCalendar["weeks"] = [];
+  let currentWeek: GraphQLContributionCalendar["weeks"][number] | null = null;
+  let currentWeekSunday = "";
+
+  for (const day of days) {
+    const dayDate = new Date(`${day.date}T00:00:00Z`);
+    const sunday = new Date(dayDate);
+    sunday.setUTCDate(sunday.getUTCDate() - dayDate.getUTCDay());
+    const sundayKey = sunday.toISOString().slice(0, 10);
+
+    if (!currentWeek || sundayKey !== currentWeekSunday) {
+      currentWeek = { contributionDays: [] };
+      currentWeekSunday = sundayKey;
+      weeks.push(currentWeek);
+    }
+    currentWeek.contributionDays.push(day);
+  }
+
+  const totalContributions = days.reduce((sum, d) => sum + (d.contributionCount || 0), 0);
   return { totalContributions, weeks };
 }
 
@@ -164,6 +200,9 @@ export class ForensicGitHubGraphQL {
         from: cursor.toISOString(),
         to: actualEnd.toISOString(),
       });
+      // Abut the next window at this window's end instant. Any boundary-day
+      // overlap between windows is neutralized by date-keyed dedup in
+      // mergeCalendars, so no day can be skipped or double-counted.
       cursor = actualEnd;
     }
 

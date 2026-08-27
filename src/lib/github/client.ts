@@ -106,7 +106,22 @@ export class ForensicGitHubClient {
         };
       }
 
-      return (await response.json()) as T;
+      // Some endpoints (notably /stats/contributors warming up) respond 202
+      // or 204 with an EMPTY body. response.json() would throw there.
+      const rawBody = await response.text();
+      if (!rawBody.trim()) {
+        return undefined as T;
+      }
+
+      try {
+        return JSON.parse(rawBody) as T;
+      } catch {
+        throw {
+          status: response.status,
+          message: `GitHub API returned malformed JSON for ${path}`,
+          headers: responseHeaders,
+        };
+      }
     }, cacheKey);
   }
 

@@ -221,72 +221,93 @@ export function calculateTemporalAnalytics(
     const totalWeeklyDeletions = weeklyStats.reduce((acc, w) => acc + (w.d || 0), 0);
 
     if (totalWeeklyAdditions > 0 || totalWeeklyDeletions > 0) {
-      // --- Sync monthly data ---
-      for (const m of monthMap.values()) {
-        m.additions = 0;
-        m.deletions = 0;
-      }
+      // Weekly stat records arrive PER REPO, so the same calendar date can
+      // legitimately receive churn from several repos within the same week.
+      // Everything therefore accumulates into per-date buckets first —
+      // assigning directly onto day objects previously let whichever repo
+      // processed last overwrite every earlier one (weeks going dark while
+      // the monthly totals stayed inflated).
+      const churnByDate = new Map<string, { additions: number; deletions: number }>();
 
-      for (const w of weeklyStats) {
-        if ((w.a || 0) > 0 || (w.d || 0) > 0 || (w.c || 0) > 0) {
-          const weekDate = new Date(w.w * 1000);
-          const { monthStr } = extractLocalParts(weekDate);
-          const m = monthMap.get(monthStr) || { count: 0, additions: 0, deletions: 0 };
-          m.additions += w.a || 0;
-          m.deletions += w.d || 0;
-          monthMap.set(monthStr, m);
-        }
-      }
-
-      // --- Sync daily heatmap data ---
       for (const w of weeklyStats) {
         const weekAdditions = w.a || 0;
         const weekDeletions = w.d || 0;
-        const weekCommits = w.c || 0;
-        if ((weekAdditions === 0 && weekDeletions === 0) || weekCommits === 0) continue;
+        if (weekAdditions === 0 && weekDeletions === 0) continue;
 
         const weekStart = new Date(w.w * 1000);
-        const weekDays: string[] = [];
-        const weekDayCommitCounts: number[] = [];
-        let totalWeekDayCommits = 0;
 
+        const activeDays: { dateStr: string; count: number }[] = [];
+        let totalWeekDayCommits = 0;
         for (let d = 0; d < 7; d++) {
-          const day = new Date(weekStart.getTime() + d * 86400000);
-          const { dateStr } = extractLocalParts(day);
+          const dayDate = new Date(weekStart.getTime() + d * 86400000);
+          const { dateStr } = extractLocalParts(dayDate);
           const dayData = dateMap.get(dateStr);
           if (dayData && dayData.count > 0) {
-            weekDays.push(dateStr);
-            weekDayCommitCounts.push(dayData.count);
+            activeDays.push({ dateStr, count: dayData.count });
             totalWeekDayCommits += dayData.count;
           }
         }
 
-        if (totalWeekDayCommits > 0 && weekDays.length > 0) {
-          for (let i = 0; i < weekDays.length; i++) {
-            const ratio = weekDayCommitCounts[i] / totalWeekDayCommits;
-            const dayData = dateMap.get(weekDays[i])!;
-            dayData.additions = Math.round(weekAdditions * ratio);
-            dayData.deletions = Math.round(weekDeletions * ratio);
+        if (activeDays.length > 0 && totalWeekDayCommits > 0) {
+          // Distribute proportionally to each day's real commit volume.
+          for (const ad of activeDays) {
+            const ratio = ad.count / totalWeekDayCommits;
+            const bucket = churnByDate.get(ad.dateStr) || { additions: 0, deletions: 0 };
+            bucket.additions += weekAdditions * ratio;
+            bucket.deletions += weekDeletions * ratio;
+            churnByDate.set(ad.dateStr, bucket);
           }
-        } else if (weekAdditions > 0 || weekDeletions > 0 || weekCommits > 0) {
-          // If no daily commit objects exist for this week in the sampled commits,
-          // distribute the authoritative weekly churn across the week's days
+        } else {
+          // No commits sampled for this week (e.g. capped sampling): fall back
+          // to an even spread across the seven days WITHOUT inventing activity.
           for (let d = 0; d < 7; d++) {
-            const day = new Date(weekStart.getTime() + d * 86400000);
-            const { dateStr } = extractLocalParts(day);
-            const dayData = dateMap.get(dateStr) || { count: 0, additions: 0, deletions: 0 };
-            dayData.count = Math.max(dayData.count, Math.round(weekCommits / 7));
-            dayData.additions += Math.round(weekAdditions / 7);
-            dayData.deletions += Math.round(weekDeletions / 7);
-            dateMap.set(dateStr, dayData);
+            const dayDate = new Date(weekStart.getTime() + d * 86400000);
+            const { dateStr } = extractLocalParts(dayDate);
+            const bucket = churnByDate.get(dateStr) || { additions: 0, deletions: 0 };
+            bucket.additions += weekAdditions / 7;
+            bucket.deletions += weekDeletions / 7;
+            churnByDate.set(dateStr, bucket);
           }
         }
+      }
+
+      // Reset previously commit-derived churn, then refill monthly aggregation.
+      for (const m of monthMap.values()) {
+        m.additions = 0;
+        m.deletions = 0;
+      }
+      for (const [dateStr, churn] of churnByDate.entries()) {
+        // Attribute each DATE's churn to the month that date actually falls
+        // in, so a week straddling two months is split at the real boundary
+        // instead of landing entirely in its start month.
+        const monthStr = `${dateStr.slice(0, 4)}-${dateStr.slice(5, 7)}`;
+        const m = monthMap.get(monthStr) || { count: 0, additions: 0, deletions: 0 };
+        m.additions += Math.round(churn.additions);
+        m.deletions += Math.round(churn.deletions);
+        monthMap.set(monthStr, m);
+      }
+
+      for (const [dateStr, churn] of churnByDate.entries()) {
+        const dayData = dateMap.get(dateStr) || { count: 0, additions: 0, deletions: 0 };
+        // Weekly contributor stats are the authoritative churn source: dates
+        // covered by them get the cross-repo-accumulated allocation ASSIGNED
+        // (not added on top of the sparse per-commit diff sample). Deliberately
+        // do NOT touch day.count: inflating or inventing counts here corrupted
+        // streaks, totalActiveDays and peak-day metrics.
+        dayData.additions = Math.round(churn.additions);
+        dayData.deletions = Math.round(churn.deletions);
+        dateMap.set(dateStr, dayData);
       }
     }
   }
 
-  // Calculate Streaks
-  const uniqueDatesSorted = Array.from(dateMap.keys()).sort();
+  // Calculate Streaks — only days with REAL commits count as active; dates
+  // carrying synced churn but zero commits (stat spread over unsampled weeks)
+  // must not fabricate streaks or active-day totals.
+  const uniqueDatesSorted = Array.from(dateMap.entries())
+    .filter(([, val]) => val.count > 0)
+    .map(([date]) => date)
+    .sort();
   let longestStreak = 0;
   let currentRunningStreak = 0;
   let activeStreak = 0;
