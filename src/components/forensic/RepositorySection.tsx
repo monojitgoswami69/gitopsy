@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
 import { RepositoryAnalysis, RepositoryAward } from "@/types/domain";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,8 @@ import {
   FolderGit2,
   Trophy,
   ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
   Star,
   GitFork,
   GitPullRequest,
@@ -18,7 +19,7 @@ import {
   Lock,
   ExternalLink,
   GitCommit,
-  ArrowRight,
+  Search,
 } from "lucide-react";
 
 interface RepositorySectionProps {
@@ -26,7 +27,7 @@ interface RepositorySectionProps {
   awards: RepositoryAward[];
 }
 
-type SortField = "commits" | "recent" | "churn" | "stars";
+type SortField = "commits" | "recent";
 
 const LANGUAGE_COLORS = [
   "#FF6B6B",
@@ -39,10 +40,35 @@ const LANGUAGE_COLORS = [
   "#F43F5E",
 ];
 
+function highlightMatch(text: string, query: string): React.ReactNode {
+  if (!query.trim() || !text) return text;
+  const trimmed = query.trim();
+  const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const parts = text.split(new RegExp(`(${escaped})`, "gi"));
+
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.toLowerCase() === trimmed.toLowerCase() ? (
+          <mark
+            key={i}
+            className="bg-[#FFDC58] text-black px-0.5 rounded-[2px]"
+          >
+            {part}
+          </mark>
+        ) : (
+          part
+        )
+      )}
+    </>
+  );
+}
+
 export function RepositorySection({ repositories, awards }: RepositorySectionProps) {
   const [sortField, setSortField] = useState<SortField>("commits");
   const [sortAsc, setSortAsc] = useState(false);
   const [expandedRepoId, setExpandedRepoId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -55,7 +81,17 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
 
   const activeRepos = repositories.filter((r) => r.commitCount > 0);
 
-  const sortedRepos = [...activeRepos].sort((a, b) => {
+  const filteredRepos = activeRepos.filter((r) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    return (
+      r.name.toLowerCase().includes(q) ||
+      r.fullName.toLowerCase().includes(q) ||
+      (r.primaryLanguage && r.primaryLanguage.toLowerCase().includes(q))
+    );
+  });
+
+  const sortedRepos = [...filteredRepos].sort((a, b) => {
     let diff = 0;
     switch (sortField) {
       case "commits":
@@ -64,20 +100,21 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
       case "recent":
         diff = a.daysSinceLastPush - b.daysSinceLastPush; // fewer days = more recent
         break;
-      case "churn":
-        diff = b.additions + b.deletions - (a.additions + a.deletions);
-        break;
-      case "stars":
-        diff = b.stars - a.stars;
-        break;
     }
     return sortAsc ? -diff : diff;
   });
 
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="size-3 opacity-60" />;
+    }
+    return sortAsc ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />;
+  };
+
   return (
     <div id="section-repositories" className="flex flex-col gap-8">
       {/* 04. Repository Portfolio */}
-      <div className="border-[4px] border-black bg-white rounded-[12px] p-5 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-5 text-black">
+      <div className="border-[4px] border-black bg-white rounded-[12px] p-5 sm:p-6 pb-2.5 sm:pb-3 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-4 sm:gap-5 text-black">
         {/* Section Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b-[2px] border-black/15 pb-4">
           <div>
@@ -89,155 +126,177 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
             </p>
           </div>
 
-          {/* Minimal Lightweight Sort Controls */}
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-            <span className="text-xs font-black uppercase text-gray-500 mr-1">SORT:</span>
-            <Button
-              size="sm"
-              variant={sortField === "commits" ? "main" : "outline"}
-              onClick={() => handleSort("commits")}
-            >
-              COMMITS <ArrowUpDown className="size-3" />
-            </Button>
-            <Button
-              size="sm"
-              variant={sortField === "recent" ? "main" : "outline"}
-              onClick={() => handleSort("recent")}
-            >
-              ACTIVITY <ArrowUpDown className="size-3" />
-            </Button>
-            <Button
-              size="sm"
-              variant={sortField === "churn" ? "main" : "outline"}
-              onClick={() => handleSort("churn")}
-            >
-              CHURN <ArrowUpDown className="size-3" />
-            </Button>
-            <Button
-              size="sm"
-              variant={sortField === "stars" ? "main" : "outline"}
-              onClick={() => handleSort("stars")}
-            >
-              STARS <ArrowUpDown className="size-3" />
-            </Button>
+          {/* Minimal Search Line & Sort Controls */}
+          <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+            {/* Unboxed Underline Search Line */}
+            <div className="flex items-center gap-1.5 border-b-[2px] border-black/25 focus-within:border-black pb-0.5 w-32 sm:w-44 focus-within:w-52 transition-all">
+              <Search className="size-3.5 text-gray-500 stroke-[2.5] shrink-0" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search repos..."
+                className="bg-transparent text-xs font-mono font-bold text-black placeholder:text-gray-400 focus:outline-none w-full"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="text-gray-400 hover:text-black text-xs font-mono font-bold px-0.5"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+
+            {/* Sort Controls */}
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="text-xs font-black uppercase text-gray-500 mr-1">SORT:</span>
+              <Button
+                size="sm"
+                variant={sortField === "commits" ? "main" : "outline"}
+                onClick={() => handleSort("commits")}
+              >
+                COMMITS {getSortIcon("commits")}
+              </Button>
+              <Button
+                size="sm"
+                variant={sortField === "recent" ? "main" : "outline"}
+                onClick={() => handleSort("recent")}
+              >
+                ACTIVITY {getSortIcon("recent")}
+              </Button>
+            </div>
           </div>
         </div>
 
         {/* Scannable Minimal Repository Index List */}
-        <div className="flex flex-col -mx-5 sm:-mx-6">
-          {/* List Column Header */}
-          <div className="hidden sm:flex items-center justify-between px-5 sm:px-6 py-2 bg-neutral-100/75 border-y-[1.5px] border-black/15 text-[10px] font-black uppercase tracking-wider text-gray-500 select-none">
+        <div className="flex flex-col">
+          {/* List Column Header (Desktop Grid) */}
+          <div className="hidden sm:grid grid-cols-[minmax(0,1fr)_80px_90px_70px_48px] items-center gap-6 px-3 py-2 border-b-[2px] border-black/15 text-[10px] font-black uppercase tracking-wider text-gray-500 select-none">
             <span>REPOSITORY</span>
-            <div className="flex items-center gap-6 shrink-0">
-              <span className="min-w-[85px] text-right">COMMITS</span>
-              <span className="min-w-[140px]">ACTIVITY / RECENCY</span>
-              <span className="w-6 text-center">DETAILS</span>
-            </div>
+            <span className="text-right">VISIBILITY</span>
+            <span className="text-right">COMMITS</span>
+            <span className="text-right">ACTIVITY</span>
+            <span className="text-right">DETAILS</span>
           </div>
 
-          <div className="flex flex-col divide-y divide-black/10">
-            {sortedRepos.map((repo) => {
+          <div className="flex flex-col">
+            {sortedRepos.length === 0 ? (
+              <div className="py-8 text-center text-xs font-mono text-gray-500">
+                No repositories found matching &ldquo;{searchQuery}&rdquo;.
+              </div>
+            ) : (
+              sortedRepos.map((repo) => {
               const isExpanded = expandedRepoId === repo.id;
-              const repoAwards = awards.filter(
-                (a) => a.repoFullName.toLowerCase() === repo.fullName.toLowerCase()
-              );
               const isDormant = repo.daysSinceLastPush > 180;
               const isRecent = repo.daysSinceLastPush <= 30;
 
               return (
-                <div key={repo.id} className="flex flex-col">
-                  {/* Default Clean Scannable Row */}
+                <div
+                  key={repo.id}
+                  className={`transition-all duration-150 ${
+                    isExpanded
+                      ? "bg-[#FFFDF7] border-[2px] border-black rounded-[10px] my-2.5 p-4 sm:p-5"
+                      : "hover:bg-amber-50/40 px-3 rounded-[6px] border-b border-black/10 last:border-b-0"
+                  }`}
+                >
+                  {/* Summary Row (Clickable Header) */}
                   <div
                     onClick={() => setExpandedRepoId(isExpanded ? null : repo.id)}
-                    className={`px-5 sm:px-6 py-3.5 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 hover:bg-amber-50/50 cursor-pointer transition-colors select-none ${
-                      isExpanded ? "bg-amber-50/40" : ""
+                    className={`grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_80px_90px_70px_48px] items-start sm:items-center gap-2 sm:gap-6 cursor-pointer select-none ${
+                      isExpanded ? "pb-3.5 border-b-[1.5px] border-black/15" : "py-3.5 sm:py-4"
                     }`}
                   >
-                  {/* Left Column: Repo Name, Badges, Full Identifier */}
-                  <div className="flex flex-col min-w-0 pr-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-black text-sm sm:text-[15px] text-black tracking-tight hover:underline">
-                        {repo.name}
+                    {/* Column 1: Repo Name, Badges, Full Identifier */}
+                    <div className="flex flex-col min-w-0 pr-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-black text-sm sm:text-[15px] text-black tracking-tight hover:underline">
+                          {highlightMatch(repo.name, searchQuery)}
+                        </span>
+                        {repo.isFork && (
+                          <span className="inline-flex items-center text-[9.5px] font-mono font-bold uppercase px-1.5 py-0.5 border-[1.5px] border-black rounded bg-white text-black select-none">
+                            FORK
+                          </span>
+                        )}
+                        {repo.isArchived && (
+                          <span className="inline-flex items-center text-[9.5px] font-mono font-bold uppercase px-1.5 py-0.5 border-[1.5px] border-black rounded bg-[#FF6B6B] text-black select-none">
+                            ARCHIVED
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[11px] font-mono text-gray-500 truncate max-w-full mt-0.5">
+                        {highlightMatch(repo.fullName, searchQuery)}
                       </span>
-                      {repo.isPrivate && (
-                        <Badge variant="neutral" className="text-[9px] py-0 px-1 font-mono">
-                          <Lock className="size-2.5 mr-0.5" /> PRIVATE
-                        </Badge>
-                      )}
-                      {repo.isFork && (
-                        <Badge variant="neutral" className="text-[9px] py-0 px-1 font-mono">
-                          FORK
-                        </Badge>
-                      )}
-                      {repo.isArchived && (
-                        <Badge variant="coral" className="text-[9px] py-0 px-1 font-mono">
-                          ARCHIVED
-                        </Badge>
-                      )}
-                      {repoAwards.length > 0 && (
-                        <span className="text-[10px] font-black bg-[#FFDC58] text-black border border-black px-1.5 py-0.2 rounded shadow-[1px_1px_0_0_#000]">
-                          {repoAwards[0].badge} {repoAwards[0].title}
+                    </div>
+
+                    {/* Column 2: Visibility */}
+                    <div className="hidden sm:flex items-center justify-end text-right">
+                      {repo.isPrivate ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-gray-800">
+                          <Lock className="size-2.5" /> Private
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center text-[10px] font-mono font-bold text-gray-500">
+                          Public
                         </span>
                       )}
                     </div>
-                    <span className="text-[11px] font-mono text-gray-500 truncate max-w-xs sm:max-w-md mt-0.5">
-                      {repo.fullName}
-                    </span>
-                  </div>
 
-                  {/* Right Column: Desktop Scannable Metrics */}
-                  <div className="hidden sm:flex items-center gap-6 shrink-0">
-                    <span className="font-mono font-black text-xs text-black min-w-[85px] text-right">
-                      {repo.commitCount.toLocaleString()} commits
-                    </span>
-
-                    <div className="min-w-[140px] flex items-center gap-1.5 text-[11px] font-mono font-bold text-gray-600">
-                      <span
-                        className={`size-2 rounded-full border border-black shrink-0 ${
-                          isRecent
-                            ? "bg-emerald-500"
-                            : isDormant
-                            ? "bg-gray-300"
-                            : "bg-amber-400"
-                        }`}
-                      />
-                      <span>
-                        {isDormant
-                          ? `Dormant · ${repo.daysSinceLastPush}d ago`
-                          : repo.daysSinceLastPush === 0
-                          ? "Active · Pushed today"
-                          : `Active · ${repo.daysSinceLastPush}d ago`}
+                    {/* Column 3: Commits Metric */}
+                    <div className="hidden sm:block text-right">
+                      <span className="font-mono font-black text-xs text-black block">
+                        {repo.commitCount.toLocaleString()} commits
                       </span>
                     </div>
 
-                    <div className="size-6 rounded flex items-center justify-center border border-black/20 hover:border-black hover:bg-[#FFDC58] transition-all text-black">
-                      {isExpanded ? (
-                        <ChevronUp className="size-4 stroke-[2.5]" />
-                      ) : (
-                        <ChevronDown className="size-4 stroke-[2.5]" />
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Mobile Row Summary */}
-                  <div className="flex sm:hidden items-center justify-between text-xs font-mono font-bold pt-1 border-t border-black/5 text-gray-700">
-                    <span className="font-black text-black">{repo.commitCount} commits</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] text-gray-500">
+                    {/* Column 4: Activity */}
+                    <div className="hidden sm:block text-right">
+                      <span className="text-[11px] font-mono font-bold text-gray-600 block">
                         {repo.daysSinceLastPush === 0 ? "Today" : `${repo.daysSinceLastPush}d ago`}
                       </span>
+                    </div>
+
+                    {/* Column 5: Details Toggle Chevron */}
+                    <div className="hidden sm:flex items-center justify-end">
                       <ChevronDown
-                        className={`size-4 stroke-[2.5] transition-transform ${
-                          isExpanded ? "rotate-180" : ""
+                        className={`size-4 stroke-[2.5] text-gray-600 transition-transform duration-300 ease-out ${
+                          isExpanded ? "rotate-180 text-black" : ""
                         }`}
                       />
                     </div>
-                  </div>
-                </div>
 
-                {/* Expanded Detailed Repository Dossier */}
-                {isExpanded && (
-                  <div className="bg-[#FFFDF7] border-y-[2px] border-black/15 px-5 sm:px-6 py-5 sm:py-6 flex flex-col gap-5 text-black animate-in fade-in duration-150">
+                    {/* Mobile Row Summary */}
+                    <div className="flex sm:hidden items-center justify-between text-xs font-mono font-bold pt-1 border-t border-black/5 text-gray-700 w-full">
+                      <div className="flex items-center gap-2">
+                        <span className="font-black text-black">{repo.commitCount} commits</span>
+                        <span className="text-[10px] text-gray-500 uppercase">
+                          · {repo.isPrivate ? "Private" : "Public"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-gray-500">
+                          {repo.daysSinceLastPush === 0 ? "Today" : `${repo.daysSinceLastPush}d ago`}
+                        </span>
+                        <ChevronDown
+                          className={`size-4 stroke-[2.5] transition-transform duration-300 ease-out ${
+                            isExpanded ? "rotate-180" : ""
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Expanded Detailed Repository Dossier Content (Smooth CSS Grid Transition) */}
+                  <div
+                    className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${
+                      isExpanded
+                        ? "grid-rows-[1fr] opacity-100"
+                        : "grid-rows-[0fr] opacity-0 pointer-events-none"
+                    }`}
+                  >
+                    <div className="overflow-hidden">
+                      <div className="pt-4 pb-1.5 px-1 flex flex-col gap-5 text-black">
                     {/* Header & Quick Action Buttons */}
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-black/10 pb-3">
                       <div>
@@ -245,86 +304,27 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
                           <span className="text-xs font-black uppercase tracking-wider text-gray-500">
                             SPECIMEN DOSSIER
                           </span>
-                          <span className="font-mono text-[10px] font-bold bg-neutral-100 px-2 py-0.5 rounded border border-black/20">
-                            branch: {repo.defaultBranch}
-                          </span>
-                          {repo.primaryLanguage && (
-                            <span className="text-[10px] font-black uppercase px-2 py-0.5 border border-black rounded bg-[#FFDC58] text-black font-mono shadow-[1px_1px_0_0_#000]">
-                              Primary: {repo.primaryLanguage}
-                            </span>
-                          )}
                         </div>
                         <h3 className="font-mono font-black text-base sm:text-lg text-black mt-0.5">
-                          {repo.fullName}
+                          {highlightMatch(repo.fullName, searchQuery)}
                         </h3>
                       </div>
 
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap pr-1.5 pb-0.5">
                         <a
                           href={`https://github.com/${repo.fullName}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs font-black bg-[#FFDC58] hover:bg-[#ffe27a] text-black px-3 py-1.5 border-[1.5px] border-black rounded shadow-[1.5px_1.5px_0_0_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all"
+                          className="inline-flex items-center gap-1.5 text-xs font-black bg-[#FFDC58] hover:bg-[#ffe27a] text-black px-3.5 py-1.5 border-[2px] border-black rounded-[6px] shadow-[2px_2px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0_0_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all cursor-pointer"
                         >
                           OPEN ON GITHUB <ExternalLink className="size-3.5" />
                         </a>
-                        <Link
-                          href={`/repositories/${repo.fullName}`}
-                          className="inline-flex items-center gap-1.5 text-xs font-black bg-white hover:bg-neutral-100 text-black px-3 py-1.5 border-[1.5px] border-black rounded shadow-[1.5px_1.5px_0_0_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all"
-                        >
-                          FULL AUTOPSY <ArrowRight className="size-3.5" />
-                        </Link>
                       </div>
                     </div>
 
-                    {/* Deterministic Repository Awards (if applicable) */}
-                    {repoAwards.length > 0 && (
-                      <div className="flex flex-col gap-2">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-gray-600">
-                          VERIFIED REPOSITORY DISTINCTIONS ({repoAwards.length})
-                        </span>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {repoAwards.map((award) => (
-                            <div
-                              key={award.id}
-                              className="border-[2px] border-black bg-amber-50/90 rounded-[8px] p-3.5 shadow-[2px_2px_0_0_#000] flex flex-col justify-between gap-2"
-                            >
-                              <div>
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-1.5 font-black text-xs uppercase text-black">
-                                    <span className="text-base">{award.badge}</span>
-                                    <span>{award.title}</span>
-                                  </div>
-                                  <Badge
-                                    variant={
-                                      award.category === "CHAOS"
-                                        ? "coral"
-                                        : award.category === "VELOCITY"
-                                        ? "cyan"
-                                        : "main"
-                                    }
-                                    className="text-[9px] py-0 px-1 font-mono"
-                                  >
-                                    {award.category}
-                                  </Badge>
-                                </div>
-                                <p className="text-xs font-semibold text-gray-700 leading-relaxed mt-1">
-                                  {award.description}
-                                </p>
-                              </div>
-                              <div className="border-t border-black/10 pt-2 flex items-start gap-1.5 text-[11px] font-bold text-emerald-800">
-                                <CheckCircle2 className="size-3.5 text-emerald-700 shrink-0 mt-0.5" />
-                                <span>Evidence: {award.evidence}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
                     {/* Core Engineering Activity Metrics Grid */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                      <div className="border-[1.5px] border-black p-3 rounded-[6px] bg-white shadow-[1.5px_1.5px_0_0_#000]">
+                      <div className="border-[1.5px] border-black p-3 rounded-[6px] bg-white flex flex-col items-center justify-center text-center">
                         <span className="text-[10px] font-black uppercase text-gray-500 block">
                           COMMITS ANALYZED
                         </span>
@@ -336,7 +336,7 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
                         </span>
                       </div>
 
-                      <div className="border-[1.5px] border-black p-3 rounded-[6px] bg-white shadow-[1.5px_1.5px_0_0_#000]">
+                      <div className="border-[1.5px] border-black p-3 rounded-[6px] bg-white flex flex-col items-center justify-center text-center">
                         <span className="text-[10px] font-black uppercase text-gray-500 block">
                           NET CODE BALANCE
                         </span>
@@ -352,7 +352,7 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
                         </span>
                       </div>
 
-                      <div className="border-[1.5px] border-black p-3 rounded-[6px] bg-white shadow-[1.5px_1.5px_0_0_#000]">
+                      <div className="border-[1.5px] border-black p-3 rounded-[6px] bg-white flex flex-col items-center justify-center text-center">
                         <span className="text-[10px] font-black uppercase text-gray-500 block">
                           PULL REQUESTS & ISSUES
                         </span>
@@ -364,7 +364,7 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
                         </span>
                       </div>
 
-                      <div className="border-[1.5px] border-black p-3 rounded-[6px] bg-white shadow-[1.5px_1.5px_0_0_#000]">
+                      <div className="border-[1.5px] border-black p-3 rounded-[6px] bg-white flex flex-col items-center justify-center text-center">
                         <span className="text-[10px] font-black uppercase text-gray-500 block">
                           COMMUNITY & TRACTION
                         </span>
@@ -379,7 +379,7 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
 
                     {/* Language Composition Breakdown */}
                     {repo.languages.length > 0 && (
-                      <div className="border-[1.5px] border-black p-3.5 rounded-[8px] bg-white shadow-[1.5px_1.5px_0_0_#000] flex flex-col gap-2.5">
+                      <div className="border-[1.5px] border-black p-3.5 rounded-[8px] bg-white flex flex-col gap-2.5">
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] font-black uppercase tracking-wider text-gray-600">
                             LANGUAGE COMPOSITION ({repo.languages.length})
@@ -408,25 +408,25 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
                           ))}
                         </div>
 
-                        {/* Language Chips */}
-                        <div className="flex flex-wrap gap-1.5 pt-1">
+                        {/* Language Legends (Unboxed & Centered) */}
+                        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 pt-1 text-[11px] font-mono">
                           {repo.languages.map((l, idx) => (
                             <div
                               key={l.name}
-                              className="inline-flex items-center gap-1 text-[10px] font-mono font-bold bg-neutral-50 px-2 py-0.5 border border-black/20 rounded"
+                              className="inline-flex items-center gap-1.5"
                             >
                               <span
-                                className="size-2 rounded-full border border-black/40"
+                                className="size-2 rounded-full border border-black/40 shrink-0"
                                 style={{
                                   backgroundColor:
                                     LANGUAGE_COLORS[idx % LANGUAGE_COLORS.length],
                                 }}
                               />
-                              <span className="font-black text-black">{l.name}</span>
-                              <span className="text-gray-500">
+                              <span className="font-bold text-black">{highlightMatch(l.name, searchQuery)}</span>
+                              <span className="text-gray-500 font-medium">
                                 {l.percentage > 0 ? `${l.percentage}%` : "<1%"}
                               </span>
-                              <span className="text-gray-400">
+                              <span className="text-gray-400 text-[10px]">
                                 ({(l.bytes / 1024).toFixed(1)} KB)
                               </span>
                             </div>
@@ -463,15 +463,17 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
                       </div>
                     </div>
                   </div>
-                )}
+                </div>
               </div>
-            );
-          })}
-          </div>
-        </div>
-      </div>
+            </div>
+          );
+        })
+      )}
+    </div>
+  </div>
+</div>
 
-      {/* 05. Repository Distinctions Overview */}
+      {/* 05. Repository Awards Overview */}
       {awards.length > 0 && (
         <div id="section-distinctions" className="flex flex-col gap-4">
           <div className="flex items-center gap-2">
@@ -479,53 +481,36 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-xl font-black uppercase tracking-tight text-black">
-                  05. REPOSITORY DISTINCTIONS
+                  05. REPOSITORY AWARDS
                 </h2>
-                <Badge variant="coral">{awards.length}</Badge>
               </div>
               <p className="text-xs font-bold text-gray-600 mt-0.5">
-                Evidence-based repository distinctions awarded based on verifiable commit, churn, and longevity milestones.
+                Evidence-based repository awards based on verifiable commit, churn, and longevity milestones.
               </p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {awards.map((award) => {
-              const categoryBadgeVariant: "coral" | "cyan" | "main" | "purple" | "lime" =
-                award.category === "CHAOS"
-                  ? "coral"
-                  : award.category === "VELOCITY"
-                  ? "cyan"
-                  : award.category === "SCALE"
-                  ? "purple"
-                  : award.category === "CRAFT"
-                  ? "lime"
-                  : "main";
-
               return (
                 <div
                   key={award.id}
                   className="border-[3px] border-black bg-white rounded-[12px] p-5 shadow-[3.5px_3.5px_0_0_#000] flex flex-col justify-between gap-4 text-black hover:translate-x-[1.5px] hover:translate-y-[1.5px] hover:shadow-[2px_2px_0_0_#000] active:translate-x-[3.5px] active:translate-y-[3.5px] active:shadow-none transition-all duration-150"
                 >
                   <div className="flex flex-col gap-3">
-                    {/* Header: Emblem box + Title + Category Badge */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-3">
-                        <div className="size-11 rounded-[8px] border-[2px] border-black bg-neutral-100 shadow-[2px_2px_0_0_#000] flex items-center justify-center text-2xl select-none shrink-0">
-                          {award.badge}
-                        </div>
-                        <div>
-                          <span className="text-[10px] font-black uppercase tracking-wider text-gray-500 block">
-                            DISTINCTION
-                          </span>
-                          <h3 className="text-sm sm:text-base font-black uppercase tracking-tight text-black leading-tight">
-                            {award.title}
-                          </h3>
-                        </div>
+                    {/* Header: Direct Emoji + Title */}
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-2xl select-none shrink-0" role="img" aria-label={award.title}>
+                        {award.badge}
+                      </span>
+                      <div>
+                        <span className="text-[10px] font-black uppercase tracking-wider text-gray-500 block">
+                          AWARD
+                        </span>
+                        <h3 className="text-sm sm:text-base font-black uppercase tracking-tight text-black leading-tight">
+                          {award.title}
+                        </h3>
                       </div>
-                      <Badge variant={categoryBadgeVariant}>
-                        {award.category}
-                      </Badge>
                     </div>
 
                     {/* Interactive Clickable Repository Link */}
@@ -548,7 +533,7 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
                   </div>
 
                   {/* Verified Evidence Drawer */}
-                  <div className="bg-[#FFFDF5] border-[2px] border-black rounded-[8px] p-3 shadow-[2px_2px_0_0_#000] flex flex-col gap-1 mt-auto">
+                  <div className="bg-[#FFFDF5] border-[1.5px] border-black rounded-[8px] p-3 flex flex-col gap-1 mt-auto">
                     <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-gray-700">
                       <CheckCircle2 className="size-3 text-emerald-700 shrink-0" />
                       <span>VERIFIED EVIDENCE</span>

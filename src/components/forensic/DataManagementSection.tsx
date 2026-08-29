@@ -55,7 +55,7 @@ export function DataManagementSection({ analysis, onAnalysisUpdated }: DataManag
       <div className="flex items-center justify-between border-b-[3px] border-black pb-4">
         <div>
           <h2 className="text-xl font-black uppercase tracking-tight">
-            15. LOCAL STORAGE & DATA MANAGEMENT
+            14. LOCAL STORAGE &amp; DATA MANAGEMENT
           </h2>
           <p className="text-xs font-bold text-gray-600">
             Control your in-browser Dexie IndexedDB records. 100% token-redacted exports.
@@ -65,7 +65,7 @@ export function DataManagementSection({ analysis, onAnalysisUpdated }: DataManag
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Export Card */}
-        <div className="border-[3px] border-black p-5 rounded-[8px] bg-[#FFFBEB] flex flex-col justify-between gap-4 shadow-[4px_4px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150">
+        <div className="border-[3px] border-black p-5 rounded-[8px] bg-[#FFFBEB] flex flex-col justify-between gap-4 shadow-[3.5px_3.5px_0_0_#000]">
           <div className="flex flex-col gap-2">
             <h3 className="font-black text-base uppercase flex items-center gap-2">
               <Download className="size-5" /> EXPORT DOSSIER (JSON)
@@ -76,13 +76,13 @@ export function DataManagementSection({ analysis, onAnalysisUpdated }: DataManag
             </p>
           </div>
 
-          <Button variant="main" onClick={handleExportJson}>
+          <Button variant="main" size="md" className="w-full font-black" onClick={handleExportJson}>
             <Download className="size-4" /> DOWNLOAD DOSSIER (JSON)
           </Button>
         </div>
 
         {/* Import Card */}
-        <div className="border-[3px] border-black p-5 rounded-[8px] bg-[#EFF6FF] flex flex-col justify-between gap-4 shadow-[4px_4px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150">
+        <div className="border-[3px] border-black p-5 rounded-[8px] bg-[#EFF6FF] flex flex-col justify-between gap-4 shadow-[3.5px_3.5px_0_0_#000]">
           <div className="flex flex-col gap-2">
             <h3 className="font-black text-base uppercase flex items-center gap-2">
               <Upload className="size-5" /> IMPORT DOSSIER FILE
@@ -93,23 +93,23 @@ export function DataManagementSection({ analysis, onAnalysisUpdated }: DataManag
             </p>
           </div>
 
-          <label className="cursor-pointer">
+          <label className="cursor-pointer block w-full">
             <input type="file" accept=".json" onChange={handleImportJson} className="hidden" />
-            <span className="neo-btn bg-[#4D96FF] text-black px-4 py-2.5 inline-flex items-center justify-center gap-2 text-xs font-black uppercase tracking-wide w-full">
+            <div className="w-full h-11 px-5 inline-flex items-center justify-center font-black tracking-wide uppercase transition-all duration-100 cursor-pointer select-none rounded-[6px] bg-[#4D96FF] hover:bg-[#6ba6ff] text-black border-[2px] border-black shadow-[3px_3px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_0_#000] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none gap-2 text-sm">
               <Upload className="size-4" /> SELECT DOSSIER FILE
-            </span>
+            </div>
           </label>
         </div>
       </div>
 
       {importStatus && (
-        <div className="border-[2px] border-black bg-amber-100 p-3 rounded text-xs font-mono font-bold">
+        <div className="border-[2px] border-black bg-amber-100 p-3 rounded-[6px] text-xs font-mono font-bold">
           {importStatus}
         </div>
       )}
 
       {/* Purge Local Storage */}
-      <div className="border-[3px] border-red-600 bg-red-50 p-5 rounded-[8px] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-[4px_4px_0_0_#000]">
+      <div className="border-[3px] border-black bg-red-50 p-5 rounded-[8px] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-[3.5px_3.5px_0_0_#000]">
         <div className="flex items-start gap-3">
           <AlertTriangle className="size-6 text-red-600 shrink-0 mt-0.5" />
           <div>
@@ -120,7 +120,7 @@ export function DataManagementSection({ analysis, onAnalysisUpdated }: DataManag
           </div>
         </div>
 
-        <Button variant="destructive" size="sm" onClick={handlePurgeAll}>
+        <Button variant="destructive" size="md" className="font-black whitespace-nowrap" onClick={handlePurgeAll}>
           <Trash2 className="size-4" /> PURGE ALL DATA
         </Button>
       </div>

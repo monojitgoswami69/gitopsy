@@ -2,7 +2,6 @@
 
 import React from "react";
 import { CourtCharge } from "@/types/domain";
-import { Badge } from "@/components/ui/badge";
 import { Scale, Gavel, CheckCircle2 } from "lucide-react";
 
 interface CourtSectionProps {
@@ -18,15 +17,13 @@ export function CourtSection({ charges, defendantLogin }: CourtSectionProps) {
           <div className="flex items-center gap-2">
             <Scale className="size-6 text-black" />
             <h2 className="text-xl font-black uppercase tracking-tight">
-              12. GITOPSY COURTROOM INDICTMENTS
+              11. GITOPSY COURTROOM INDICTMENTS
             </h2>
           </div>
           <p className="text-xs font-bold text-gray-600 mt-0.5">
             Formal forensic indictments filed on behalf of sensible sleep cycles and git history hygiene for @{defendantLogin}.
           </p>
         </div>
-
-        <Badge variant="coral">DOCKET: ACTIVE TRIAL ({charges.length})</Badge>
       </div>
 
       {/* Direct Grid Display of All Charges (No Tabs) */}
@@ -48,7 +45,7 @@ export function CourtSection({ charges, defendantLogin }: CourtSectionProps) {
                 <span className="text-[9px] font-black uppercase tracking-wider text-gray-500">
                   FORMAL ALLEGATION:
                 </span>
-                <p className="text-xs font-bold text-gray-900 leading-relaxed bg-white p-2.5 rounded border border-black/20">
+                <p className="text-xs font-bold text-gray-900 leading-relaxed bg-white p-3 rounded-[6px] border-[1.5px] border-black/30">
                   &ldquo;{charge.allegation}&rdquo;
                 </p>
               </div>
@@ -57,18 +54,20 @@ export function CourtSection({ charges, defendantLogin }: CourtSectionProps) {
                 <span className="text-[9px] font-black uppercase tracking-wider text-gray-500">
                   VERIFIED METRIC EVIDENCE:
                 </span>
-                <div className="bg-white p-2.5 rounded border border-black/20 font-mono text-xs font-bold text-emerald-900 flex items-start gap-2">
+                <div className="bg-white p-3 rounded-[6px] border-[1.5px] border-black/30 font-mono text-xs font-bold text-emerald-900 flex items-start gap-2">
                   <CheckCircle2 className="size-4 text-emerald-700 shrink-0 mt-0.5" />
                   <span className="leading-snug">{charge.evidence}</span>
                 </div>
               </div>
             </div>
 
-            <div className="border-t-[2px] border-black/15 pt-2.5 flex items-start gap-2.5 bg-amber-100/60 p-2.5 rounded border border-black/20">
+            <div className="flex items-start gap-2.5 bg-amber-100/70 p-3 rounded-[6px] border-[1.5px] border-black">
               <Gavel className="size-4 text-black shrink-0 mt-0.5" />
-              <div className="min-w-0">
-                <span className="text-[9px] font-black uppercase text-gray-600">COURT SENTENCE:</span>
-                <p className="text-xs font-black text-black mt-0.5 leading-snug">{charge.sentence}</p>
+              <div className="flex flex-col gap-1 min-w-0">
+                <span className="text-[10px] font-black uppercase tracking-wider text-gray-700 leading-none">
+                  COURT SENTENCE:
+                </span>
+                <p className="text-xs font-black text-black leading-snug">{charge.sentence}</p>
               </div>
             </div>
           </div>

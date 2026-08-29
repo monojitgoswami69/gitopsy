@@ -14,17 +14,16 @@ const SECTIONS: SectionItem[] = [
   { id: "section-activity", label: "02. Activity Heatmap" },
   { id: "section-temporal", label: "03. Temporal Profile" },
   { id: "section-repositories", label: "04. Repositories" },
-  { id: "section-distinctions", label: "05. Distinctions" },
+  { id: "section-distinctions", label: "05. Repository Awards" },
   { id: "section-languages", label: "06. Language DNA" },
   { id: "section-commits", label: "07. Commit Forensics" },
   { id: "section-churn", label: "08. Code Churn" },
   { id: "section-collaboration", label: "09. Collaboration" },
-  { id: "section-classifications", label: "10. Assessments" },
-  { id: "section-findings", label: "11. Findings" },
-  { id: "section-court", label: "12. Courtroom" },
-  { id: "section-case-notes", label: "13. Case Notes" },
-  { id: "section-wrapped", label: "14. Wrapped Recap" },
-  { id: "section-data", label: "15. Data & Privacy" },
+  { id: "section-classifications", label: "10. Gitopsy Awards" },
+  { id: "section-court", label: "11. Courtroom" },
+  { id: "section-case-notes", label: "12. Special Notes" },
+  { id: "section-wrapped", label: "13. Wrapped Recap" },
+  { id: "section-data", label: "14. Data & Privacy" },
 ];
 
 interface DossierIndexNavProps {

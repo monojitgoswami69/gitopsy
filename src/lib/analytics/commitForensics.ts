@@ -31,6 +31,7 @@ export function analyzeCommitForensics(
       conventionalCommitCount: 0,
       remarks: [],
       largestCommit: null,
+      topVolumeCommits: [],
     };
   }
 
@@ -214,6 +215,25 @@ export function analyzeCommitForensics(
   // Pick top 4 distinct remarks
   const remarks = candidateRemarks.slice(0, 4);
 
+  // Top 3 volume commits
+  const topVolumeCommits = [...detailedCommits]
+    .sort((a, b) => {
+      const volA = a.additions + a.deletions;
+      const volB = b.additions + b.deletions;
+      if (volB !== volA) return volB - volA;
+      return a.sha.localeCompare(b.sha);
+    })
+    .slice(0, 3)
+    .map((c) => ({
+      sha: c.sha,
+      repoFullName: c.repoFullName,
+      message: c.message,
+      additions: c.additions,
+      deletions: c.deletions,
+      filesChanged: c.filesChanged,
+      authorDate: c.authorDate,
+    }));
+
   return {
     totalAnalyzed,
     detailedCommitsCount: detailedCount,
@@ -229,6 +249,7 @@ export function analyzeCommitForensics(
     repeatedMessageCount,
     conventionalCommitCount,
     remarks,
-    largestCommit,
+    largestCommit: largestCommit || topVolumeCommits[0] || null,
+    topVolumeCommits,
   };
 }

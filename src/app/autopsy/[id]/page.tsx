@@ -33,7 +33,6 @@ import {
   Sparkles,
   RefreshCw,
   Zap,
-  Lightbulb,
   FileCode2,
   ArrowLeft,
   FileText,
@@ -600,7 +599,7 @@ export default function AutopsyReportDetailPage() {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="border-[2px] border-black p-3.5 rounded-[8px] bg-amber-50 shadow-[2px_2px_0_0_#000]">
+            <div className="border-[1.5px] border-black p-3.5 rounded-[8px] bg-amber-50/70 flex flex-col items-center justify-center text-center">
               <span className="text-[10px] font-black uppercase text-gray-500">PRs AUTHORED</span>
               <div className="text-2xl font-black font-mono mt-1 text-black">
                 {analysis.summary.prsAuthored}
@@ -608,7 +607,7 @@ export default function AutopsyReportDetailPage() {
               <span className="text-[10px] text-gray-600 font-bold">{analysis.summary.prsMerged} merged</span>
             </div>
 
-            <div className="border-[2px] border-black p-3.5 rounded-[8px] bg-amber-50 shadow-[2px_2px_0_0_#000]">
+            <div className="border-[1.5px] border-black p-3.5 rounded-[8px] bg-amber-50/70 flex flex-col items-center justify-center text-center">
               <span className="text-[10px] font-black uppercase text-gray-500">MERGE COMPLETION</span>
               <div className="text-2xl font-black font-mono mt-1 text-emerald-700">
                 {analysis.summary.mergeRatePercentage !== null ? `${analysis.summary.mergeRatePercentage}%` : "N/A"}
@@ -616,7 +615,7 @@ export default function AutopsyReportDetailPage() {
               <span className="text-[10px] text-gray-600 font-bold">of authored PRs</span>
             </div>
 
-            <div className="border-[2px] border-black p-3.5 rounded-[8px] bg-amber-50 shadow-[2px_2px_0_0_#000]">
+            <div className="border-[1.5px] border-black p-3.5 rounded-[8px] bg-amber-50/70 flex flex-col items-center justify-center text-center">
               <span className="text-[10px] font-black uppercase text-gray-500">CODE REVIEWS SUBMITTED</span>
               <div className="text-2xl font-black font-mono mt-1 text-blue-700">
                 {analysis.summary.reviewsAuthored}
@@ -624,7 +623,7 @@ export default function AutopsyReportDetailPage() {
               <span className="text-[10px] text-gray-600 font-bold">peer reviews</span>
             </div>
 
-            <div className="border-[2px] border-black p-3.5 rounded-[8px] bg-amber-50 shadow-[2px_2px_0_0_#000]">
+            <div className="border-[1.5px] border-black p-3.5 rounded-[8px] bg-amber-50/70 flex flex-col items-center justify-center text-center">
               <span className="text-[10px] font-black uppercase text-gray-500">MULTI-CONTRIBUTOR SHARE</span>
               <div className="text-2xl font-black font-mono mt-1 text-purple-700">
                 {analysis.summary.multiContributorRepoShare || 0}%
@@ -634,54 +633,16 @@ export default function AutopsyReportDetailPage() {
           </div>
         </div>
 
-        {/* 10. Deterministic Developer Classifications */}
+        {/* 10. The Gitopsy Awards */}
         <ClassificationsSection classifications={analysis.classifications} />
 
-        {/* 11. Verified Findings */}
-        <div id="section-findings" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-6 text-black">
-          <div className="flex items-center justify-between border-b-[3px] border-black pb-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <Lightbulb className="size-6 text-[#FD9745]" />
-                <h2 className="text-xl font-black uppercase tracking-tight">
-                  11. VERIFIED FINDINGS &amp; OBSERVATIONS
-                </h2>
-              </div>
-              <p className="text-xs font-bold text-gray-600 mt-0.5">
-                Objective observations derived strictly from verified GitHub activity records.
-              </p>
-            </div>
-          </div>
-
-          {/* Findings Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {analysis.findings.map((finding) => (
-              <div
-                key={finding.id}
-                className="border-[3px] border-black bg-amber-50/70 rounded-[8px] p-4 shadow-[3px_3px_0_0_#000] flex flex-col justify-between gap-2 hover:translate-x-[1.5px] hover:translate-y-[1.5px] hover:shadow-[1.5px_1.5px_0_0_#000] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all duration-150"
-              >
-                <div className="flex items-start gap-3">
-                  <span className="text-2xl">{finding.icon}</span>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[10px] font-black uppercase text-gray-500">{finding.category}</span>
-                    <p className="text-sm font-black text-black leading-snug">{finding.title}</p>
-                  </div>
-                </div>
-                <div className="border-t-[2px] border-black/10 pt-2 text-[11px] font-mono text-gray-700 font-bold">
-                  Evidence: {finding.evidence}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* 12. Gitopsy Courtroom */}
+        {/* 11. Gitopsy Courtroom */}
         <CourtSection
           charges={analysis.courtCharges}
           defendantLogin={analysis.subject.login}
         />
 
-        {/* 13. Special Findings & Case Notes */}
+        {/* 12. Special Findings & Case Notes */}
         {analysis.easterEggs.length > 0 && (
           <div id="section-case-notes" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-6 text-black">
             <div className="flex items-center justify-between border-b-[3px] border-black pb-4">
@@ -689,7 +650,7 @@ export default function AutopsyReportDetailPage() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <Zap className="size-6 text-purple-700" />
                   <h2 className="text-xl font-black uppercase tracking-tight">
-                    13. SPECIAL FINDINGS &amp; CASE NOTES
+                    12. SPECIAL FINDINGS &amp; CASE NOTES
                   </h2>
                   <Badge variant="purple">{analysis.easterEggs.length}</Badge>
                 </div>
@@ -718,13 +679,12 @@ export default function AutopsyReportDetailPage() {
           </div>
         )}
 
-        {/* 14. Wrapped Recap & Launcher */}
+        {/* 13. Wrapped Recap & Launcher */}
         <div id="section-wrapped" className="border-[4px] border-black bg-[#FFDC58] rounded-[12px] p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 text-black">
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
-              <Badge variant="coral">EXAMINATION SUMMARY</Badge>
               <h2 className="text-2xl font-black uppercase tracking-tight">
-                14. GITOPSY FORENSIC WRAPPED
+                13. GITOPSY FORENSIC WRAPPED
               </h2>
             </div>
             <p className="text-xs font-bold text-gray-800 max-w-lg leading-relaxed">
@@ -739,11 +699,11 @@ export default function AutopsyReportDetailPage() {
             onClick={() => setIsWrappedOpen(true)}
             className="whitespace-nowrap shadow-[4px_4px_0_0_#000]"
           >
-            <Sparkles className="size-5" /> LAUNCH WRAPPED (FULL SCREEN)
+            LAUNCH WRAPPED
           </Button>
         </div>
 
-        {/* 15. Data Management & Privacy */}
+        {/* 14. Data Management & Privacy */}
         <DataManagementSection
           analysis={analysis}
           onAnalysisUpdated={(a) => setAnalysis(a)}

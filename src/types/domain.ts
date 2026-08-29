@@ -154,7 +154,17 @@ export interface CommitForensics {
     additions: number;
     deletions: number;
     filesChanged: number;
+    authorDate?: string;
   } | null;
+  topVolumeCommits?: {
+    sha: string;
+    repoFullName: string;
+    message: string;
+    additions: number;
+    deletions: number;
+    filesChanged: number;
+    authorDate?: string;
+  }[];
 }
 
 export interface DeveloperClassification {

@@ -83,12 +83,11 @@ export function HeadlineMetrics({ summary, topLanguage }: HeadlineMetricsProps) 
     {
       title: "COMMUNITY ENGAGEMENT",
       value: (
-        <span className="inline-flex items-center gap-2.5">
+        <span className="inline-flex items-center gap-3">
           <span className="inline-flex items-center gap-1.5">
-            <Star className="size-5 text-amber-500 fill-amber-400 stroke-[2.5]" />
+            <Star className="size-5 text-black stroke-[2.5]" />
             <span>{summary.starsReceived}</span>
           </span>
-          <span className="text-gray-400 font-bold">•</span>
           <span className="inline-flex items-center gap-1.5">
             <GitFork className="size-5 text-black stroke-[2.5]" />
             <span>{summary.forksReceived}</span>
