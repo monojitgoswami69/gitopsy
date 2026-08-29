@@ -32,7 +32,7 @@ export function GlobalAutopsyModal() {
       activeToken = await checkSession();
     }
     if (!activeToken) {
-      window.location.href = "/api/auth/login";
+      window.location.href = "/api/auth/login?return_to=/autopsy";
       return;
     }
 

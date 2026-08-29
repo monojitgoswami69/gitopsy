@@ -146,7 +146,7 @@ export default function AutopsyConsolePage() {
       activeToken = await checkSession();
     }
     if (!activeToken) {
-      window.location.href = "/api/auth/login";
+      window.location.href = "/api/auth/login?return_to=/autopsy";
       return;
     }
     await runLiveExamination(activeToken, username || profile?.login || undefined);
@@ -190,13 +190,13 @@ export default function AutopsyConsolePage() {
         </p>
 
         <div className="flex items-center gap-4 mt-1">
-          <Link
-            href="/api/auth/login"
+          <a
+            href="/api/auth/login?return_to=/autopsy"
             className="bg-[#FFDC58] text-black border-[3px] border-black px-8 py-4 text-sm font-black uppercase shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all flex items-center gap-2.5 rounded-2xl"
           >
             <Lock className="size-5" />
             <span>Connect GitHub (PKCE)</span>
-          </Link>
+          </a>
         </div>
       </div>
     );

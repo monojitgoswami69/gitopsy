@@ -47,45 +47,6 @@ export async function GET(request: NextRequest) {
 
     const data = await userRes.json();
 
-    // Paginate all accessible repositories across owner, collaborator, and organization memberships
-    const allRepos: any[] = [];
-    let page = 1;
-    while (page <= 10) {
-      const reposRes = await fetch(
-        `https://api.github.com/user/repos?per_page=100&page=${page}&affiliation=owner,collaborator,organization_member`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/vnd.github+json",
-            "User-Agent": "Gitopsy-Forensic-Analyzer",
-          },
-        }
-      );
-      if (!reposRes.ok) break;
-      const pageData = await reposRes.json();
-      if (!Array.isArray(pageData) || pageData.length === 0) break;
-      allRepos.push(...pageData);
-      if (pageData.length < 100) break;
-      page++;
-    }
-
-    const owned = allRepos.filter(
-      (r: any) => r.owner?.login?.toLowerCase() === data.login?.toLowerCase()
-    );
-    const ownedPublicRepos =
-      allRepos.length > 0
-        ? owned.filter((r: any) => !r.private).length
-        : data.public_repos ?? 0;
-    const ownedPrivateRepos =
-      allRepos.length > 0
-        ? owned.filter((r: any) => Boolean(r.private)).length
-        : data.total_private_repos || 0;
-    const ownedReposCount = ownedPublicRepos + ownedPrivateRepos;
-    const accessibleReposCount =
-      allRepos.length > 0
-        ? allRepos.length
-        : data.public_repos + (data.total_private_repos || 0);
-
     const profile: SubjectProfile = {
       login: data.login,
       name: data.name || null,
@@ -96,10 +57,6 @@ export async function GET(request: NextRequest) {
       createdAt: data.created_at,
       publicRepos: data.public_repos || 0,
       totalPrivateRepos: data.total_private_repos || 0,
-      ownedReposCount,
-      ownedPublicRepos,
-      ownedPrivateRepos,
-      accessibleReposCount,
       followers: data.followers || 0,
       following: data.following || 0,
     };

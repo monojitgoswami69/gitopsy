@@ -19,6 +19,13 @@ export default function LandingPage() {
   const { isAuthenticated } = useAuthStore();
   const { currentAnalysis } = useAutopsyStore();
 
+  React.useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("auth_status") === "connected" || urlParams.has("auth_error")) {
+      window.history.replaceState({}, "", "/");
+    }
+  }, []);
+
   const handleScrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
     e.preventDefault();
     const el = document.getElementById(id);
@@ -56,7 +63,7 @@ export default function LandingPage() {
           transition={{ delay: 0.1, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
           className="text-base sm:text-xl font-semibold text-gray-800 max-w-3xl leading-relaxed mb-8"
         >
-          Gitopsy puts your entire version control history under a clinical microscope. We audit 24-hour UTC habits, code churn blast radius, commit genetics, and developer classifications—with serious data, deterministic math, and ridiculous presentation.
+          Gitopsy is a privacy-first, local analytics engine for your GitHub activity. It audits 24-hour UTC commit patterns, code churn, message conventions, and workflow archetypes using deterministic calculations directly in your browser.
         </motion.p>
 
         {/* CTAs */}
@@ -71,18 +78,18 @@ export default function LandingPage() {
               href="/autopsy"
               className="bg-[#FFDC58] text-black border-[3px] border-black px-8 py-4 text-sm font-black uppercase shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all flex items-center gap-2.5 rounded-2xl"
             >
-              <span>Visit Your Autopsy</span>
+              <span>Visit Console</span>
               <ArrowRight className="size-5 stroke-[3]" />
             </Link>
           ) : (
-            <Link
+            <a
               href="/api/auth/login"
               className="bg-[#FFDC58] text-black border-[3px] border-black px-8 py-4 text-sm font-black uppercase shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all flex items-center gap-2.5 rounded-2xl"
             >
               <Lock className="size-5" />
               <span>Connect GitHub (PKCE)</span>
               <ArrowRight className="size-5 stroke-[3]" />
-            </Link>
+            </a>
           )}
         </motion.div>
       </section>
@@ -99,7 +106,7 @@ export default function LandingPage() {
         <div className="text-center mb-8">
           <h2 className="text-2xl sm:text-4xl font-black uppercase tracking-tight">How It Works</h2>
           <p className="text-xs sm:text-sm text-gray-700 font-bold max-w-xl mx-auto mt-2">
-            Three simple steps from repository history to a complete forensic autopsy.
+            Three simple steps from repository history to a complete forensic analysis.
           </p>
         </div>
 
@@ -115,7 +122,7 @@ export default function LandingPage() {
               </h3>
             </div>
             <p className="text-xs text-gray-700 font-semibold leading-relaxed">
-              Connect your account via read-only GitHub OAuth. No passwords, zero write permissions, and no repository code ever leaves your browser.
+              Connect your account with read-only GitHub OAuth. No passwords, zero write permissions, and repository data never leaves your browser.
             </p>
           </div>
 
@@ -126,11 +133,11 @@ export default function LandingPage() {
                 02
               </span>
               <h3 className="text-base sm:text-lg font-black uppercase">
-                Forensic Audit
+                Audit
               </h3>
             </div>
             <p className="text-xs text-gray-700 font-semibold leading-relaxed">
-              A background Web Worker processes commit logs, code churn diffs, author timestamps, and message syntax at 60fps without UI lag.
+              A background Web Worker processes commit logs, diff churn, timestamps, and message syntax without blocking the UI thread.
             </p>
           </div>
 
@@ -141,11 +148,11 @@ export default function LandingPage() {
                 03
               </span>
               <h3 className="text-base sm:text-lg font-black uppercase">
-                Autopsy Dossier
+                Dossier
               </h3>
             </div>
             <p className="text-xs text-gray-700 font-semibold leading-relaxed">
-              Explore your developer archetype, repository awards (*The Workhorse*, *The Monolith*), interactive courtroom trial, and Wrapped recap.
+              Review your developer archetype, repository awards, commit breakdown, and year-in-review summary.
             </p>
           </div>
         </div>
@@ -169,7 +176,7 @@ export default function LandingPage() {
           <div className="group bg-white border-[3px] border-black p-6 shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150 rounded-3xl cursor-default">
             <div className="flex items-center gap-2.5 mb-3">
               <Clock className="size-5 sm:size-6 text-[#CA8A04] group-hover:scale-110 transition-transform shrink-0 stroke-[2.5]" />
-              <h3 className="text-lg font-black uppercase">24-Hour Temporal Forensics</h3>
+              <h3 className="text-lg font-black uppercase">24-Hour Temporal Analysis</h3>
             </div>
             <p className="text-xs text-gray-700 font-semibold leading-relaxed">
               24-hour UTC clocks, weekday cadence matrices, consecutive streaks, and nocturnal ratios calculated from true author commit timestamps.
@@ -183,7 +190,7 @@ export default function LandingPage() {
               <h3 className="text-lg font-black uppercase">Commit Forensics &amp; Churn</h3>
             </div>
             <p className="text-xs text-gray-700 font-semibold leading-relaxed">
-              Regex message intent categorization (`feat`, `fix`, `refactor`, `chore`), size spectrum distributions, and monthly code churn blast radius.
+              Regex message intent categorization (feat, fix, refactor, chore), size spectrum distributions, and monthly code churn volume.
             </p>
           </div>
 
@@ -194,7 +201,7 @@ export default function LandingPage() {
               <h3 className="text-lg font-black uppercase">The Gitopsy Courtroom</h3>
             </div>
             <p className="text-xs text-gray-700 font-semibold leading-relaxed">
-              An interactive trial simulation (&ldquo;The People vs @username&rdquo;) charging you with verified crimes against sleep and git hygiene.
+              An interactive trial simulation charging you with verified crimes against sleep and git hygiene based on real commit statistics.
             </p>
           </div>
 
@@ -202,10 +209,10 @@ export default function LandingPage() {
           <div className="group bg-white border-[3px] border-black p-6 shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150 rounded-3xl cursor-default">
             <div className="flex items-center gap-2.5 mb-3">
               <Sparkles className="size-5 sm:size-6 text-[#9333EA] group-hover:scale-110 transition-transform shrink-0 stroke-[2.5]" />
-              <h3 className="text-lg font-black uppercase">15-Chapter Gitopsy Wrapped</h3>
+              <h3 className="text-lg font-black uppercase">Gitopsy Wrapped</h3>
             </div>
             <p className="text-xs text-gray-700 font-semibold leading-relaxed">
-              A full-screen audiovisual narrative journey celebrating your annual/lifetime records, primary specimen, and developer diagnosis with confetti.
+              A multi-chapter visual walkthrough celebrating your annual records, primary specimen, and developer diagnosis.
             </p>
           </div>
         </div>
@@ -227,7 +234,7 @@ export default function LandingPage() {
             <span>© Gitopsy 2026</span>
             <span className="text-black/40">•</span>
             <a
-              href="#"
+              href="https://github.com/monojitgoswami69/gitopsy"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-black transition-colors flex items-center gap-1.5 hover:underline"

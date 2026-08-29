@@ -171,17 +171,6 @@ export function AutopsyReportsConsole({
                       <span className="text-xs font-mono font-bold text-gray-600">
                         {r.subject.login}
                       </span>
-                      {r.primaryClassification && (
-                        <span
-                          className="text-[10px] font-black uppercase px-2 py-0.5 border border-black rounded shadow-[1px_1px_0_0_#000]"
-                          style={{
-                            backgroundColor:
-                              r.primaryClassification.badgeAccent || "#FFDC58",
-                          }}
-                        >
-                          {r.primaryClassification.title}
-                        </span>
-                      )}
                     </div>
 
                     <div className="flex items-center gap-3 text-xs font-semibold text-gray-600 flex-wrap">

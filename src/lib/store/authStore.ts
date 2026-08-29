@@ -70,20 +70,19 @@ export const useAuthStore = create<AuthState>()(
 
       fetchProfile: async (force = false) => {
         const existing = get().profile;
-        if (existing && !force) {
-          if (!get().username && existing.login) {
-            set({
-              username: existing.login,
-              avatarUrl: existing.avatarUrl || get().avatarUrl,
-            });
-          }
-          return existing;
+        if (existing && !get().username && existing.login) {
+          set({
+            username: existing.login,
+            avatarUrl: existing.avatarUrl || get().avatarUrl,
+          });
         }
 
+        // If a request is already in-flight, return it if blocking (force), else return existing cached
         if (inFlightProfilePromise) {
-          return inFlightProfilePromise;
+          return force ? inFlightProfilePromise : (existing || inFlightProfilePromise);
         }
 
+        // Trigger background revalidation (Stale-While-Revalidate)
         inFlightProfilePromise = (async () => {
           try {
             const res = await fetch("/api/profile");
@@ -99,12 +98,17 @@ export const useAuthStore = create<AuthState>()(
               }
             }
           } catch {
-            // ignore fetch errors
+            // Silently retain existing cache on fetch errors
           } finally {
             inFlightProfilePromise = null;
           }
-          return null;
+          return existing || null;
         })();
+
+        // SWR: Return cached profile immediately if available and force is false
+        if (existing && !force) {
+          return existing;
+        }
 
         return inFlightProfilePromise;
       },

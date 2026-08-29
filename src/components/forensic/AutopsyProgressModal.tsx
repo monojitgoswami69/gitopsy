@@ -113,7 +113,7 @@ export function AutopsyProgressModal({
               <Save className="size-6 text-amber-600 shrink-0 mt-0.5" />
               <div className="flex-1">
                 <h3 className="font-black text-sm uppercase text-amber-900 mb-1">
-                  Checkpoint Saved — Resume Available
+                  Checkpoint Saved: Resume Available
                 </h3>
                 <p className="text-xs font-mono font-bold text-amber-800 leading-relaxed">
                   {resumeState!.resumeReason}

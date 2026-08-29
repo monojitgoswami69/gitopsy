@@ -86,11 +86,11 @@ export function HeaderNav() {
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            <Link href="/api/auth/login">
+            <a href="/api/auth/login">
               <Button size="sm" variant="main">
                 CONNECT GITHUB
               </Button>
-            </Link>
+            </a>
           </div>
         )}
       </div>

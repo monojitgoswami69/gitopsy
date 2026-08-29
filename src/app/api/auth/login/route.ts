@@ -48,5 +48,34 @@ export async function GET(request: NextRequest) {
     maxAge: 600,
   });
 
+  // Determine return_to destination (default to '/')
+  let returnTo = request.nextUrl.searchParams.get("return_to");
+  if (!returnTo) {
+    const referer = request.headers.get("referer");
+    if (referer) {
+      try {
+        const refUrl = new URL(referer);
+        if (refUrl.origin === request.nextUrl.origin) {
+          returnTo = refUrl.pathname + refUrl.search;
+        }
+      } catch {
+        // ignore invalid referer header
+      }
+    }
+  }
+
+  if (!returnTo || !returnTo.startsWith("/") || returnTo.startsWith("//")) {
+    returnTo = "/";
+  }
+
+  response.cookies.set("gitopsy_return_to", returnTo, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 600,
+  });
+
   return response;
 }
+

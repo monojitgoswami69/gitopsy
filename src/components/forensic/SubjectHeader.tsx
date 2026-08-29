@@ -13,11 +13,13 @@ import {
 interface SubjectHeaderProps {
   subject: SubjectProfile;
   primaryClassification?: DeveloperClassification;
+  showRepoScope?: boolean;
 }
 
 export function SubjectHeader({
   subject,
   primaryClassification,
+  showRepoScope = false,
 }: SubjectHeaderProps) {
   const memberSince = new Date(subject.createdAt).toLocaleDateString(undefined, {
     month: "short",
@@ -33,15 +35,17 @@ export function SubjectHeader({
 
   return (
     <div id="section-subject" className="w-full flex flex-col items-center justify-center text-black">
-      {/* Subject Dossier Header */}
-      <div className="w-full flex items-center justify-between mb-4 pb-2 border-b-[2px] border-black/15">
-        <h2 className="text-xs font-black uppercase tracking-wider text-gray-700">
-          SUBJECT DOSSIER
-        </h2>
-        <span className="text-[10px] font-mono font-bold bg-amber-100 border border-black px-2 py-0.5 rounded shadow-[1px_1px_0_0_#000]">
-          CASE ID: @{subject.login.toUpperCase()}
-        </span>
-      </div>
+      {/* Subject Dossier Header (Report View Only) */}
+      {showRepoScope && (
+        <div className="w-full flex items-center justify-between mb-4 pb-2 border-b-[2px] border-black/15">
+          <h2 className="text-xs font-black uppercase tracking-wider text-gray-700">
+            SUBJECT DOSSIER
+          </h2>
+          <span className="text-[10px] font-mono font-bold bg-amber-100 border border-black px-2 py-0.5 rounded shadow-[1px_1px_0_0_#000]">
+            CASE ID: @{subject.login.toUpperCase()}
+          </span>
+        </div>
+      )}
 
       {/* Profile & Identity Block (Image on Left, details on right) */}
       <div className="flex flex-col sm:flex-row items-center sm:items-start md:items-center justify-center gap-5 sm:gap-6 text-center sm:text-left">
@@ -64,7 +68,7 @@ export function SubjectHeader({
           className="hidden sm:block w-[1.5px] self-stretch bg-gradient-to-b from-transparent via-black/25 to-transparent mx-1"
         />
 
-        {/* Right: Info, Handle, Bio, Meta & Repository Pill */}
+        {/* Right: Info, Handle, Bio & Meta */}
         <div className="flex flex-col items-center sm:items-start gap-2 max-w-3xl">
           <div className="flex items-center gap-2.5 flex-wrap justify-center sm:justify-start">
             <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-black leading-tight">
@@ -106,21 +110,22 @@ export function SubjectHeader({
             <span>Member since {memberSince}</span>
           </div>
 
-          {/* Repository Scope Single Pill */}
-          <div className="flex items-center justify-center sm:justify-start mt-1">
-            <div className="bg-white border-[2.5px] border-black px-4 py-1.5 rounded-xl text-xs font-mono font-bold shadow-[2px_2px_0_0_#000] flex items-center gap-2.5 flex-wrap justify-center sm:justify-start text-black">
-              <span><strong className="font-black">{accessibleRepos}</strong> Accessible Repos</span>
-              <span className="text-gray-400">|</span>
-              <span><strong className="font-black">{ownedRepos}</strong> Owned</span>
-              <span className="text-gray-400">|</span>
-              <span><strong className="font-black">{ownedPublic}</strong> Public</span>
-              <span className="text-gray-400">|</span>
-              <span><strong className="font-black">{ownedPrivate}</strong> Private</span>
+          {/* Repository Scope Pill (Report View Only) */}
+          {showRepoScope && (
+            <div className="flex items-center justify-center sm:justify-start mt-1">
+              <div className="bg-white border-[2.5px] border-black px-4 py-1.5 rounded-xl text-xs font-mono font-bold shadow-[2px_2px_0_0_#000] flex items-center gap-2.5 flex-wrap justify-center sm:justify-start text-black">
+                <span><strong className="font-black">{accessibleRepos}</strong> Accessible Repos</span>
+                <span className="text-gray-400">|</span>
+                <span><strong className="font-black">{ownedRepos}</strong> Owned</span>
+                <span className="text-gray-400">|</span>
+                <span><strong className="font-black">{ownedPublic}</strong> Public</span>
+                <span className="text-gray-400">|</span>
+                <span><strong className="font-black">{ownedPrivate}</strong> Private</span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
-
     </div>
   );
 }

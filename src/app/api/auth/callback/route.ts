@@ -7,21 +7,34 @@ export async function GET(request: NextRequest) {
   const error = url.searchParams.get("error");
   const errorDescription = url.searchParams.get("error_description");
 
+  const rawReturnTo = request.cookies.get("gitopsy_return_to")?.value || "/";
+  const returnTo =
+    rawReturnTo.startsWith("/") && !rawReturnTo.startsWith("//")
+      ? rawReturnTo
+      : "/";
+
   if (error) {
-    return NextResponse.redirect(
-      new URL(`/?auth_error=${encodeURIComponent(errorDescription || error)}`, request.url)
-    );
+    const errorUrl = `${returnTo}${returnTo.includes("?") ? "&" : "?"}auth_error=${encodeURIComponent(errorDescription || error)}`;
+    const response = NextResponse.redirect(new URL(errorUrl, request.url));
+    response.cookies.delete("gitopsy_return_to");
+    return response;
   }
 
   if (!code || !state) {
-    return NextResponse.redirect(new URL("/?auth_error=MISSING_CODE_OR_STATE", request.url));
+    const errorUrl = `${returnTo}${returnTo.includes("?") ? "&" : "?"}auth_error=MISSING_CODE_OR_STATE`;
+    const response = NextResponse.redirect(new URL(errorUrl, request.url));
+    response.cookies.delete("gitopsy_return_to");
+    return response;
   }
 
   const savedState = request.cookies.get("gitopsy_oauth_state")?.value;
   const codeVerifier = request.cookies.get("gitopsy_code_verifier")?.value;
 
   if (!savedState || savedState !== state) {
-    return NextResponse.redirect(new URL("/?auth_error=INVALID_OAUTH_STATE", request.url));
+    const errorUrl = `${returnTo}${returnTo.includes("?") ? "&" : "?"}auth_error=INVALID_OAUTH_STATE`;
+    const response = NextResponse.redirect(new URL(errorUrl, request.url));
+    response.cookies.delete("gitopsy_return_to");
+    return response;
   }
 
   const clientId = process.env.GITHUB_CLIENT_ID || process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID;
@@ -48,15 +61,14 @@ export async function GET(request: NextRequest) {
     const tokenData = await tokenResponse.json();
 
     if (tokenData.error || !tokenData.access_token) {
-      return NextResponse.redirect(
-        new URL(
-          `/?auth_error=${encodeURIComponent(tokenData.error_description || tokenData.error || "Token exchange failed")}`,
-          request.url
-        )
-      );
+      const errorUrl = `${returnTo}${returnTo.includes("?") ? "&" : "?"}auth_error=${encodeURIComponent(tokenData.error_description || tokenData.error || "Token exchange failed")}`;
+      const response = NextResponse.redirect(new URL(errorUrl, request.url));
+      response.cookies.delete("gitopsy_return_to");
+      return response;
     }
 
-    const response = NextResponse.redirect(new URL("/autopsy?auth_status=connected", request.url));
+    const successUrl = `${returnTo}${returnTo.includes("?") ? "&" : "?"}auth_status=connected`;
+    const response = NextResponse.redirect(new URL(successUrl, request.url));
 
     // Store token in HttpOnly temporary session cookie for client in-memory retrieval
     response.cookies.set("gitopsy_token_session", tokenData.access_token, {
@@ -67,14 +79,17 @@ export async function GET(request: NextRequest) {
       maxAge: 3600 * 8, // 8 hours
     });
 
-    // Clean up PKCE cookies
+    // Clean up PKCE and return_to cookies
     response.cookies.delete("gitopsy_code_verifier");
     response.cookies.delete("gitopsy_oauth_state");
+    response.cookies.delete("gitopsy_return_to");
 
     return response;
   } catch (err) {
-    return NextResponse.redirect(
-      new URL(`/?auth_error=${encodeURIComponent(String(err))}`, request.url)
-    );
+    const errorUrl = `${returnTo}${returnTo.includes("?") ? "&" : "?"}auth_error=${encodeURIComponent(String(err))}`;
+    const response = NextResponse.redirect(new URL(errorUrl, request.url));
+    response.cookies.delete("gitopsy_return_to");
+    return response;
   }
 }
+

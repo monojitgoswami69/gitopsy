@@ -317,6 +317,7 @@ export default function AutopsyReportDetailPage() {
         <SubjectHeader
           subject={analysis.subject}
           primaryClassification={analysis.primaryClassification}
+          showRepoScope={true}
         />
 
         {/* 01. Executive Headline Metrics / Case Summary */}

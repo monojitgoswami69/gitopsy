@@ -1,76 +1,125 @@
-# GITOPSY
-## Your GitHub, under examination.
+# Gitopsy
 
-> **GitHub + Autopsy**: Privacy-first forensic engineering intelligence and analytics that puts your entire GitHub history under a clinical microscope.
->
-> **Philosophy**: *Serious data. Deterministic analysis. Ridiculous presentation.*
+A local-first, privacy-focused GitHub analytics engine built with Next.js, Web Workers, and IndexedDB.
 
----
-
-## ⚡ Key Highlights
-
-- **Single Continuous Forensic Dossier**: A unified, responsive, scrollable report flowing from Subject Identity down to Executive Metrics, Heatmaps, Temporal Forensics, Repositories, Language DNA, Commit Forensics, Classifications, Courtroom, and Wrapped.
-- **100% Deterministic & Factually Traceable**: Every metric, classification, award, charge, and finding is calculated directly from GitHub API data. **Zero LLMs, zero cloud databases, and zero fabricated medical/biological claims.**
-- **Strict Local-First Privacy Boundary**: **Zero application database**. No PostgreSQL, MongoDB, Redis, Supabase, tracking pixels, or telemetry. All repository data, diffs, and analytics reside strictly inside the user's browser `IndexedDB` (via Dexie).
-- **Dedicated Web Worker Pipeline**: Heavy network fetching, pagination, metrics normalization, and aggregation execute entirely in a background Web Worker (`analyzer.worker.ts`) to ensure a smooth 60fps main UI.
-- **Evidence-Backed Developer Classifications**: Transparent classifications (*Night Owl Builder*, *Weekend Warrior*, *Polyglot Investigator*, *Refactor Machine*, *One-Project Specialist*, *Repository Hoarder*, *Commit Machine*, *Fix Addict*, *WIP Specialist*, *Steady Builder*, *The Monolith*) with explicit **Evidence Strength** (`LOW`, `MODERATE`, `HIGH`, `VERY HIGH`).
-- **Deterministic Repository Awards**: *The Workhorse*, *The Main Character*, *The Ghost Town*, *The Comeback Kid*, *The Side Project*, *The Monolith*, *The Chaos Engine*.
-- **Commit Message Forensics & Churn Metrics**: Regex message intent categorization (`feat`, `fix`, `refactor`, `chore`, `wip`, `merge`, `revert`, `docs`), size spectrum distribution, median commit size, and conventional-commit compliance.
-- **Gitopsy Courtroom**: Interactive trial simulation ("The People vs @username") charging the developer with crimes against sleep and git hygiene based on verified statistics.
-- **Gitopsy Wrapped**: Full-screen 15-chapter narrative journey celebrating your annual/lifetime records with audio-visual cues and confetti.
-- **Secret Easter Eggs & Konami Code**: Hidden triggers responding to natural metrics (404, 3 AM push, 42, 69, 420, 1337) and keyboard sequences (`↑ ↑ ↓ ↓ ← → ← → B A`).
-- **Modern Neo-Brutalism Design System**: High-contrast brutalist borders, hard offset box-shadows `4px 4px 0_0_#000`, bold typography, tactile click feedback, and custom Apache ECharts visualizations.
-- **1-Click Demo Dossier**: Instant zero-auth inspection mode with a realistic multi-repository specimen dataset alongside GitHub App PKCE authorization.
+Gitopsy analyzes your version control patterns, 24-hour UTC commit distributions, code churn, and workflow archetypes using deterministic calculations directly in your browser.
 
 ---
 
-## 🛠️ Architecture & Core Stack
+## Highlights
 
-| Layer | Technology |
+- **Local-First Processing**: Analysis, aggregation, and caching run entirely in the browser using a dedicated Web Worker and IndexedDB. Repository code and commit histories are never stored on an external server.
+- **24-Hour Temporal Analysis**: Visualizes 24-hour UTC commit clocks, weekday activity distributions, active streak lengths, and nocturnal commit ratios derived directly from author timestamps.
+- **Commit Forensics & Code Churn**: Categorizes commit intent (feat, fix, refactor, chore), measures historical line additions and deletions, and analyzes commit size distributions.
+- **Deterministic Archetypes**: Classifies workflow habits (such as Night Owl, Weekend Warrior, Polyglot, Refactor Specialist) with explicit, rule-based evidence criteria.
+- **Interactive Reports & Summary**: Generates structured forensic reports and an interactive year-in-review breakdown.
+- **GitHub OAuth with PKCE**: Uses read-only OAuth with cryptographic PKCE verification. Access tokens are kept in session memory and never stored in persistent databases.
+
+---
+
+## Architecture
+
+```
+[ Browser Client ]
+  ├── Next.js (App Router, React 19, TypeScript)
+  ├── Web Worker (analyzer.worker.ts)
+  │     ├── GitHub REST & GraphQL API Client (Direct HTTPS)
+  │     ├── Rate-Limit Scheduler & Paging Engine
+  │     └── Deterministic Analytics Normalization
+  └── IndexedDB (Dexie.js Storage Layer)
+        └── Cached Reports, Checkpoints & Analysis Results
+
+[ Server Boundary ]
+  └── Minimal Next.js Route Handlers
+        ├── /api/auth/login     (PKCE Challenge & GitHub OAuth Redirect)
+        ├── /api/auth/callback  (Token Exchange)
+        ├── /api/auth/session   (Session Verification)
+        ├── /api/auth/logout    (Cookie Invalidation)
+        └── /api/profile        (Basic Profile Retrieval)
+```
+
+---
+
+## Tech Stack
+
+| Component | Technology |
 |---|---|
-| **Framework** | Next.js 15 (App Router), React 19, TypeScript (Strict) |
-| **Styling** | Tailwind CSS v4, Custom Neo-Brutalism Design Tokens |
-| **Local Storage** | Dexie (IndexedDB), Versioned Schema & Migrations |
-| **Concurrency** | Web Workers (Main Thread / Background Analyzer separation) |
-| **Charts** | Apache ECharts with Custom Brutalist Tooltips & Color Palettes |
+| **Framework** | Next.js (App Router), React 19, TypeScript |
+| **Styling** | Tailwind CSS, Neo-Brutalism Design Tokens |
+| **Concurrency** | Dedicated Web Workers API |
+| **Storage** | Dexie.js (IndexedDB) |
+| **Visualizations** | Apache ECharts |
 | **Data Layer** | Octokit, GitHub REST API v3, GitHub GraphQL API v4 |
-| **Rate Limiter** | Forensic Request Scheduler (Bounded concurrency, backoff, retry) |
-| **State** | Zustand (In-memory token management, zero storage persistence) |
-| **Validation** | Zod (Import schema validation, export token sanitization) |
-| **Testing** | Vitest (Unit & Integration), Playwright (E2E) |
+| **Validation** | Zod |
+| **Testing** | Vitest, Playwright |
 
 ---
 
-## 🚀 Quickstart
+## Getting Started
 
-### 1. Installation
+### Prerequisites
+
+- Node.js 18.18 or higher
+- pnpm (recommended) or npm / yarn
+- A GitHub OAuth App (for authentication)
+
+### 1. Clone the repository
+
 ```bash
-cd githulyzer
+git clone https://github.com/monojitgoswami69/gitopsy.git
+cd gitopsy
+```
+
+### 2. Install dependencies
+
+```bash
 pnpm install
 ```
 
-### 2. Run Development Server
+### 3. Configure environment variables
+
+Create a `.env.local` file in the root directory:
+
+```env
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
+GITHUB_REDIRECT_URI=http://localhost:3000/api/auth/callback
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+> **Note**: In your GitHub OAuth App settings, set the Authorization callback URL to `http://localhost:3000/api/auth/callback`.
+
+### 4. Run the development server
+
 ```bash
 pnpm dev
 ```
-Open [http://localhost:3000](http://localhost:3000) (or [http://localhost:3001](http://localhost:3001)) in your browser.
 
-### 3. Run Test Suite
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+### 5. Run tests & production build
+
 ```bash
+# Run unit tests
 pnpm test
-```
 
-### 4. Build Production Bundle
-```bash
+# Create production build
 pnpm build
 ```
 
 ---
 
-## 🔒 Privacy & Security Invariants
+## Privacy & Security
 
-Gitopsy operates under an uncompromising privacy invariant:
-1. **Server as Authentication Boundary Only**: Minimal Next.js server routes exist solely to initiate GitHub App OAuth 2.0 with PKCE and securely exchange authorization codes.
-2. **No Repository Data on Server**: Zero repository names, commits, diffs, or analytical results ever reach the Next.js server.
-3. **In-Memory Credential Lifetime**: Access tokens are kept exclusively in memory during the active session; never written to `localStorage`, `IndexedDB`, or exported JSON files.
-4. **Deep Data Redaction**: Export snapshots sanitize and strip 100% of tokens, authorization headers, and secrets.
+Gitopsy enforces strict privacy standards:
+
+1. **No External Database**: There is no server-side database (PostgreSQL, MongoDB, Supabase, Firebase, etc.). All report data lives locally in your browser's IndexedDB.
+2. **Zero Telemetry**: No third-party trackers, analytics scripts, or session recordings.
+3. **Read-Only Scopes**: Only requests `read:user` scope by default. Gitopsy never asks for write permissions to your repositories.
+4. **Local Data Management**: All local reports can be exported or permanently deleted at any time directly from the interface.
+
+---
+
+## License
+
+MIT License. See [LICENSE](LICENSE) for details.
