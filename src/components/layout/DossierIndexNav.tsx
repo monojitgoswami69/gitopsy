@@ -82,8 +82,8 @@ export function DossierIndexNav({ onLaunchWrapped }: DossierIndexNavProps) {
         if (el) {
           const rect = el.getBoundingClientRect();
           const offset = rect.top - containerTop;
-          // When section top reaches the viewing zone
-          if (offset <= 220) {
+          // When section top reaches the viewing zone with clearance
+          if (offset <= 140) {
             currentId = SECTIONS[i].id;
           }
         }
@@ -109,7 +109,19 @@ export function DossierIndexNav({ onLaunchWrapped }: DossierIndexNavProps) {
       setActiveSection(id);
       setIsMobileOpen(false);
 
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      const scrollContainer = document.getElementById("app-main-scroll");
+      if (scrollContainer) {
+        const containerRect = scrollContainer.getBoundingClientRect();
+        const elRect = el.getBoundingClientRect();
+        // Give 36px of breathing room above the box edge so outer borders and padding clear cleanly
+        const targetScrollTop = scrollContainer.scrollTop + (elRect.top - containerRect.top) - 36;
+        scrollContainer.scrollTo({
+          top: Math.max(0, targetScrollTop),
+          behavior: "smooth",
+        });
+      } else {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
 
       setTimeout(() => {
         isScrollingRef.current = false;

@@ -85,9 +85,7 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
               <FolderGit2 className="size-6 text-black" /> 04. REPOSITORY PORTFOLIO
             </h2>
             <p className="text-xs font-bold text-gray-600 mt-0.5">
-              {activeRepos.length === repositories.length
-                ? `Examined ${repositories.length} accessible repositories across public and authorized private scopes.`
-                : `Displaying ${activeRepos.length} contributed repositories (${repositories.length} total accessible repositories scanned).`}
+              Displaying {repositories.length} contributed repositories with verified commit activity.
             </p>
           </div>
 
@@ -492,44 +490,76 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {awards.map((award) => (
-              <div
-                key={award.id}
-                className="border-[3px] border-black bg-white rounded-[10px] p-5 shadow-[3.5px_3.5px_0_0_#000] flex flex-col justify-between gap-4 text-black"
-              >
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-2xl">{award.badge}</span>
-                    <Badge
-                      variant={
-                        award.category === "CHAOS"
-                          ? "coral"
-                          : award.category === "VELOCITY"
-                          ? "cyan"
-                          : "main"
-                      }
+            {awards.map((award) => {
+              const categoryBadgeVariant: "coral" | "cyan" | "main" | "purple" | "lime" =
+                award.category === "CHAOS"
+                  ? "coral"
+                  : award.category === "VELOCITY"
+                  ? "cyan"
+                  : award.category === "SCALE"
+                  ? "purple"
+                  : award.category === "CRAFT"
+                  ? "lime"
+                  : "main";
+
+              return (
+                <div
+                  key={award.id}
+                  className="border-[3px] border-black bg-white rounded-[12px] p-5 shadow-[3.5px_3.5px_0_0_#000] flex flex-col justify-between gap-4 text-black hover:translate-x-[1.5px] hover:translate-y-[1.5px] hover:shadow-[2px_2px_0_0_#000] active:translate-x-[3.5px] active:translate-y-[3.5px] active:shadow-none transition-all duration-150"
+                >
+                  <div className="flex flex-col gap-3">
+                    {/* Header: Emblem box + Title + Category Badge */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-3">
+                        <div className="size-11 rounded-[8px] border-[2px] border-black bg-neutral-100 shadow-[2px_2px_0_0_#000] flex items-center justify-center text-2xl select-none shrink-0">
+                          {award.badge}
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-black uppercase tracking-wider text-gray-500 block">
+                            DISTINCTION
+                          </span>
+                          <h3 className="text-sm sm:text-base font-black uppercase tracking-tight text-black leading-tight">
+                            {award.title}
+                          </h3>
+                        </div>
+                      </div>
+                      <Badge variant={categoryBadgeVariant}>
+                        {award.category}
+                      </Badge>
+                    </div>
+
+                    {/* Interactive Clickable Repository Link */}
+                    <a
+                      href={`https://github.com/${award.repoFullName}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-fit max-w-full px-2.5 py-1 bg-neutral-100 hover:bg-[#FFDC58] text-black border-[1.5px] border-black rounded-[6px] shadow-[1.5px_1.5px_0_0_#000] hover:translate-x-[0.5px] hover:translate-y-[0.5px] hover:shadow-[1px_1px_0_0_#000] active:translate-x-[1.5px] active:translate-y-[1.5px] active:shadow-none text-xs font-mono font-bold flex items-center gap-1.5 transition-all truncate group/repo"
+                      title={`Open ${award.repoFullName} on GitHub`}
                     >
-                      {award.category}
-                    </Badge>
+                      <FolderGit2 className="size-3 text-gray-700 group-hover/repo:text-black shrink-0" />
+                      <span className="truncate">{award.repoFullName}</span>
+                      <ExternalLink className="size-2.5 text-gray-400 group-hover/repo:text-black shrink-0 ml-0.5" />
+                    </a>
+
+                    {/* Description */}
+                    <p className="text-xs font-semibold text-gray-700 leading-relaxed">
+                      {award.description}
+                    </p>
                   </div>
 
-                  <h3 className="text-base font-black uppercase tracking-tight mt-1">
-                    {award.title}
-                  </h3>
-                  <div className="text-xs font-mono font-bold bg-black text-[#FFDC58] px-2 py-0.5 rounded w-fit truncate max-w-full">
-                    {award.repoFullName}
+                  {/* Verified Evidence Drawer */}
+                  <div className="bg-[#FFFDF5] border-[2px] border-black rounded-[8px] p-3 shadow-[2px_2px_0_0_#000] flex flex-col gap-1 mt-auto">
+                    <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-gray-700">
+                      <CheckCircle2 className="size-3 text-emerald-700 shrink-0" />
+                      <span>VERIFIED EVIDENCE</span>
+                    </div>
+                    <p className="text-xs font-mono font-bold text-black leading-snug">
+                      {award.evidence}
+                    </p>
                   </div>
-                  <p className="text-xs font-semibold text-gray-700 leading-relaxed mt-1">
-                    {award.description}
-                  </p>
                 </div>
-
-                <div className="border-t-[2px] border-black/15 pt-2.5 flex items-start gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-50/80 p-2 rounded border border-emerald-700">
-                  <CheckCircle2 className="size-3.5 shrink-0 mt-0.5 text-emerald-700" />
-                  <span>{award.evidence}</span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

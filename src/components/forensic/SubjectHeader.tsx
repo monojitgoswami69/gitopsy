@@ -14,12 +14,14 @@ interface SubjectHeaderProps {
   subject: SubjectProfile;
   primaryClassification?: DeveloperClassification;
   showRepoScope?: boolean;
+  contributedRepos?: number;
 }
 
 export function SubjectHeader({
   subject,
   primaryClassification,
   showRepoScope = false,
+  contributedRepos,
 }: SubjectHeaderProps) {
   const memberSince = new Date(subject.createdAt).toLocaleDateString(undefined, {
     month: "short",
@@ -102,7 +104,12 @@ export function SubjectHeader({
           {showRepoScope && (
             <div className="flex items-center justify-center sm:justify-start mt-1">
               <div className="bg-white border-[2.5px] border-black px-4 py-1.5 rounded-xl text-xs font-mono font-bold shadow-[2px_2px_0_0_#000] flex items-center gap-2.5 flex-wrap justify-center sm:justify-start text-black">
-                <span><strong className="font-black">{accessibleRepos}</strong> Accessible Repos</span>
+                <span>
+                  <strong className="font-black">
+                    {contributedRepos !== undefined ? contributedRepos : accessibleRepos}
+                  </strong>{" "}
+                  Contributed Repos
+                </span>
                 <span className="text-gray-400">|</span>
                 <span><strong className="font-black">{ownedRepos}</strong> Owned</span>
                 <span className="text-gray-400">|</span>

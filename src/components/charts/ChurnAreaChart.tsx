@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useEffect, useRef, useCallback } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { EChartContainer } from "./EChartContainer";
 import type { EChartsOption } from "echarts";
 import type * as echarts from "echarts";
@@ -26,92 +26,27 @@ export function ChurnAreaChart({
 
   const chartInstanceRef = useRef<echarts.ECharts | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const isLockingJustNowRef = useRef(false);
+  const lastClickPosRef = useRef<[number, number] | null>(null);
 
-  // Surgically toggle tooltip tracking on the live instance.
-  // This does NOT rebuild chart options — the tooltip stays exactly where it is.
-  const freezeTooltip = useCallback((index?: number) => {
-    const instance = chartInstanceRef.current;
-    if (!instance || instance.isDisposed()) return;
-    instance.setOption({
-      tooltip: { triggerOn: "none", alwaysShowContent: true },
-      series: [
-        {
-          emphasis: {
-            focus: "series",
-            itemStyle: {
-              color: "#22C55E",
-              borderColor: "#000000",
-              borderWidth: 2,
-            },
-          },
-        },
-        {
-          emphasis: {
-            focus: "series",
-            itemStyle: {
-              color: "#EF4444",
-              borderColor: "#000000",
-              borderWidth: 2,
-            },
-          },
-        },
-      ],
-    });
-    if (typeof index === "number") {
-      instance.dispatchAction({ type: "highlight", seriesIndex: 0, dataIndex: index });
-      instance.dispatchAction({ type: "highlight", seriesIndex: 1, dataIndex: index });
-      instance.dispatchAction({ type: "showTip", seriesIndex: 0, dataIndex: index });
-    }
-  }, []);
-
-  const unfreezeTooltip = useCallback(() => {
-    const instance = chartInstanceRef.current;
-    if (!instance || instance.isDisposed()) return;
-    instance.setOption({
-      tooltip: { triggerOn: "mousemove", alwaysShowContent: false },
-      series: [
-        {
-          emphasis: {
-            focus: "none",
-            itemStyle: {
-              color: "#22C55E",
-              borderColor: "#000000",
-              borderWidth: 2,
-            },
-          },
-        },
-        {
-          emphasis: {
-            focus: "none",
-            itemStyle: {
-              color: "#EF4444",
-              borderColor: "#000000",
-              borderWidth: 2,
-            },
-          },
-        },
-      ],
-    });
-    instance.dispatchAction({ type: "downplay" });
-    instance.dispatchAction({ type: "hideTip" });
-    instance.dispatchAction({ type: "updateAxisPointer", currTrigger: "leave" });
-
-    // Safety RAF to guarantee tooltip DOM element is dismissed immediately on outside clicks
-    requestAnimationFrame(() => {
-      if (!instance || instance.isDisposed()) return;
-      instance.dispatchAction({ type: "hideTip" });
-      instance.dispatchAction({ type: "downplay" });
-    });
-  }, []);
-
-  // When lockedIndex changes, freeze or unfreeze — nothing else
+  // After React re-renders chartOptions (which resets the tooltip DOM),
+  // re-show the tooltip at the cursor's pixel position that was captured on click.
   useEffect(() => {
-    if (lockedIndex !== null) {
-      freezeTooltip(lockedIndex);
-    } else {
-      unfreezeTooltip();
+    const instance = chartInstanceRef.current;
+    if (!instance || instance.isDisposed()) return;
+
+    if (lockedIndex !== null && lastClickPosRef.current) {
+      const [x, y] = lastClickPosRef.current;
+      requestAnimationFrame(() => {
+        if (!instance || instance.isDisposed()) return;
+        instance.dispatchAction({ type: "showTip", x, y });
+      });
+    } else if (lockedIndex === null) {
+      instance.dispatchAction({ type: "hideTip" });
+      instance.dispatchAction({ type: "updateAxisPointer", currTrigger: "leave" });
+      lastClickPosRef.current = null;
     }
-  }, [lockedIndex, freezeTooltip, unfreezeTooltip]);
+  }, [lockedIndex]);
 
   // Release locking when clicking anywhere outside
   useEffect(() => {
@@ -129,7 +64,6 @@ export function ChurnAreaChart({
     };
   }, [lockedIndex]);
 
-  // Chart options are ONLY rebuilt when data or granularity change — never on lock/unlock
   const chartOptions: EChartsOption = useMemo(() => {
     if (!data || data.length === 0) {
       return {
@@ -138,8 +72,36 @@ export function ChurnAreaChart({
     }
 
     const labels = data.map((d) => d.label);
-    const additions = data.map((d) => (d.additions > 0 ? d.additions : null));
-    const deletions = data.map((d) => (d.deletions > 0 ? -Math.abs(d.deletions) : null));
+
+    const additions = data.map((d, i) => {
+      if (d.additions <= 0) return null;
+      const isSelected = lockedIndex === i;
+      const isDimmed = lockedIndex !== null && !isSelected;
+      return {
+        value: d.additions,
+        itemStyle: {
+          color: isSelected ? "#22C55E" : isDimmed ? "rgba(74, 222, 128, 0.22)" : "#4ADE80",
+          borderColor: isDimmed ? "rgba(0, 0, 0, 0.15)" : "#000000",
+          borderWidth: isSelected ? 2 : 1.5,
+          borderRadius: [4, 4, 0, 0] as [number, number, number, number],
+        },
+      };
+    });
+
+    const deletions = data.map((d, i) => {
+      if (d.deletions <= 0) return null;
+      const isSelected = lockedIndex === i;
+      const isDimmed = lockedIndex !== null && !isSelected;
+      return {
+        value: -Math.abs(d.deletions),
+        itemStyle: {
+          color: isSelected ? "#EF4444" : isDimmed ? "rgba(248, 113, 113, 0.22)" : "#F87171",
+          borderColor: isDimmed ? "rgba(0, 0, 0, 0.15)" : "#000000",
+          borderWidth: isSelected ? 2 : 1.5,
+          borderRadius: [0, 0, 4, 4] as [number, number, number, number],
+        },
+      };
+    });
 
     return {
       animationDurationUpdate: 0,
@@ -155,8 +117,8 @@ export function ChurnAreaChart({
       tooltip: {
         show: true,
         trigger: "axis",
-        triggerOn: "mousemove",
-        alwaysShowContent: false,
+        triggerOn: lockedIndex !== null ? "none" : "mousemove",
+        alwaysShowContent: lockedIndex !== null,
         transitionDuration: 0,
         axisPointer: {
           type: "shadow",
@@ -258,23 +220,12 @@ export function ChurnAreaChart({
           barMaxWidth: granularity === "WEEKLY" ? 16 : 28,
           barMinHeight: 6,
           cursor: "pointer",
-          itemStyle: {
-            color: "#4ADE80",
-            borderColor: "#000000",
-            borderWidth: 1.5,
-            borderRadius: [4, 4, 0, 0],
-          },
           emphasis: {
             focus: "none",
             itemStyle: {
               color: "#22C55E",
               borderColor: "#000000",
               borderWidth: 2,
-            },
-          },
-          blur: {
-            itemStyle: {
-              opacity: 0.58,
             },
           },
         },
@@ -286,12 +237,6 @@ export function ChurnAreaChart({
           barMaxWidth: granularity === "WEEKLY" ? 16 : 28,
           barMinHeight: 6,
           cursor: "pointer",
-          itemStyle: {
-            color: "#F87171",
-            borderColor: "#000000",
-            borderWidth: 1.5,
-            borderRadius: [0, 0, 4, 4],
-          },
           emphasis: {
             focus: "none",
             itemStyle: {
@@ -300,15 +245,10 @@ export function ChurnAreaChart({
               borderWidth: 2,
             },
           },
-          blur: {
-            itemStyle: {
-              opacity: 0.58,
-            },
-          },
         },
       ],
     };
-  }, [data, granularity]); // lockedIndex is NOT a dependency — locking never rebuilds options
+  }, [data, granularity, lockedIndex]);
 
   return (
     <div ref={containerRef} className="w-full flex flex-col items-center">
@@ -328,14 +268,22 @@ export function ChurnAreaChart({
         height="280px"
         onChartReady={(instance) => {
           chartInstanceRef.current = instance;
+
           instance.getZr().on("click", (event) => {
-            // If a card is already persisted, any click strictly unpersists
+            // If a card is already persisted, any click unpersists
             if (lockedIndexRef.current !== null) {
               setLockedIndex(null);
+              isLockingJustNowRef.current = true;
+              setTimeout(() => {
+                isLockingJustNowRef.current = false;
+              }, 0);
               return;
             }
 
-            // If no card is persisted, lock onto the bar the user clicked in
+            // Capture cursor position for tooltip re-show after React re-render
+            lastClickPosRef.current = [event.offsetX, event.offsetY];
+
+            // If no card is persisted, lock onto the bar column the user clicked in
             const pointInPixel = [event.offsetX, event.offsetY];
             if (instance.containPixel({ gridIndex: 0 }, pointInPixel)) {
               try {
@@ -354,34 +302,10 @@ export function ChurnAreaChart({
             setLockedIndex(null);
           });
 
-          // Hold highlight and background dimming while a bar column is locked
-          instance.getZr().on("mousemove", () => {
-            if (lockedIndexRef.current !== null) {
-              instance.dispatchAction({
-                type: "highlight",
-                seriesIndex: 0,
-                dataIndex: lockedIndexRef.current,
-              });
-              instance.dispatchAction({
-                type: "highlight",
-                seriesIndex: 1,
-                dataIndex: lockedIndexRef.current,
-              });
-            }
-          });
-
-          instance.getZr().on("globalout", () => {
-            if (lockedIndexRef.current !== null) {
-              instance.dispatchAction({
-                type: "highlight",
-                seriesIndex: 0,
-                dataIndex: lockedIndexRef.current,
-              });
-              instance.dispatchAction({
-                type: "highlight",
-                seriesIndex: 1,
-                dataIndex: lockedIndexRef.current,
-              });
+          instance.on("click", (params: any) => {
+            if (isLockingJustNowRef.current) return;
+            if (typeof params.dataIndex === "number") {
+              setLockedIndex(params.dataIndex);
             }
           });
         }}

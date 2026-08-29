@@ -248,16 +248,19 @@ async function processSingleRepo(
 
   const repoCommits = commitsOutcome.data;
 
-  // Skip all other fetches if the user has 0 commits in this repo.
-  // This is the single biggest performance optimization: dead repos
-  // cost 1 API call instead of 10+.
+  // Repos where the subject has 0 commits are not analyzed or counted as contributed repos.
+  if (repoCommits.length === 0) {
+    state.processedRepoFullNames.add(r.fullName!);
+    return;
+  }
+
   let contribStats: Awaited<ReturnType<typeof rest.getRepoContributorStats>>["data"] = null;
   let prs: Awaited<ReturnType<typeof rest.getRepoPullRequests>>["data"] = [];
   let issues: Awaited<ReturnType<typeof rest.getRepoIssues>>["data"] = [];
   let languages: Awaited<ReturnType<typeof rest.getRepoLanguages>>["data"] = [];
 
-  if (repoCommits.length > 0 && !cancelled) {
-    // Phase 2: fetch remaining resources only for active repos
+  if (!cancelled) {
+    // Phase 2: fetch remaining resources only for repos with verified commit activity
     const [contribStatsOutcome, prsOutcome, issuesOutcome, languagesOutcome] = await Promise.all([
       rest.getRepoContributorStats(r.fullName!, state.subjectLogin),
       rest.getRepoPullRequests(r.fullName!, state.subjectLogin, state.sinceDate),
@@ -748,12 +751,13 @@ async function runAnalysisPipeline(
         });
       }
 
-      state.reposToScan = rawRepos.filter((r) => !r.isArchived);
+      // Scan all discovered repositories, including archived repositories.
+      state.reposToScan = rawRepos;
     }
 
     const totalReposToScan = state.reposToScan.length;
     if (totalReposToScan === 0) {
-      postLog("warn", "No non-archived repositories found for analysis.");
+      postLog("warn", "No repositories found for analysis.");
     }
 
     const alreadyProcessed = state.processedRepoFullNames.size;

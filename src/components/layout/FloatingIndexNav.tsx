@@ -46,7 +46,18 @@ export function FloatingIndexNav() {
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
     if (el) {
-      el.scrollIntoView({ behavior: "smooth" });
+      const scrollContainer = document.getElementById("app-main-scroll");
+      if (scrollContainer) {
+        const containerRect = scrollContainer.getBoundingClientRect();
+        const elRect = el.getBoundingClientRect();
+        const targetScrollTop = scrollContainer.scrollTop + (elRect.top - containerRect.top) - 36;
+        scrollContainer.scrollTo({
+          top: Math.max(0, targetScrollTop),
+          behavior: "smooth",
+        });
+      } else {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
       setIsOpen(false);
     }
   };

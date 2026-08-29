@@ -153,13 +153,13 @@ export function LanguagesSunburst({ languages }: { languages: LanguageByteEntry[
           name: "Languages",
           type: "pie",
           center: ["50%", "50%"],
-          radius: ["40%", "72%"],
-          padAngle: 4,
+          radius: ["42%", "82%"],
+          padAngle: 3.5,
           avoidLabelOverlap: false,
           itemStyle: {
-            borderRadius: 6,
+            borderRadius: 5,
             borderColor: "#000",
-            borderWidth: 2.5,
+            borderWidth: 2,
           },
           label: {
             show: false,
@@ -167,13 +167,13 @@ export function LanguagesSunburst({ languages }: { languages: LanguageByteEntry[
           },
           emphasis: {
             scale: true,
-            scaleSize: 8,
+            scaleSize: 6,
             itemStyle: {
-              shadowBlur: 14,
+              shadowBlur: 12,
               shadowOffsetX: 0,
-              shadowColor: "rgba(0, 0, 0, 0.4)",
+              shadowColor: "rgba(0, 0, 0, 0.35)",
               borderColor: "#000",
-              borderWidth: 3,
+              borderWidth: 2.5,
             },
           },
           data,
@@ -183,8 +183,8 @@ export function LanguagesSunburst({ languages }: { languages: LanguageByteEntry[
   }, [grouped, unselected, palette]);
 
   return (
-    <div className="w-full flex flex-col items-center">
-      <EChartContainer options={chartOptions} height="200px" />
+    <div className="w-full flex flex-col items-center justify-center">
+      <EChartContainer options={chartOptions} height="180px" />
       <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 mt-2 px-2 max-w-[360px] mx-auto text-center select-none">
         {grouped.map((l, idx) => {
           const isHidden = unselected.has(l.name);

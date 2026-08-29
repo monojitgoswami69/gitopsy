@@ -36,7 +36,7 @@ export function HeadlineMetrics({ summary, topLanguage }: HeadlineMetricsProps) 
       rotation: -10,
     },
     {
-      title: "REPOSITORIES EXAMINED",
+      title: "CONTRIBUTED REPOSITORIES",
       value: summary.reposAnalyzed.toString(),
       subtitle: `${summary.activeRepos} active in last 90 days`,
       icon: Layers,

@@ -17,6 +17,10 @@ export function TemporalHoursChart({
   const hours = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")}:00`);
   const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+  const totalHourCommits = useMemo(() => commitsByHour.reduce((a, b) => a + b, 0), [commitsByHour]);
+  const totalWeekdayCommits = useMemo(() => commitsByWeekday.reduce((a, b) => a + b, 0), [commitsByWeekday]);
+  const weekdayFullNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
   const hourOptions: EChartsOption = useMemo(() => {
     return {
       grid: { left: 45, right: 20, top: 30, bottom: 30 },
@@ -49,14 +53,33 @@ export function TemporalHoursChart({
         },
       ],
       tooltip: {
+        show: true,
         trigger: "axis",
+        backgroundColor: "transparent",
+        borderColor: "transparent",
+        borderWidth: 0,
+        extraCssText: "background: transparent !important; border: none !important; padding: 0 !important; box-shadow: none !important; pointer-events: none;",
+        textStyle: {
+          color: "#000000",
+          fontFamily: "monospace",
+          fontSize: 11,
+        },
+        axisPointer: {
+          type: "shadow",
+          shadowStyle: {
+            color: "rgba(0, 0, 0, 0.05)",
+          },
+        },
         formatter: (params: any) => {
           const item = params[0];
-          const isNight = item.dataIndex >= 21 || item.dataIndex <= 4;
+          if (!item) return "";
+          const commits = Number(item.value) || 0;
+
           return `
-            <div style="font-weight:900;">${item.name} ${tzLabel}</div>
-            <div>Commits: <strong>${item.value}</strong></div>
-            ${isNight ? '<div style="color:#9333ea; font-size:11px; font-weight:bold;">🌙 Night Shift Window</div>' : ""}
+            <div style="background:#FFFFFF; border:1.5px solid #000000; border-radius:6px; padding:6px 10px; font-family:monospace; box-shadow:2.5px 2.5px 0 0 rgba(0,0,0,0.15);">
+              <div style="font-weight:900; font-size:12px; color:#000;">${item.name} ${tzLabel}</div>
+              <div style="font-size:11px; font-weight:700; color:#374151; margin-top:2px;">Commits: <strong style="color:#000; font-weight:900;">${commits}</strong></div>
+            </div>
           `;
         },
       },
@@ -94,19 +117,40 @@ export function TemporalHoursChart({
         },
       ],
       tooltip: {
+        show: true,
         trigger: "axis",
+        backgroundColor: "transparent",
+        borderColor: "transparent",
+        borderWidth: 0,
+        extraCssText: "background: transparent !important; border: none !important; padding: 0 !important; box-shadow: none !important; pointer-events: none;",
+        textStyle: {
+          color: "#000000",
+          fontFamily: "monospace",
+          fontSize: 11,
+        },
+        axisPointer: {
+          type: "shadow",
+          shadowStyle: {
+            color: "rgba(0, 0, 0, 0.05)",
+          },
+        },
         formatter: (params: any) => {
           const item = params[0];
-          const isWeekend = item.dataIndex === 0 || item.dataIndex === 6;
+          if (!item) return "";
+          const dayIdx = item.dataIndex;
+          const dayFull = weekdayFullNames[dayIdx] || item.name;
+          const commits = Number(item.value) || 0;
+
           return `
-            <div style="font-weight:900;">${item.name}</div>
-            <div>Commits: <strong>${item.value}</strong></div>
-            ${isWeekend ? '<div style="color:#2563eb; font-size:11px; font-weight:bold;">⚡ Weekend Shipper Window</div>' : ""}
+            <div style="background:#FFFFFF; border:1.5px solid #000000; border-radius:6px; padding:6px 10px; font-family:monospace; box-shadow:2.5px 2.5px 0 0 rgba(0,0,0,0.15);">
+              <div style="font-weight:900; font-size:12px; color:#000;">${dayFull}</div>
+              <div style="font-size:11px; font-weight:700; color:#374151; margin-top:2px;">Commits: <strong style="color:#000; font-weight:900;">${commits}</strong></div>
+            </div>
           `;
         },
       },
     };
-  }, [commitsByWeekday, weekdays]);
+  }, [commitsByWeekday, weekdays, weekdayFullNames]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 w-full">

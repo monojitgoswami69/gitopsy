@@ -318,6 +318,7 @@ export default function AutopsyReportDetailPage() {
           subject={analysis.subject}
           primaryClassification={analysis.primaryClassification}
           showRepoScope={true}
+          contributedRepos={analysis.summary.reposAnalyzed}
         />
 
         {/* 01. Executive Headline Metrics / Case Summary */}
@@ -478,7 +479,7 @@ export default function AutopsyReportDetailPage() {
         />
 
         {/* 06. Language DNA & Dialects */}
-        <div id="section-languages" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-6 text-black">
+        <div id="section-languages" className="border-[4px] border-black bg-white rounded-[12px] p-5 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-6 text-black">
           <div className="flex items-center justify-between border-b-[3px] border-black pb-4">
             <div>
               <div className="flex items-center gap-2">
@@ -493,58 +494,62 @@ export default function AutopsyReportDetailPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            <div className="lg:col-span-6 flex flex-col items-center justify-center w-full">
-              <LanguagesSunburst languages={analysis.languages} />
-            </div>
+          <div className="w-full flex justify-center">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center justify-center w-full max-w-5xl">
+              {/* Left Column: Donut Chart & Interactive Legend */}
+              <div className="lg:col-span-5 flex flex-col items-center justify-center w-full">
+                <LanguagesSunburst languages={analysis.languages} />
+              </div>
 
-            <div className="lg:col-span-6 flex flex-col justify-center">
-              {(() => {
-                const totalLangs = analysis.languages.length;
-                const mid = Math.ceil(totalLangs / 2);
-                const col1 = analysis.languages.slice(0, mid);
-                const col2 = analysis.languages.slice(mid);
+              {/* Right Column: Clean Detected Dialects List */}
+              <div className="lg:col-span-7 flex flex-col justify-center w-full">
+                {(() => {
+                  const totalLangs = analysis.languages.length;
+                  const mid = Math.ceil(totalLangs / 2);
+                  const col1 = analysis.languages.slice(0, mid);
+                  const col2 = analysis.languages.slice(mid);
 
-                const renderItem = (lang: (typeof analysis.languages)[0], globalIdx: number) => {
-                  const isUnder5 = lang.percentage < 5;
-                  const dotColor = isUnder5 ? "#94A3B8" : LANGUAGE_PALETTE[globalIdx % LANGUAGE_PALETTE.length];
+                  const renderItem = (lang: (typeof analysis.languages)[0], globalIdx: number) => {
+                    const isUnder5 = lang.percentage < 5;
+                    const dotColor = isUnder5 ? "#94A3B8" : LANGUAGE_PALETTE[globalIdx % LANGUAGE_PALETTE.length];
+                    return (
+                      <div
+                        key={lang.name}
+                        className="flex items-center justify-between py-1.5 border-b border-black/10"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className="size-2.5 rounded-full border border-black shrink-0"
+                            style={{ backgroundColor: dotColor }}
+                          />
+                          <span className="font-black text-xs sm:text-[13px] uppercase text-black tracking-tight truncate">
+                            {lang.name}
+                          </span>
+                        </div>
+
+                        <span className="font-mono font-black text-xs sm:text-[13px] text-black shrink-0 pl-1.5">
+                          {lang.percentage > 0 ? `${lang.percentage}%` : lang.bytes > 0 ? "<1%" : "0%"}
+                        </span>
+                      </div>
+                    );
+                  };
+
                   return (
-                    <div
-                      key={lang.name}
-                      className="flex items-center justify-between py-1.5 border-b border-black/10"
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span
-                          className="size-2.5 rounded-full border border-black shrink-0"
-                          style={{ backgroundColor: dotColor }}
-                        />
-                        <span className="font-black text-xs sm:text-[13px] uppercase text-black tracking-tight truncate">
-                          {lang.name}
+                    <>
+                      <div className="flex items-center justify-between pb-1.5 mb-1 border-b-[2px] border-black/15">
+                        <span className="text-xs font-black uppercase text-gray-700">
+                          DETECTED DIALECTS ({analysis.languages.length})
                         </span>
                       </div>
 
-                      <span className="font-mono font-black text-xs sm:text-[13px] text-black shrink-0 pl-1.5">
-                        {lang.percentage > 0 ? `${lang.percentage}%` : lang.bytes > 0 ? "<1%" : "0%"}
-                      </span>
-                    </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 items-start">
+                        <div className="flex flex-col">{col1.map((lang, idx) => renderItem(lang, idx))}</div>
+                        <div className="flex flex-col">{col2.map((lang, idx) => renderItem(lang, mid + idx))}</div>
+                      </div>
+                    </>
                   );
-                };
-
-                return (
-                  <>
-                    <div className="flex items-center justify-between pb-1.5 mb-1 border-b-[2px] border-black/15">
-                      <span className="text-xs font-black uppercase text-gray-700">
-                        DETECTED DIALECTS ({analysis.languages.length})
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 items-start">
-                      <div className="flex flex-col">{col1.map((lang, idx) => renderItem(lang, idx))}</div>
-                      <div className="flex flex-col">{col2.map((lang, idx) => renderItem(lang, mid + idx))}</div>
-                    </div>
-                  </>
-                );
-              })()}
+                })()}
+              </div>
             </div>
           </div>
         </div>
