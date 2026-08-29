@@ -51,7 +51,17 @@ Gitopsy analyzes your version control patterns, 24-hour UTC commit distributions
 | **Visualizations** | Apache ECharts |
 | **Data Layer** | Octokit, GitHub REST API v3, GitHub GraphQL API v4 |
 | **Validation** | Zod |
-| **Testing** | Vitest, Playwright |
+| **Testing** | Vitest (Unit & Integration) |
+
+---
+
+## Documentation
+
+Comprehensive technical specifications and models are available in the [docs/](docs/) directory:
+
+- [Architecture Specification](docs/architecture.md): System topology, Web Worker processing pipeline, and storage layers.
+- [Privacy & Security Specification](docs/privacy-security.md): Local-first invariants, PKCE OAuth flow, and token lifecycle.
+- [Analytics & Data Models](docs/analytics-model.md): Mathematical formulations, developer archetype criteria, and IndexedDB schemas.
 
 ---
 
