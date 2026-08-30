@@ -94,15 +94,19 @@ export const useAutopsyStore = create<AutopsyStoreState>((set) => ({
     set((state) => ({
       progress: {
         ...state.progress,
-        repoWarnings: [...state.progress.repoWarnings, warning],
+        // Capped alongside logs: the modal only renders the last 5 anyway.
+        repoWarnings: [...state.progress.repoWarnings.slice(-199), warning],
       },
     })),
   addLog: (log) =>
     set((state) => ({
       progress: {
         ...state.progress,
+        // Capped: logs are diagnostic-only (no UI consumes them yet); an
+        // unbounded array re-renders the app on every worker log line and
+        // grows with repo count.
         logs: [
-          ...state.progress.logs,
+          ...state.progress.logs.slice(-199),
           { ...log, timestamp: Date.now() },
         ],
       },

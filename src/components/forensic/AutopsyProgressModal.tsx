@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Skull, AlertTriangle, Terminal, OctagonAlert, Save, Play } from "lucide-react";
 
@@ -84,6 +84,51 @@ export function AutopsyProgressModal({
     return () => clearInterval(interval);
   }, [resumeState]);
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  // Focus trap: confine Tab to the modal while it's open
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key !== "Tab" || !dialogRef.current) return;
+    const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      }
+    } else {
+      if (document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen && !resumeState) return;
+    previousFocusRef.current = document.activeElement as HTMLElement;
+    document.addEventListener("keydown", handleKeyDown);
+    // Move focus into the dialog
+    const timer = setTimeout(() => {
+      if (dialogRef.current) {
+        const firstFocusable = dialogRef.current.querySelector<HTMLElement>(
+          'button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+        );
+        (firstFocusable || dialogRef.current).focus();
+      }
+    }, 50);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      clearTimeout(timer);
+      previousFocusRef.current?.focus();
+    };
+  }, [isOpen, resumeState, handleKeyDown]);
+
   if (!isOpen && !resumeState) return null;
 
   const visibleRepoWarnings = (repoWarnings || []).slice(-5);
@@ -91,13 +136,20 @@ export function AutopsyProgressModal({
   const canResume = countdown <= 0;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-black/35 backdrop-blur-[6px] animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-black/35 backdrop-blur-[6px] animate-in fade-in duration-200"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="autopsy-progress-title"
+      ref={dialogRef}
+      tabIndex={-1}
+    >
       <div className="w-full max-w-2xl bg-[#FFFDF9] border-[4px] border-black rounded-[14px] sm:rounded-[16px] p-4 sm:p-7 shadow-[6px_6px_0_0_#000] sm:shadow-[10px_10px_0_0_#000] text-black flex flex-col gap-4 sm:gap-5 relative max-h-[92vh] overflow-y-auto">
         {/* Top Header Bar */}
         <div className="flex items-center justify-between border-b-[3px] border-black pb-3.5">
           <div className="flex items-center gap-2.5">
             <Skull className="size-6 text-black" />
-            <h2 className="text-lg sm:text-xl font-black uppercase tracking-tight">
+            <h2 id="autopsy-progress-title" className="text-lg sm:text-xl font-black uppercase tracking-tight">
               {showResume ? "Analysis Paused for Rate Limit" : "Forensic Autopsy In Progress"}
             </h2>
           </div>

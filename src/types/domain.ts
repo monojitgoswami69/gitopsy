@@ -35,6 +35,7 @@ export interface SummaryMetrics {
   mergeRatePercentage: number | null;
   issuesAuthored: number;
   reviewsAuthored: number;
+  reviewsAuthoredTruncated?: boolean;
   starsReceived: number;
   forksReceived: number;
   longestStreakDays: number;

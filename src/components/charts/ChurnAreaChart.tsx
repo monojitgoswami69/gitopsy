@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { EChartContainer } from "./EChartContainer";
 import type { EChartsOption } from "echarts";
 import type * as echarts from "echarts";

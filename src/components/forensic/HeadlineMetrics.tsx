@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { SummaryMetrics, LanguageAnalysis } from "@/types/domain";
 import {
   History,
@@ -80,8 +79,8 @@ export function HeadlineMetrics({ summary, topLanguage }: HeadlineMetricsProps) 
     },
     {
       title: "ISSUES & REVIEWS",
-      value: `${summary.issuesAuthored} / ${summary.reviewsAuthored}`,
-      subtitle: `${summary.issuesAuthored} issues • ${summary.reviewsAuthored} reviews`,
+      value: `${summary.issuesAuthored} / ${summary.reviewsAuthoredTruncated ? "1,000+" : summary.reviewsAuthored}`,
+      subtitle: `${summary.issuesAuthored} issues • ${summary.reviewsAuthoredTruncated ? "1,000+" : summary.reviewsAuthored} reviews`,
       icon: MessageSquareCode,
       rotation: -8,
     },

@@ -1,13 +1,12 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { gitopsyDb } from "@/lib/db";
 import { GitopsyAnalysis } from "@/types/domain";
 import { SubjectHeader } from "@/components/forensic/SubjectHeader";
 import { HeadlineMetrics } from "@/components/forensic/HeadlineMetrics";
-import dynamic from "next/dynamic";
 import { RepositorySection } from "@/components/forensic/RepositorySection";
 import { CommitForensicsSection } from "@/components/forensic/CommitForensicsSection";
 import { ClassificationsSection } from "@/components/forensic/ClassificationsSection";
@@ -15,10 +14,6 @@ import { CourtSection } from "@/components/forensic/CourtSection";
 import { DataManagementSection } from "@/components/forensic/DataManagementSection";
 import { DossierIndexNav } from "@/components/layout/DossierIndexNav";
 
-const DeveloperCardModal = dynamic(
-  () => import("@/components/forensic/DeveloperCardModal").then((mod) => mod.DeveloperCardModal),
-  { ssr: false }
-);
 import Image from "next/image";
 import { HeatmapChart } from "@/components/charts/HeatmapChart";
 import { TemporalHoursChart } from "@/components/charts/TemporalHoursChart";
@@ -26,25 +21,19 @@ import { ChurnAreaChart } from "@/components/charts/ChurnAreaChart";
 import {
   LanguagesSunburst,
   LANGUAGE_PALETTE,
-  groupLanguagesWithOthers,
 } from "@/components/charts/LanguagesSunburst";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Calendar,
   Clock,
   Globe2,
-  Gift,
   RefreshCw,
-  Zap,
   FileCode2,
   ArrowLeft,
   FileText,
   AlertTriangle,
   GitPullRequest,
-  Users2,
-  IdCard,
 } from "lucide-react";
 
 export default function AutopsyReportDetailPage() {
@@ -56,17 +45,6 @@ export default function AutopsyReportDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [heatmapMetric, setHeatmapMetric] = useState<"COMMITS" | "LINES">("COMMITS");
-  const [isMobile, setIsMobile] = useState(false);
-  const [isCardModalOpen, setIsCardModalOpen] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 640);
-    };
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
 
   useEffect(() => {
     async function loadReport() {
@@ -209,7 +187,7 @@ export default function AutopsyReportDetailPage() {
   return (
     <div className="w-full relative pb-20 lg:pb-2">
       {/* Standalone Left Sidebar Index Navigation */}
-      <DossierIndexNav onLaunchCard={() => setIsCardModalOpen(true)} />
+      <DossierIndexNav />
 
       {/* Main Continuous Flowing Dossier */}
       <div className="w-full lg:pl-56 xl:pl-68 flex flex-col gap-10 min-w-0 pr-2 sm:pr-4">
@@ -520,17 +498,17 @@ export default function AutopsyReportDetailPage() {
             <div className="border-[1.5px] border-black p-3 sm:p-3.5 rounded-[8px] bg-amber-50/70 flex flex-col items-center justify-center text-center">
               <span className="text-[10px] font-black uppercase text-gray-500">CODE REVIEWS SUBMITTED</span>
               <div className="text-xl sm:text-2xl font-black font-mono mt-1 text-blue-700">
-                {analysis.summary.reviewsAuthored}
+                {analysis.summary.reviewsAuthoredTruncated ? "1,000+" : analysis.summary.reviewsAuthored}
               </div>
               <span className="text-[10px] text-gray-600 font-bold">peer reviews</span>
             </div>
 
             <div className="border-[1.5px] border-black p-3 sm:p-3.5 rounded-[8px] bg-amber-50/70 flex flex-col items-center justify-center text-center">
-              <span className="text-[10px] font-black uppercase text-gray-500">MULTI-CONTRIBUTOR SHARE</span>
+              <span className="text-[10px] font-black uppercase text-gray-500">COMMUNITY REACH</span>
               <div className="text-xl sm:text-2xl font-black font-mono mt-1 text-purple-700">
                 {analysis.summary.multiContributorRepoShare || 0}%
               </div>
-              <span className="text-[10px] text-gray-600 font-bold">collaborative repos</span>
+              <span className="text-[10px] text-gray-600 font-bold">repos with PRs, stars or forks</span>
             </div>
           </div>
         </div>
@@ -543,30 +521,6 @@ export default function AutopsyReportDetailPage() {
           charges={analysis.courtCharges}
           defendantLogin={analysis.subject.login}
         />
-
-        {/* Developer Card Launcher */}
-        <div id="section-developer-card" className="border-[4px] border-black bg-[#FFDC58] rounded-[12px] p-4 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 text-black">
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center gap-2.5">
-              <IdCard className="size-5 sm:size-6 text-black stroke-[2.2] shrink-0" />
-              <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-tight">
-                THE GITOPSY DEVELOPER CARD
-              </h2>
-            </div>
-            <p className="text-xs font-bold text-neutral-900 max-w-lg leading-relaxed mt-1">
-              Your GitHub identity, distilled into one high-impact card worth sharing.
-            </p>
-          </div>
-
-          <Button
-            size="lg"
-            variant="accent"
-            onClick={() => setIsCardModalOpen(true)}
-            className="whitespace-nowrap shadow-[4px_4px_0_0_#000] w-full sm:w-auto font-black"
-          >
-            OPEN YOUR DEVELOPER CARD
-          </Button>
-        </div>
 
         {/* 14. Data Management & Privacy */}
         <DataManagementSection
@@ -620,14 +574,6 @@ export default function AutopsyReportDetailPage() {
           </div>
         </footer>
       </div>
-
-      {/* Developer Card Modal */}
-      {isCardModalOpen && (
-        <DeveloperCardModal
-          report={analysis}
-          onClose={() => setIsCardModalOpen(false)}
-        />
-      )}
     </div>
   );
 }

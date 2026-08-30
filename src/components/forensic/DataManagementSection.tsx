@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { GitopsyAnalysis } from "@/types/domain";
 import { Button } from "@/components/ui/button";
 import { ForensicDataSanitizer } from "@/lib/db/exportImport";
-import { Download, Upload, ShieldCheck, Database } from "lucide-react";
+import { Download, Upload, Database } from "lucide-react";
 
 interface DataManagementSectionProps {
   analysis: GitopsyAnalysis;

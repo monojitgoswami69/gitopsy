@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { DeveloperClassification } from "@/types/domain";
 import { Trophy, CheckCircle2 } from "lucide-react";
 

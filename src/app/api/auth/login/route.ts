@@ -18,7 +18,11 @@ export async function GET(request: NextRequest) {
   const challenge = await generateCodeChallenge(verifier);
   const state = generateOAuthState();
 
-  const scope = process.env.GITHUB_SCOPES || "read:user";
+  // "repo" is required for /user/repos to return private repositories and for
+  // /user to report private counts. Without it those repos are silently absent
+  // and the analysis presents public-only numbers as complete. Both scopes are
+  // read-only; the app performs no write operations.
+  const scope = process.env.GITHUB_SCOPES || "read:user repo";
 
   const authorizeUrl = buildGitHubAuthorizeUrl(
     {

@@ -21,6 +21,8 @@ export interface ClassificationContext {
     peakDailyCommits?: number;
     averageDailyCommits?: number;
     functionalLanguageCount?: number;
+    prsAuthored?: number;
+    reviewsAuthored?: number;
     timezone?: string;
     timezoneAbbr?: string;
   };
@@ -489,7 +491,7 @@ export function computeDeveloperClassifications(ctx: ClassificationContext): Dev
   });
 
   // 17. SOLO OPERATOR (consolidated from easter egg)
-  const isSolo = totalCommits >= 40 && (summary as any).prsAuthored === 0 && (summary as any).reviewsAuthored === 0;
+  const isSolo = totalCommits >= 40 && summary.prsAuthored === 0 && summary.reviewsAuthored === 0;
   classifications.push({
     id: "solo-operator",
     title: "SOLO OPERATOR",
@@ -508,7 +510,7 @@ export function computeDeveloperClassifications(ctx: ClassificationContext): Dev
         criterion: "Pull requests & reviews overhead",
         actualValue: "0 PRs / 0 reviews",
         threshold: "0 PRs and 0 reviews",
-        isSatisfied: Boolean((summary as any).prsAuthored === 0 && (summary as any).reviewsAuthored === 0),
+        isSatisfied: Boolean(summary.prsAuthored === 0 && summary.reviewsAuthored === 0),
       },
     ],
   });

@@ -1,20 +1,29 @@
 "use client";
 
-import React, { use } from "react";
+import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { useAutopsyStore } from "@/lib/store/autopsyStore";
+import { gitopsyDb } from "@/lib/db";
+import { RepositoryAnalysis } from "@/types/domain";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft,
   Star,
   GitFork,
-  FileCode2,
-  Calendar,
-  GitPullRequest,
   Lock,
   ExternalLink,
 } from "lucide-react";
+
+function findSpecimen(repositories: RepositoryAnalysis[] | undefined, fullName: string, repo: string) {
+  return (
+    repositories?.find(
+      (r) =>
+        r.fullName.toLowerCase() === fullName.toLowerCase() ||
+        r.name.toLowerCase() === repo.toLowerCase()
+    ) || null
+  );
+}
 
 export default function RepositoryAutopsyPage({
   params,
@@ -24,12 +33,42 @@ export default function RepositoryAutopsyPage({
   const resolvedParams = use(params);
   const { owner, repo } = resolvedParams;
   const fullName = `${owner}/${repo}`;
-  const { currentAnalysis } = useAutopsyStore();
+  const currentAnalysis = useAutopsyStore((s) => s.currentAnalysis);
 
-  const specimen =
-    currentAnalysis?.repositories.find(
-      (r) => r.fullName.toLowerCase() === fullName.toLowerCase() || r.name.toLowerCase() === repo.toLowerCase()
-    ) || currentAnalysis?.repositories[0];
+  // The zustand store is memory-only; on a cold load (refresh or direct link)
+  // recover the most recent persisted analysis so this page doesn't 404.
+  const [coldSpecimen, setColdSpecimen] = useState<RepositoryAnalysis | null>(null);
+  const [coldLoadDone, setColdLoadDone] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const latest = await gitopsyDb.analyses.orderBy("generatedAt").reverse().first();
+        if (!cancelled) setColdSpecimen(findSpecimen(latest?.repositories, fullName, repo));
+      } catch {
+        // not-found state below handles it
+      } finally {
+        if (!cancelled) setColdLoadDone(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [fullName, repo]);
+
+  // In-memory analysis always wins once available.
+  const specimen = findSpecimen(currentAnalysis?.repositories, fullName, repo) ?? coldSpecimen;
+
+  if (!specimen && !coldLoadDone && !currentAnalysis) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-3 text-black">
+        <span className="font-mono text-xs font-black uppercase tracking-widest">
+          RETRIEVING SPECIMEN RECORD...
+        </span>
+      </div>
+    );
+  }
 
   if (!specimen) {
     return (

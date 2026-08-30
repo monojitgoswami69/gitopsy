@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { CourtCharge } from "@/types/domain";
 import { Scale, Gavel, CheckCircle2 } from "lucide-react";
 

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { computeDeveloperClassifications } from "@/lib/analytics/classifications";
-import { ForensicCommit, RepositoryAnalysis } from "@/types/domain";
+import { RepositoryAnalysis } from "@/types/domain";
 
 describe("Developer Assessments Engine", () => {
   const baseRepo: RepositoryAnalysis = {

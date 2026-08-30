@@ -50,17 +50,20 @@ export class ForensicAuthError extends ForensicGitHubError {
   }
 }
 
-export class ForensicPermissionError extends ForensicGitHubError {
-  constructor(resource: string) {
-    super(`Access denied for specimen resource: ${resource}`, { statusCode: 403 });
-    this.name = "ForensicPermissionError";
-  }
-}
-
 export function isResumableRateLimitError(err: unknown): boolean {
   if (err instanceof ForensicRateLimitError) {
     return err.isResumable === true;
   }
   const obj = err as { isResumable?: boolean; name?: string };
   return obj?.isResumable === true || obj?.name === "ForensicRateLimitError";
+}
+
+export function isAuthError(err: unknown): boolean {
+  if (err instanceof ForensicAuthError) return true;
+  const obj = err as { name?: string; statusCode?: number; status?: number };
+  return (
+    obj?.name === "ForensicAuthError" ||
+    obj?.statusCode === 401 ||
+    (obj?.status === 401 && obj?.name === undefined)
+  );
 }

@@ -1,13 +1,10 @@
 "use client";
 
-import React from "react";
 import { CommitForensics } from "@/types/domain";
 import {
   FileCode2,
   Scale,
-  Tag,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 
 const INTENT_COLORS = [
   "#4D96FF",

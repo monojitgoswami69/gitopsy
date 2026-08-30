@@ -1,5 +1,5 @@
 import { ForensicGitHubClient } from "./client";
-import { isResumableRateLimitError } from "./errors";
+import { isResumableRateLimitError, isAuthError } from "./errors";
 import { SubjectProfile, ForensicCommit } from "@/types/domain";
 
 export interface RestRepoSummary {
@@ -186,6 +186,9 @@ export class ForensicGitHubRest {
 
       return ok(repos, hitMaxPages);
     } catch (err) {
+      // A revoked/expired token must abort the whole analysis, not
+      // silently downgrade every repo into a per-repo failure entry.
+      if (isAuthError(err)) throw err;
       return fail([], err instanceof Error ? err.message : String(err));
     }
   }
@@ -213,6 +216,9 @@ export class ForensicGitHubRest {
 
       return ok(result);
     } catch (err) {
+      // A revoked/expired token must abort the whole analysis, not
+      // silently downgrade every repo into a per-repo failure entry.
+      if (isAuthError(err)) throw err;
       return fail([], err instanceof Error ? err.message : String(err));
     }
   }
@@ -299,6 +305,9 @@ export class ForensicGitHubRest {
 
       return ok(commits, truncated);
     } catch (err) {
+      // A revoked/expired token must abort the whole analysis, not
+      // silently downgrade every repo into a per-repo failure entry.
+      if (isAuthError(err)) throw err;
       return fail([], err instanceof Error ? err.message : String(err));
     }
   }
@@ -342,8 +351,9 @@ export class ForensicGitHubRest {
         } catch (err) {
           // Rate-limit aborts drive the checkpoint/resume flow — rethrow so
           // the worker stops cleanly instead of firing more requests at an
-          // exhausted limit.
+          // exhausted limit. Auth errors must abort the analysis entirely.
           if (isResumableRateLimitError(err)) throw err;
+          if (isAuthError(err)) throw err;
 
           const status = httpStatusOf(err);
           // Hard client errors (404 empty stats, 401, 403 permission, 422…)
@@ -407,6 +417,9 @@ export class ForensicGitHubRest {
         filesChanged: detail.files?.length ?? 0,
       });
     } catch (err) {
+      // A revoked/expired token must abort the whole analysis, not
+      // silently downgrade every repo into a per-repo failure entry.
+      if (isAuthError(err)) throw err;
       return fail(
         { additions: 0, deletions: 0, filesChanged: 0 },
         err instanceof Error ? err.message : String(err)
@@ -457,7 +470,10 @@ export class ForensicGitHubRest {
       let iterResult = await generator.next();
       while (!iterResult.done && !stopPagination) {
         for (const pr of iterResult.value) {
-          if (pr.user?.login !== author) continue;
+          // GitHub logins are case-insensitive; the login casing on a repo's
+          // PR payload can differ from the authenticated login (renames), so
+          // compare case-insensitively or authored PRs are silently dropped.
+          if (pr.user?.login?.toLowerCase() !== author.toLowerCase()) continue;
 
           if (sinceDate && pr.created_at < sinceDate) {
             stopPagination = true;
@@ -489,6 +505,9 @@ export class ForensicGitHubRest {
 
       return ok(prs, truncated);
     } catch (err) {
+      // A revoked/expired token must abort the whole analysis, not
+      // silently downgrade every repo into a per-repo failure entry.
+      if (isAuthError(err)) throw err;
       return fail([], err instanceof Error ? err.message : String(err));
     }
   }
@@ -526,7 +545,8 @@ export class ForensicGitHubRest {
       })) {
         for (const issue of page) {
           if (issue.pull_request) continue;
-          if (issue.user?.login !== author) continue;
+          // Case-insensitive for the same reason as the PR filter above.
+          if (issue.user?.login?.toLowerCase() !== author.toLowerCase()) continue;
           if (sinceDate && issue.created_at < sinceDate) continue;
 
           issues.push({
@@ -545,6 +565,9 @@ export class ForensicGitHubRest {
 
       return ok(issues, false);
     } catch (err) {
+      // A revoked/expired token must abort the whole analysis, not
+      // silently downgrade every repo into a per-repo failure entry.
+      if (isAuthError(err)) throw err;
       return fail([], err instanceof Error ? err.message : String(err));
     }
   }
@@ -557,6 +580,9 @@ export class ForensicGitHubRest {
       const truncated = count >= 1000;
       return ok(count, truncated);
     } catch (err) {
+      // A revoked/expired token must abort the whole analysis, not
+      // silently downgrade every repo into a per-repo failure entry.
+      if (isAuthError(err)) throw err;
       return fail(0, err instanceof Error ? err.message : String(err));
     }
   }

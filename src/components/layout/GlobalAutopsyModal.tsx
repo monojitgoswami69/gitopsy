@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { useAutopsyStore } from "@/lib/store/autopsyStore";
 import { useAuthStore } from "@/lib/store/authStore";
 import { AutopsyProgressModal } from "@/components/forensic/AutopsyProgressModal";

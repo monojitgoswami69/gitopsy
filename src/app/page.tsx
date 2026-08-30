@@ -10,7 +10,7 @@ import {
   Clock,
   FileCode2,
   Scale,
-  IdCard,
+  Layers,
 } from "lucide-react";
 import { useAuthStore } from "@/lib/store/authStore";
 import { useAutopsyStore } from "@/lib/store/autopsyStore";
@@ -208,11 +208,11 @@ export default function LandingPage() {
           {/* Feature 4 */}
           <div className="group bg-white border-[3px] border-black p-5 sm:p-6 shadow-[4px_4px_0_0_#000] sm:shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] sm:hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150 rounded-2xl sm:rounded-3xl cursor-default">
             <div className="flex items-center gap-2.5 mb-2.5 sm:mb-3">
-              <IdCard className="size-5 sm:size-6 text-[#9333EA] group-hover:scale-110 transition-transform shrink-0 stroke-[2.5]" />
-              <h3 className="text-base sm:text-lg font-black uppercase">The Developer Card</h3>
+              <Layers className="size-5 sm:size-6 text-[#9333EA] group-hover:scale-110 transition-transform shrink-0 stroke-[2.5]" />
+              <h3 className="text-base sm:text-lg font-black uppercase">Language DNA &amp; Archetypes</h3>
             </div>
             <p className="text-xs text-gray-700 font-semibold leading-relaxed">
-              A distilled, high-impact social identity card summarizing your primary classification and cadence.
+              Multi-language byte distribution, functional dialect breakdowns, and forensic classifications.
             </p>
           </div>
         </div>

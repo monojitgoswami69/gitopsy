@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import { RepositoryAnalysis, RepositoryAward } from "@/types/domain";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   FolderGit2,
@@ -10,12 +9,9 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  Star,
-  GitFork,
   GitPullRequest,
   CheckCircle2,
   ChevronDown,
-  ChevronUp,
   Lock,
   ExternalLink,
   GitCommit,

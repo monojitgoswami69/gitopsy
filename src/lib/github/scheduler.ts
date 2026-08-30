@@ -321,7 +321,9 @@ export class ForensicRequestScheduler {
       }
     }
     this.inFlightPromises.clear();
-    this.currentRunning = 0;
+    // NOTE: currentRunning is intentionally NOT reset here. In-flight tasks
+    // still decrement it in their finally blocks; zeroing it would let the
+    // counter go negative and permanently raise effective concurrency.
     this.isPaused = false;
     this.pauseUntilTimestamp = 0;
     this.rateLimitStatus = { ...INITIAL_RATE_LIMIT };

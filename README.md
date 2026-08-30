@@ -1,19 +1,21 @@
 # Gitopsy
 
-A local-first, privacy-focused GitHub analytics engine built with Next.js, Web Workers, and IndexedDB.
+A local-first, privacy-focused GitHub forensic intelligence and analytics engine built with Next.js, Web Workers, and IndexedDB.
 
-Gitopsy analyzes your version control patterns, 24-hour UTC commit distributions, code churn, and workflow archetypes using deterministic calculations directly in your browser.
+Gitopsy analyzes your version control patterns, 24-hour commit distributions, code churn, commit forensics, developer archetypes, repository awards, and version control charges using deterministic calculations running entirely in your browser.
 
 ---
 
 ## Highlights
 
-- **Local-First Processing**: Analysis, aggregation, and caching run entirely in the browser using a dedicated Web Worker and IndexedDB. Repository code and commit histories are never stored on an external server.
-- **24-Hour Temporal Analysis**: Visualizes 24-hour UTC commit clocks, weekday activity distributions, active streak lengths, and nocturnal commit ratios derived directly from author timestamps.
-- **Commit Forensics & Code Churn**: Categorizes commit intent (feat, fix, refactor, chore), measures historical line additions and deletions, and analyzes commit size distributions.
-- **Deterministic Archetypes**: Classifies workflow habits (such as Night Owl, Weekend Warrior, Polyglot, Refactor Specialist) with explicit, rule-based evidence criteria.
-- **Interactive Reports & Summary**: Generates structured forensic reports and an interactive year-in-review breakdown.
-- **GitHub OAuth with PKCE**: Uses read-only OAuth with cryptographic PKCE verification. Access tokens are kept in session memory and never stored in persistent databases.
+- **Local-First Processing**: Analysis, aggregation, and persistence run entirely in the browser using a dedicated Web Worker and IndexedDB (Dexie.js). Repository code, diffs, and commit histories never leave your machine or touch external servers.
+- **24-Hour Temporal Clocks**: Visualizes 24-hour commit activity, weekday distributions, active streaks, and nocturnal ratios derived directly from author timestamps and local timezones.
+- **Commit Forensics & Code Churn**: Analyzes conventional commit adherence, commit size distributions, message verbosity, and bounded line deletion-to-addition churn ratios.
+- **Deterministic Archetypes**: Classifies workflow habits (such as Night Owl, Weekend Warrior, Solo Operator, Code Artisan, Polyglot, Refactor Machine) with verifiable, rule-based criteria.
+- **Court of Version Control & Awards**: Generates satirical yet mathematically grounded courtroom indictments, verdict sentences, and repository accolades.
+- **Resilient & Resumable Scheduling**: Concurrency-bounded GitHub API scheduler with 202 warm-up retry loops, primary/secondary rate-limit detection, and periodic checkpoint-resume state.
+- **Sanitized Export & Import**: Complete forensic dossier export and import with cryptographic token redaction and Zod schema validation.
+- **PWA & Offline Viewing**: Service worker with automated build-time content-hash cache versioning and offline report exploration.
 
 ---
 
@@ -24,18 +26,18 @@ Gitopsy analyzes your version control patterns, 24-hour UTC commit distributions
   ├── Next.js (App Router, React 19, TypeScript)
   ├── Web Worker (analyzer.worker.ts)
   │     ├── GitHub REST & GraphQL API Client (Direct HTTPS)
-  │     ├── Rate-Limit Scheduler & Paging Engine
-  │     └── Deterministic Analytics Normalization
+  │     ├── Concurrency Scheduler & Paging Engine
+  │     └── Deterministic Normalization & Aggregation
   └── IndexedDB (Dexie.js Storage Layer)
-        └── Cached Reports, Checkpoints & Analysis Results
+        └── Cached Analyses, Checkpoints, and Sync Markers
 
-[ Server Boundary ]
+[ Server Boundary (Authentication Only) ]
   └── Minimal Next.js Route Handlers
-        ├── /api/auth/login     (PKCE Challenge & GitHub OAuth Redirect)
-        ├── /api/auth/callback  (Token Exchange)
-        ├── /api/auth/session   (Session Verification)
+        ├── /api/auth/login     (PKCE Challenge & OAuth Redirect)
+        ├── /api/auth/callback  (Server-Side Token Exchange)
+        ├── /api/auth/session   (Session Cookie Proxy, No-Store)
         ├── /api/auth/logout    (Cookie Invalidation)
-        └── /api/profile        (Basic Profile Retrieval)
+        └── /api/profile        (Bounded Memory Cache Proxy)
 ```
 
 ---
@@ -44,23 +46,24 @@ Gitopsy analyzes your version control patterns, 24-hour UTC commit distributions
 
 | Component | Technology |
 |---|---|
-| **Framework** | Next.js (App Router), React 19, TypeScript |
-| **Styling** | Tailwind CSS, Neo-Brutalism Design Tokens |
-| **Concurrency** | Dedicated Web Workers API |
-| **Storage** | Dexie.js (IndexedDB) |
+| **Framework** | Next.js 16 (App Router, Turbopack), React 19, TypeScript |
+| **Styling** | Tailwind CSS, Neobrutalist Design System |
+| **Worker Engine** | Native Web Workers API |
+| **Storage** | Dexie.js 4 (IndexedDB) |
 | **Visualizations** | Apache ECharts |
-| **Data Layer** | Octokit, GitHub REST API v3, GitHub GraphQL API v4 |
+| **Data Layer** | GitHub REST API v3, GitHub GraphQL API v4 |
 | **Validation** | Zod |
 | **Testing** | Vitest (Unit & Integration) |
+| **Linting** | ESLint (Flat Config) + TypeScript Compiler |
 
 ---
 
 ## Documentation
 
-Comprehensive technical specifications and models are available in the [docs/](docs/) directory:
+Comprehensive technical specifications are available in the [docs/](docs/) directory:
 
-- [Architecture Specification](docs/architecture.md): System topology, Web Worker processing pipeline, and storage layers.
-- [Privacy & Security Specification](docs/privacy-security.md): Local-first invariants, PKCE OAuth flow, and token lifecycle.
+- [Architecture Specification](docs/architecture.md): System topology, Web Worker processing pipeline, scheduling, and storage layers.
+- [Privacy & Security Specification](docs/privacy-security.md): Local-first invariants, PKCE OAuth flow, and token redaction engine.
 - [Analytics & Data Models](docs/analytics-model.md): Mathematical formulations, developer archetype criteria, and IndexedDB schemas.
 
 ---
@@ -107,13 +110,16 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### 5. Run tests & production build
+### 5. Quality gates & production build
 
 ```bash
-# Run unit tests
+# Run unit & integration test suite (61 tests)
 pnpm test
 
-# Create production build
+# Run ESLint and TypeScript compiler verification
+pnpm lint
+
+# Create production build with automated SW cache stamping
 pnpm build
 ```
 
@@ -123,13 +129,14 @@ pnpm build
 
 Gitopsy enforces strict privacy standards:
 
-1. **No External Database**: There is no server-side database (PostgreSQL, MongoDB, Supabase, Firebase, etc.). All report data lives locally in your browser's IndexedDB.
+1. **No External Database**: There is no server-side database (PostgreSQL, MongoDB, Supabase, Firebase, Redis, etc.). All report data lives locally in your browser's IndexedDB.
 2. **Zero Telemetry**: No third-party trackers, analytics scripts, or session recordings.
-3. **Read-Only Scopes**: Only requests `read:user` scope by default. Gitopsy never asks for write permissions to your repositories.
-4. **Local Data Management**: All local reports can be exported or permanently deleted at any time directly from the interface.
+3. **Read-Only Scopes**: Defaults to `read:user repo` (read-only access to analyze user metadata and repository commit statistics). Gitopsy never requests or executes write operations.
+4. **Local Data Management**: All stored analyses, sync markers, and checkpoints can be exported, redacted, or permanently purged at any time.
 
 ---
 
 ## License
 
 MIT License. See [LICENSE](LICENSE) for details.
+

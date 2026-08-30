@@ -61,6 +61,19 @@ export async function GET(request: NextRequest) {
       following: data.following || 0,
     };
 
+    // Evict expired entries on every request (insertion order = oldest first);
+    // if still over capacity, drop the oldest remaining entries.
+    for (const [key, val] of profileCache.entries()) {
+      if (val.expiresAt <= now) {
+        profileCache.delete(key);
+      }
+    }
+    while (profileCache.size >= 200) {
+      const oldest = profileCache.keys().next().value;
+      if (oldest === undefined) break;
+      profileCache.delete(oldest);
+    }
+
     // Save to memory cache for 5 minutes
     profileCache.set(token, {
       profile,

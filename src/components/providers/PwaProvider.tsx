@@ -100,7 +100,9 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
     setDismissed(true);
     try {
       sessionStorage.setItem("gitopsy_pwa_dismissed", "true");
-    } catch {}
+    } catch {
+      // sessionStorage may be unavailable in private browsing
+    }
   };
 
   return (

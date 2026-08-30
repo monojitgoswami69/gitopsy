@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowUp, List, ChevronRight, ChevronUp, X } from "lucide-react";
+import { ArrowLeft, ArrowUp, ChevronUp } from "lucide-react";
 
 interface SectionItem {
   id: string;
@@ -22,15 +22,10 @@ const SECTIONS: SectionItem[] = [
   { id: "section-collaboration", label: "Collaboration" },
   { id: "section-classifications", label: "Gitopsy Awards" },
   { id: "section-court", label: "Courtroom" },
-  { id: "section-developer-card", label: "Developer Card" },
   { id: "section-data", label: "Data & Privacy" },
 ];
 
-interface DossierIndexNavProps {
-  onLaunchCard?: () => void;
-}
-
-export function DossierIndexNav({ onLaunchCard }: DossierIndexNavProps) {
+export function DossierIndexNav() {
   const [activeSection, setActiveSection] = useState<string>("section-headlines");
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [headerOffset, setHeaderOffset] = useState<number>(84);
@@ -68,7 +63,7 @@ export function DossierIndexNav({ onLaunchCard }: DossierIndexNavProps) {
       document.getElementById("app-main-scroll") || window;
 
     const handleScroll = () => {
-      // 1. ALWAYS compute and update scroll percentage in real-time
+      // 1. Compute and update scroll percentage in real-time
       const scrollTop =
         scrollContainer === window
           ? window.scrollY
@@ -90,35 +85,96 @@ export function DossierIndexNav({ onLaunchCard }: DossierIndexNavProps) {
       // 2. If programmatically scrolling to a section, preserve activeSection highlight during transit
       if (isScrollingRef.current) return;
 
+      // 3. Top of page boundary guard
+      if (scrollTop <= 40) {
+        setActiveSection(SECTIONS[0].id);
+        return;
+      }
+
+      // 4. Bottom of page & final section visibility guard
+      // Specifically ensures the final section (Data & Privacy) lights up smoothly when in view
+      const lastSectionId = SECTIONS[SECTIONS.length - 1].id;
+      const lastEl = document.getElementById(lastSectionId);
       const containerTop =
         scrollContainer === window
           ? 0
           : (scrollContainer as HTMLElement).getBoundingClientRect().top;
 
-      let currentId = SECTIONS[0].id;
+      if (lastEl) {
+        const lastRect = lastEl.getBoundingClientRect();
+        const isNearScrollBottom = maxScroll > 0 && scrollTop + clientHeight >= scrollHeight - 100;
+        const isLastSectionProminent =
+          lastRect.top <= containerTop + clientHeight * 0.70 &&
+          lastRect.bottom <= containerTop + clientHeight + 100;
 
+        if (isNearScrollBottom || isLastSectionProminent) {
+          setActiveSection(lastSectionId);
+          return;
+        }
+      }
+
+      // 5. Symmetrical Focal Line Detection
+      // The natural reading focal line is set at ~24% of viewport height below container top
+      const focalLine = containerTop + Math.min(220, Math.max(120, clientHeight * 0.24));
+
+      let matchedSectionId = SECTIONS[0].id;
+      let foundExactSpan = false;
+
+      // Find section whose top is <= focalLine and bottom is > focalLine
       for (let i = 0; i < SECTIONS.length; i++) {
         const el = document.getElementById(SECTIONS[i].id);
         if (el) {
           const rect = el.getBoundingClientRect();
-          const offset = rect.top - containerTop;
-          // When section top reaches the viewing zone with clearance
-          if (offset <= 140) {
-            currentId = SECTIONS[i].id;
+          if (rect.top <= focalLine && rect.bottom > focalLine) {
+            matchedSectionId = SECTIONS[i].id;
+            foundExactSpan = true;
+            break;
           }
         }
       }
 
-      setActiveSection(currentId);
+      // Fallback in case of layout gap: select section with closest boundary to focalLine
+      if (!foundExactSpan) {
+        let minDistance = Infinity;
+        for (let i = 0; i < SECTIONS.length; i++) {
+          const el = document.getElementById(SECTIONS[i].id);
+          if (el) {
+            const rect = el.getBoundingClientRect();
+            const distTop = Math.abs(rect.top - focalLine);
+            const distBottom = Math.abs(rect.bottom - focalLine);
+            const closestEdge = Math.min(distTop, distBottom);
+            if (closestEdge < minDistance) {
+              minDistance = closestEdge;
+              matchedSectionId = SECTIONS[i].id;
+            }
+          }
+        }
+      }
+
+      setActiveSection(matchedSectionId);
+    };
+
+    const handleUserInteraction = () => {
+      // Release programmatic scroll lock if user starts interacting directly
+      if (isScrollingRef.current) {
+        isScrollingRef.current = false;
+      }
     };
 
     scrollContainer.addEventListener("scroll", handleScroll, { passive: true });
     window.addEventListener("scroll", handleScroll, { passive: true });
+    scrollContainer.addEventListener("wheel", handleUserInteraction, { passive: true });
+    scrollContainer.addEventListener("touchstart", handleUserInteraction, { passive: true });
+    scrollContainer.addEventListener("pointerdown", handleUserInteraction, { passive: true });
+
     handleScroll();
 
     return () => {
       scrollContainer.removeEventListener("scroll", handleScroll);
       window.removeEventListener("scroll", handleScroll);
+      scrollContainer.removeEventListener("wheel", handleUserInteraction);
+      scrollContainer.removeEventListener("touchstart", handleUserInteraction);
+      scrollContainer.removeEventListener("pointerdown", handleUserInteraction);
       if (rafRef.current !== null) {
         cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
@@ -284,20 +340,9 @@ export function DossierIndexNav({ onLaunchCard }: DossierIndexNavProps) {
             </nav>
           </div>
 
-          {/* Quick Actions (Launch Developer Card above divider, Scroll To Top centered below divider) */}
+          {/* Quick Actions (Scroll To Top) */}
           <div className="pt-2 flex flex-col gap-2.5">
-            {onLaunchCard && (
-              <button
-                onClick={onLaunchCard}
-                className="w-full bg-[#FFDC58] hover:bg-[#FACC15] text-black border-2 border-black rounded-lg py-2 px-3 shadow-[2.5px_2.5px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] font-jetbrains text-xs sm:text-[13px] uppercase tracking-wider flex items-center justify-center transition-all cursor-pointer"
-                style={{ fontWeight: 800 }}
-              >
-                <span>DEVELOPER CARD</span>
-              </button>
-            )}
-
-            {/* Horizontal Divider Line above Scroll To Top */}
-            <div className="pt-2.5 border-t-2 border-black/15 flex items-center justify-center">
+            <div className="pt-2 border-t-2 border-black/15 flex items-center justify-center">
               <button
                 onClick={scrollToTop}
                 className="text-xs font-jetbrains font-semibold uppercase tracking-wider text-black hover:text-neutral-700 flex items-center justify-center gap-1.5 py-0.5 px-1 hover:translate-y-[-1px] transition-transform w-full cursor-pointer"
@@ -311,7 +356,7 @@ export function DossierIndexNav({ onLaunchCard }: DossierIndexNavProps) {
         </div>
       </aside>
 
-      {/* Mobile Top Actions (Console Link & Developer Card Button) */}
+      {/* Mobile Top Actions (Console Link) */}
       <div className="lg:hidden w-full flex items-center justify-between gap-3 mb-4 pt-1 pb-2 border-b-2 border-black/10">
         <Link
           href="/autopsy"
@@ -321,16 +366,6 @@ export function DossierIndexNav({ onLaunchCard }: DossierIndexNavProps) {
           <ArrowLeft className="size-3.5 stroke-[3]" />
           <span>CONSOLE</span>
         </Link>
-
-        {onLaunchCard && (
-          <button
-            onClick={onLaunchCard}
-            className="bg-[#FFDC58] hover:bg-[#FACC15] border-2 border-black px-3.5 py-1.5 rounded-lg shadow-[2px_2px_0_0_#000] text-black font-jetbrains text-xs uppercase flex items-center gap-1.5 transition-all active:shadow-none"
-            style={{ fontWeight: 800 }}
-          >
-            <span>DEVELOPER CARD</span>
-          </button>
-        )}
       </div>
 
       {/* Mobile Floating Island Dock Container — overshoots 20px past the viewport bottom

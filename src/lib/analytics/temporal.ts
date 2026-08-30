@@ -69,7 +69,7 @@ const TIMEZONE_ABBR_MAP: Record<string, string> = {
 };
 
 export function getTimezoneInfo(userTz?: string): { timezone: string; timezoneAbbr: string } {
-  let timezone = "UTC";
+  let timezone: string;
   try {
     timezone =
       userTz ||
@@ -85,7 +85,7 @@ export function getTimezoneInfo(userTz?: string): { timezone: string; timezoneAb
     return { timezone, timezoneAbbr: TIMEZONE_ABBR_MAP[timezone] };
   }
 
-  let timezoneAbbr = timezone;
+  let timezoneAbbr: string;
   try {
     const parts = new Intl.DateTimeFormat("en-US", {
       timeZone: timezone,

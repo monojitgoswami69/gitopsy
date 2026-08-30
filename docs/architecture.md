@@ -48,7 +48,7 @@ Gitopsy is built as a local-first, privacy-focused GitHub analytics engine. The 
 ## 2. Component Layers
 
 ### 2.1 Main Thread Layer (`src/components/`, `src/app/`)
-- **User Interface**: Renders the responsive dashboard, navigational indices, reports console, and courtroom/wrapped modules using Tailwind CSS and custom Neo-Brutalism tokens.
+- **User Interface**: Renders the responsive dashboard, navigational indices, reports console, and courtroom and classification modules using Tailwind CSS and custom Neo-Brutalism tokens.
 - **Visualizations**: Uses Apache ECharts with custom canvas/SVG options, responsive resize listeners, and brutalist tooltips.
 - **Worker Bridge (`ForensicWorkerClient`)**: Dispatches analysis jobs to the Web Worker and subscribes to typed progress events (`WorkerOutMessage`).
 

@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAutopsyStore } from "@/lib/store/autopsyStore";
 import { useAuthStore } from "@/lib/store/authStore";

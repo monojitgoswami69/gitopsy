@@ -2,14 +2,15 @@
  * GITOPSY BACKGROUND ANALYZER WEB WORKER
  *
  * Checkpoint & Resume Architecture:
- * - After each repo processes, a checkpoint is saved to IndexedDB.
- * - If the GitHub rate limit reset is > 5 minutes away (longPauseThreshold),
- *   the scheduler aborts all in-flight tasks with a resumable error.
- * - The worker saves a final checkpoint and posts RESUME_AVAILABLE with the
+ * - A checkpoint is saved to IndexedDB every 10 processed repos, and again
+ *   if the GitHub rate limit reset is > 5 minutes away (longPauseThreshold).
+ * - If the scheduler aborts all in-flight tasks with a resumable error,
+ *   the worker saves a final checkpoint and posts RESUME_AVAILABLE with the
  *   resume timestamp. The user can resume later (timer or manual button).
  * - On RESUME, the worker reconstructs state from the checkpoint and
  *   processes remaining repos (including previously-failed ones).
  * - No repo is permanently dropped: failed repos are retried on every resume.
+ * - Successful completion deletes the checkpoint.
  */
 
 import {
@@ -28,7 +29,7 @@ import { ForensicGitHubRest, RestRepoSummary } from "@/lib/github/rest";
 import { ForensicGitHubGraphQL } from "@/lib/github/graphql";
 import { selectDetailIndices } from "@/lib/github/detailSampling";
 import { gitopsyDb } from "@/lib/db";
-import { isResumableRateLimitError } from "@/lib/github/errors";
+import { isResumableRateLimitError, isAuthError } from "@/lib/github/errors";
 import { calculateTemporalAnalytics } from "@/lib/analytics/temporal";
 import { calculateCodeChurnAnalytics } from "@/lib/analytics/churn";
 import { analyzeCommitForensics } from "@/lib/analytics/commitForensics";
@@ -97,6 +98,9 @@ interface AnalysisState {
   resumeReason: string;
   timezone?: string;
   timezoneAbbr?: string;
+
+  /** Set when a fatal (auth) error aborts the pipeline; posted as ERROR. */
+  fatalError: string | null;
 }
 
 function newState(checkpointId: string, subjectLogin: string, concurrency: number): AnalysisState {
@@ -126,6 +130,7 @@ function newState(checkpointId: string, subjectLogin: string, concurrency: numbe
     resumeReason: "",
     timezone: undefined,
     timezoneAbbr: undefined,
+    fatalError: null,
   };
 }
 
@@ -269,7 +274,16 @@ async function processSingleRepo(
     ]);
 
     if (!contribStatsOutcome.ok && contribStatsOutcome.error) {
+      // Without contributor stats the churn fallback sums per-commit diff
+      // details, which only exist for the sampled subset — the repo's
+      // additions/deletions would be silently near-zero. Never present that
+      // as fully measured data.
+      fetchStatus = "partial";
       repoWarnings.push(`contributorStats: ${contribStatsOutcome.error}`);
+      const diagWarning = `Churn data incomplete for ${r.fullName}: ${contribStatsOutcome.error}`;
+      if (!state.diagnosticsWarnings.includes(diagWarning)) {
+        state.diagnosticsWarnings.push(diagWarning);
+      }
     }
     if (!prsOutcome.ok) {
       fetchStatus = fetchStatus === "ok" ? "partial" : fetchStatus;
@@ -288,6 +302,16 @@ async function processSingleRepo(
     prs = prsOutcome.data;
     issues = issuesOutcome.data;
     languages = languagesOutcome.data;
+
+    // PR history deeper than the 10-page cap is bounded by design; record it
+    // so the report never presents a capped PR count as complete.
+    if (prsOutcome.truncated) {
+      repoWarnings.push("pullRequests truncated at 1000 (page cap)");
+      const diagWarning = `Pull-request history for ${r.fullName} exceeded the fetch cap (1000 newest PRs); PR metrics are a lower bound.`;
+      if (!state.diagnosticsWarnings.includes(diagWarning)) {
+        state.diagnosticsWarnings.push(diagWarning);
+      }
+    }
 
     // Commit diff details: one API call per commit with no bulk endpoint, so
     // coverage is bounded deliberately — full details for repos at/below the
@@ -323,8 +347,8 @@ async function processSingleRepo(
 
   const mergedPrs = prs.filter((p) => p.state === "merged").length;
 
-  let repoAdditions = 0;
-  let repoDeletions = 0;
+  let repoAdditions: number;
+  let repoDeletions: number;
   if (contribStats && (contribStats.additions > 0 || contribStats.deletions > 0)) {
     repoAdditions = contribStats.additions;
     repoDeletions = contribStats.deletions;
@@ -404,7 +428,7 @@ async function processRepos(
   const remaining = state.reposToScan.filter((r) => !state.processedRepoFullNames.has(r.fullName));
 
   async function worker() {
-    while (cursor < remaining.length && !cancelled && !state.checkpointTriggered) {
+    while (cursor < remaining.length && !cancelled && !state.checkpointTriggered && !state.fatalError) {
       const idx = cursor++;
       const repo = remaining[idx];
       try {
@@ -412,6 +436,14 @@ async function processRepos(
       } catch (err) {
         if (isResumableRateLimitError(err)) {
           postLog("warn", `Rate limit pause triggered during repo ${repo.fullName}. Aborting for checkpoint.`);
+        } else if (isAuthError(err)) {
+          // The token was revoked/expired: every remaining request would fail
+          // the same way. Abort with a clear error instead of producing a
+          // report where every repo is a failure entry.
+          state.fatalError =
+            "GitHub authorization expired or revoked. Reconnect your account and run the analysis again.";
+          postLog("error", state.fatalError);
+          return;
         } else {
           const errorMsg = err instanceof Error ? err.message : String(err);
           postRepoWarning(repo.fullName!, "PROCESSING", errorMsg);
@@ -419,6 +451,9 @@ async function processRepos(
         }
       } finally {
         completedReposCount++;
+        if (completedReposCount % CHECKPOINT_INTERVAL === 0) {
+          queueCheckpointSave();
+        }
         const pct = 15 + Math.round((completedReposCount / Math.max(1, totalReposToScan)) * 60);
         postProgress(
           "AUTOPSY",
@@ -435,11 +470,27 @@ async function processRepos(
 
   const pool: Promise<void>[] = [];
   const workerCount = Math.max(1, Math.min(state.concurrency, remaining.length));
+
+  // Periodic checkpointing: a refresh or crash mid-analysis previously lost
+  // all progress (checkpoints were only written on rate-limit pauses). Save
+  // every CHECKPOINT_INTERVAL completed repos, serialized to keep writes
+  // ordered. Completion deletes the checkpoint, so no stale resume prompt
+  // survives a successful run.
+  const CHECKPOINT_INTERVAL = 10;
+  let checkpointChain: Promise<void> = Promise.resolve();
+  const queueCheckpointSave = () => {
+    if (!state.resumeReason) {
+      state.resumeReason = "Analysis was interrupted before completion. Repos processed so far are preserved.";
+    }
+    checkpointChain = checkpointChain.then(() => saveCheckpoint(state));
+  };
+
   for (let i = 0; i < workerCount; i++) {
     pool.push(worker());
   }
 
   await Promise.all(pool);
+  await checkpointChain;
 }
 
 async function aggregateAndComplete(
@@ -464,12 +515,11 @@ async function aggregateAndComplete(
   const totalIssuesAuthored = processedRepos.reduce((acc, r) => acc + r.issuesAuthored, 0);
 
   const reviewsOutcome = await rest.getReviewsCount(state.subjectLogin, state.sinceDate);
-  let reviewsCount = 0;
   if (!reviewsOutcome.ok) {
     postLog("warn", `Reviews count fetch failed: ${reviewsOutcome.error}. Defaulting to 0.`);
     state.diagnosticsWarnings.push(`Reviews count fetch failed: ${reviewsOutcome.error}`);
   }
-  reviewsCount = reviewsOutcome.data;
+  const reviewsCount = reviewsOutcome.data;
   if (reviewsOutcome.truncated) {
     state.diagnosticsWarnings.push("Reviews count truncated at 1000 (GitHub Search API cap).");
   }
@@ -480,7 +530,10 @@ async function aggregateAndComplete(
     churn.totalAdditions = totalLinesAdded;
     churn.totalDeletions = totalLinesDeleted;
     churn.netLines = totalLinesAdded - totalLinesDeleted;
-    churn.churnRatio = totalLinesAdded > 0 ? Math.round((totalLinesDeleted / totalLinesAdded) * 100) / 100 : 0;
+    churn.churnRatio =
+      totalLinesAdded + totalLinesDeleted > 0
+        ? Math.round((totalLinesDeleted / (totalLinesAdded + totalLinesDeleted)) * 100) / 100
+        : 0;
   }
   const commitForensics = analyzeCommitForensics(allCommits, state.subjectLogin);
   if (totalLinesAdded > 0 || totalLinesDeleted > 0) {
@@ -506,9 +559,18 @@ async function aggregateAndComplete(
 
   let totalContributions = totalCommits;
   try {
+    // Contribution calendars are queried one 365-day window per year. Span the
+    // full account age (capped at 10 years ≈ 3650 GraphQL points to stay
+    // inside the 5000/hr budget) instead of a fixed 2-year slice that silently
+    // undercounts long-standing accounts.
+    let calendarYears = 1;
+    if (state.profile?.createdAt) {
+      const accountAgeMs = Date.now() - new Date(state.profile.createdAt).getTime();
+      calendarYears = Math.min(10, Math.max(1, Math.ceil(accountAgeMs / (365 * 86400000))));
+    }
     const calendar = state.subjectLogin
-      ? await graphql.getUserContributions(state.subjectLogin, state.sinceDate, undefined, 2)
-      : await graphql.getViewerContributions(state.sinceDate, undefined, 2);
+      ? await graphql.getUserContributions(state.subjectLogin, state.sinceDate, undefined, calendarYears)
+      : await graphql.getViewerContributions(state.sinceDate, undefined, calendarYears);
     if (calendar) {
       state.graphqlContributionCalendarAvailable = true;
       totalContributions = calendar.totalContributions;
@@ -537,6 +599,7 @@ async function aggregateAndComplete(
     mergeRatePercentage,
     issuesAuthored: totalIssuesAuthored,
     reviewsAuthored: reviewsCount,
+    reviewsAuthoredTruncated: reviewsOutcome.truncated,
     starsReceived: processedRepos.reduce((acc, r) => acc + r.stars, 0),
     forksReceived: processedRepos.reduce((acc, r) => acc + r.forks, 0),
     longestStreakDays: temporal.longestStreakDays,
@@ -774,6 +837,11 @@ async function runAnalysisPipeline(
 
     await processRepos(state, rest, client);
 
+    if (state.fatalError && !cancelled) {
+      post({ type: "ERROR", payload: { error: state.fatalError } });
+      return;
+    }
+
     if (state.checkpointTriggered && !cancelled) {
       await saveCheckpoint(state);
       post({
@@ -813,6 +881,14 @@ self.onmessage = async (event: MessageEvent<WorkerInMessage>) => {
   if (data.type === "START_ANALYSIS") {
     cancelled = false;
     const { token, username, sinceDate, isIncremental, maxConcurrency, timezone } = data.payload;
+    // A fresh analysis supersedes any prior checkpoint (rate-limit or
+    // interrupted-run); without this, stale checkpoints accumulate and the
+    // console offers to resume runs the user has already abandoned.
+    try {
+      await gitopsyDb.checkpoints.clear();
+    } catch {
+      // best-effort; resume-from-checkpoint just won't be offered
+    }
     const concurrency = Math.max(1, Math.min(maxConcurrency ?? 15, 15));
     const checkpointId = `dossier-${username || "viewer"}-${Date.now()}`;
     const state = newState(checkpointId, username || "", concurrency);
