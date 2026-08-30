@@ -21,15 +21,17 @@ const geistMono = Geist_Mono({
 });
 
 const siteUrl = process.env.NEXT_PUBLIC_APP_URL || "https://gitopsy.dev";
+const siteTitle = "GITOPSY • Your GitHub, Under Examination";
+const siteDescription =
+  "Forensic GitHub engineering intelligence & developer autopsy. In-browser analysis of your commits, PRs, code churn, and coding archetype.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "GITOPSY • Your GitHub, Under Examination",
+    default: siteTitle,
     template: "%s | GITOPSY",
   },
-  description:
-    "Privacy-first forensic engineering intelligence and analytics for GitHub. In-browser autopsy of your commits, pull requests, issues, languages, code churn, and developer diagnosis.",
+  description: siteDescription,
   applicationName: "GITOPSY",
   authors: [{ name: "Monojit Goswami", url: "https://github.com/monojitgoswami69" }],
   creator: "Monojit Goswami",
@@ -54,9 +56,8 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: siteUrl,
     siteName: "GITOPSY",
-    title: "GITOPSY • Your GitHub, Under Examination",
-    description:
-      "Privacy-first forensic engineering intelligence and analytics for GitHub. In-browser autopsy of your commits, pull requests, issues, languages, code churn, and developer diagnosis.",
+    title: siteTitle,
+    description: siteDescription,
     images: [
       {
         url: "/og.png",
@@ -69,9 +70,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "GITOPSY • Your GitHub, Under Examination",
-    description:
-      "Privacy-first forensic engineering intelligence and analytics for GitHub. In-browser autopsy of your commits, pull requests, issues, languages, code churn, and developer diagnosis.",
+    title: siteTitle,
+    description: siteDescription,
     images: ["/og.png"],
     creator: "@gitopsy",
   },
@@ -112,8 +112,7 @@ const jsonLd = {
   "@type": "WebApplication",
   name: "GITOPSY",
   url: siteUrl,
-  description:
-    "Privacy-first forensic engineering intelligence and analytics for GitHub. In-browser autopsy of your commits, pull requests, issues, code churn, and developer diagnosis.",
+  description: siteDescription,
   applicationCategory: "DeveloperApplication",
   operatingSystem: "Any",
   offers: {
@@ -142,6 +141,24 @@ export default function RootLayout({
       className={`h-full overflow-hidden ${jetbrainsMono.variable} ${geistMono.variable}`}
     >
       <head>
+        <meta property="og:title" content={siteTitle} />
+        <meta property="og:description" content={siteDescription} />
+        <meta property="og:image" content={`${siteUrl}/og.png`} />
+        <meta property="og:image:secure_url" content={`${siteUrl}/og.png`} />
+        <meta property="og:image:type" content="image/png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content="GITOPSY - Forensic GitHub Intelligence & Analytics" />
+        <meta property="og:url" content={siteUrl} />
+        <meta property="og:site_name" content="GITOPSY" />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:site" content="@gitopsy" />
+        <meta name="twitter:creator" content="@gitopsy" />
+        <meta name="twitter:title" content={siteTitle} />
+        <meta name="twitter:description" content={siteDescription} />
+        <meta name="twitter:image" content={`${siteUrl}/og.png`} />
+        <meta name="twitter:image:alt" content="GITOPSY - Forensic GitHub Intelligence & Analytics" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
