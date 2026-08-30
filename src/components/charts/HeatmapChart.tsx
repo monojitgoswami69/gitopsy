@@ -107,6 +107,24 @@ export function HeatmapChart({
     };
   }, [lockedIndex]);
 
+  const [containerWidth, setContainerWidth] = useState<number>(0);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.clientWidth);
+      }
+    };
+    updateWidth();
+
+    const ro = new ResizeObserver(() => {
+      updateWidth();
+    });
+    ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, []);
+
   const dataMap = useMemo(() => {
     const map = new Map<string, HeatmapDataPoint>();
     for (const d of data) {
@@ -115,7 +133,7 @@ export function HeatmapChart({
     return map;
   }, [data]);
 
-  // Chart options are ONLY rebuilt when data, dataMap or metricLabel change — never on lock/unlock
+  // Chart options are ONLY rebuilt when data, dataMap, metricLabel or containerWidth change
   const chartOptions: EChartsOption = useMemo(() => {
     if (!data || data.length === 0) {
       return {
@@ -126,29 +144,15 @@ export function HeatmapChart({
     const today = new Date();
     const todayIso = today.toISOString().slice(0, 10);
 
-    // Scan for earliest historical activity in dataset to display extended timeline
-    const activeDates = data
-      .filter((d) => d.count > 0 && d.date)
-      .map((d) => d.date)
-      .sort();
+    // Compute exactly how many weeks fit into current screen width so cells remain crisp squares with zero text collision
+    const width = containerWidth || (typeof window !== "undefined" ? window.innerWidth - 48 : 800);
+    const availableWidth = Math.max(180, width - 52); // account for left day labels (36px) and right padding (16px)
+    const maxWeeks = Math.max(12, Math.floor(availableWidth / 13.5));
+    const maxDays = maxWeeks * 7;
 
-    let startDateIso: string;
-    if (activeDates.length > 0) {
-      const earliestDate = new Date(activeDates[0]);
-      const maxTwoYearsAgo = new Date(today);
-      maxTwoYearsAgo.setDate(maxTwoYearsAgo.getDate() - 728); // ~2 years (104 weeks)
-
-      // Use earliest commit date capped at 2 years, or at least 18 months to span full width
-      const minSpanDate = new Date(today);
-      minSpanDate.setDate(minSpanDate.getDate() - 546); // ~18 months (78 weeks)
-
-      const effectiveStart = earliestDate < minSpanDate ? (earliestDate < maxTwoYearsAgo ? maxTwoYearsAgo : earliestDate) : minSpanDate;
-      startDateIso = effectiveStart.toISOString().slice(0, 10);
-    } else {
-      const defaultStart = new Date(today);
-      defaultStart.setDate(defaultStart.getDate() - 546); // 18 months default
-      startDateIso = defaultStart.toISOString().slice(0, 10);
-    }
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() - maxDays);
+    const startDateIso = startDate.toISOString().slice(0, 10);
 
     const formattedData = data.map((d) => [d.date, Math.max(0, d.count)]);
     const counts = data.map((d) => d.count).filter((c) => c > 0);
@@ -332,7 +336,7 @@ export function HeatmapChart({
         },
       },
     };
-  }, [data, dataMap, metricLabel]); // lockedIndex is NOT a dependency — locking never rebuilds options
+  }, [data, dataMap, metricLabel, containerWidth]);
 
   return (
     <div ref={containerRef} className="w-full flex flex-col items-center">

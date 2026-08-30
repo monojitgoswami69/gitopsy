@@ -72,20 +72,20 @@ export function AutopsyReportsConsole({
   };
 
   return (
-    <div className="w-full flex flex-col gap-3.5 text-black">
+    <div className="w-full flex flex-col gap-4 text-black">
       {/* Console Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-1">
         <div>
           <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight">
             Autopsy Reports Console
           </h2>
-          <p className="text-xs text-gray-600 font-bold">
+          <p className="text-xs text-gray-600 font-bold mt-0.5">
             Stored forensic examinations in your local browser sandbox
           </p>
         </div>
 
-        <div className="flex items-center gap-4">
-          <span className="text-xs font-mono font-bold text-gray-600 uppercase tracking-wider hidden sm:inline">
+        <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+          <span className="text-[11px] sm:text-xs font-mono font-bold text-gray-600 uppercase tracking-wider">
             {reports.length} {reports.length === 1 ? "REPORT" : "REPORTS"} STORED
           </span>
 
@@ -94,7 +94,7 @@ export function AutopsyReportsConsole({
             variant="main"
             onClick={onRunNewAnalysis}
             disabled={isAnalyzing}
-            className="font-black text-xs gap-1.5"
+            className="font-black text-xs gap-1.5 shadow-[3px_3px_0_0_#000]"
           >
             <Plus className="size-4 stroke-[3]" />
             <span>RUN NEW AUTOPSY</span>
@@ -151,11 +151,11 @@ export function AutopsyReportsConsole({
               <div
                 key={r.id}
                 onClick={() => handleOpenReport(r)}
-                className="group border-[3px] border-black bg-white p-5 rounded-2xl shadow-[4px_4px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] transition-all cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4"
+                className="group border-[3px] border-black bg-white p-4 sm:p-5 rounded-2xl shadow-[4px_4px_0_0_#000] hover:translate-x-[1.5px] hover:translate-y-[1.5px] hover:shadow-[2.5px_2.5px_0_0_#000] transition-all cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-3.5 sm:gap-4"
               >
                 {/* Left: Specimen Details & Meta */}
-                <div className="flex items-start sm:items-center gap-4">
-                  <div className="relative size-12 shrink-0 rounded-xl border-2 border-black overflow-hidden bg-[#FFDC58] hidden sm:block">
+                <div className="flex items-start sm:items-center gap-3.5 sm:gap-4 min-w-0">
+                  <div className="relative size-12 sm:size-14 shrink-0 rounded-xl border-2 border-black overflow-hidden bg-[#FFDC58]">
                     <img
                       src={r.subject.avatarUrl || `https://github.com/${r.subject.login}.png`}
                       alt={r.subject.login}
@@ -163,51 +163,45 @@ export function AutopsyReportsConsole({
                     />
                   </div>
 
-                  <div className="flex flex-col gap-1.5">
+                  <div className="flex flex-col gap-1 min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm sm:text-base font-black uppercase text-black">
+                      <span className="text-sm sm:text-base font-black uppercase text-black truncate max-w-[200px] xs:max-w-xs sm:max-w-none">
                         {r.subject.name || r.subject.login}
                       </span>
-                      <span className="text-xs font-mono font-bold text-gray-600">
+                      <span className="text-[11px] sm:text-xs font-mono font-bold text-gray-700 bg-amber-100/80 px-2 py-0.5 rounded border border-black/20">
                         {r.subject.login}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-3 text-xs font-semibold text-gray-600 flex-wrap">
-                      <span className="flex items-center gap-1 font-mono">
-                        <Clock className="size-3 text-gray-500" />
+                    <div className="flex items-center gap-x-2.5 gap-y-1 text-xs font-semibold text-gray-600 flex-wrap mt-0.5">
+                      <span className="flex items-center gap-1 font-mono text-[11px] sm:text-xs text-gray-700">
+                        <Clock className="size-3 text-gray-500 shrink-0" />
                         {examinedDate}
                       </span>
-                      <span>•</span>
-                      <span>
-                        <strong className="text-black font-mono">
+                      <span className="text-gray-300 hidden xs:inline">•</span>
+                      <span className="text-[11px] sm:text-xs">
+                        <strong className="text-black font-mono font-bold">
                           {r.summary.totalCommits.toLocaleString()}
                         </strong>{" "}
                         Commits
                       </span>
-                      <span>•</span>
-                      <span>
-                        <strong className="text-black font-mono">
+                      <span className="text-gray-300 hidden xs:inline">•</span>
+                      <span className="text-[11px] sm:text-xs">
+                        <strong className="text-black font-mono font-bold">
                           {r.summary.reposAnalyzed}
                         </strong>{" "}
                         Repositories
                       </span>
-                      {r.languages[0]?.name && (
-                        <>
-                          <span>•</span>
-                          <span>{r.languages[0].name}</span>
-                        </>
-                      )}
                     </div>
                   </div>
                 </div>
 
-                {/* Right: Actions */}
-                <div className="flex items-center gap-3 self-end md:self-center">
+                {/* Right / Bottom: Actions */}
+                <div className="flex items-center justify-between md:justify-end gap-2.5 pt-3 md:pt-0 border-t border-black/10 md:border-t-0 shrink-0">
                   <Link
                     href={`/autopsy/${r.id}`}
                     onClick={(e) => e.stopPropagation()}
-                    className="bg-[#FFDC58] hover:bg-[#ffe27a] text-black border-[2.5px] border-black px-4 py-2 rounded-xl text-xs font-black uppercase flex items-center gap-1.5 shadow-[3px_3px_0_0_#000] hover:translate-x-[1.5px] hover:translate-y-[1.5px] hover:shadow-[1.5px_1.5px_0_0_#000] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all duration-75 select-none"
+                    className="flex-1 md:flex-initial bg-[#FFDC58] hover:bg-[#ffe27a] text-black border-[2px] border-black px-4 py-2.5 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-1.5 shadow-[2.5px_2.5px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1.5px_1.5px_0_0_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all duration-75 select-none"
                   >
                     <span>VIEW REPORT</span>
                     <ArrowRight className="size-3.5" />
@@ -216,7 +210,8 @@ export function AutopsyReportsConsole({
                   <button
                     onClick={(e) => handleDelete(r.id, e)}
                     title="Delete record"
-                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg border border-transparent hover:border-black transition-all cursor-pointer"
+                    className="p-2.5 text-gray-500 hover:text-red-600 bg-gray-50 hover:bg-red-50 rounded-xl border border-black/20 hover:border-black shadow-[2px_2px_0_0_rgba(0,0,0,0.08)] hover:shadow-[2px_2px_0_0_#000] transition-all cursor-pointer shrink-0"
+                    aria-label="Delete autopsy record"
                   >
                     <Trash2 className="size-4" />
                   </button>

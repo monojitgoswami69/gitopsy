@@ -29,11 +29,11 @@ export function Dialog({ isOpen, onClose, title, className, children }: DialogPr
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-[2px] animate-in fade-in duration-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-[2px] animate-in fade-in duration-100">
       <div
         className={twMerge(
           clsx(
-            "relative w-full max-w-lg bg-white border-[4px] border-black rounded-[10px] shadow-[10px_10px_0_0_#000] p-6 text-black animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto",
+            "relative w-full max-w-lg bg-white border-[4px] border-black rounded-[10px] shadow-[6px_6px_0_0_#000] sm:shadow-[10px_10px_0_0_#000] p-4 sm:p-6 text-black animate-in zoom-in-95 duration-150 max-h-[92vh] overflow-y-auto",
             className
           )
         )}

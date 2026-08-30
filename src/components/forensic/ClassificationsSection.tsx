@@ -34,11 +34,11 @@ export function ClassificationsSection({ classifications }: ClassificationsSecti
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         {derivedAwards.map((arch) => (
           <div
             key={arch.id}
-            className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col justify-between gap-5 hover:translate-x-[1.5px] hover:translate-y-[1.5px] hover:shadow-[2px_2px_0_0_#000] active:translate-x-[3.5px] active:translate-y-[3.5px] active:shadow-none transition-all duration-150"
+            className="border-[4px] border-black bg-white rounded-[10px] sm:rounded-[12px] p-4 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col justify-between gap-4 sm:gap-5 hover:translate-x-[1.5px] hover:translate-y-[1.5px] hover:shadow-[2px_2px_0_0_#000] active:translate-x-[3.5px] active:translate-y-[3.5px] active:shadow-none transition-all duration-150"
           >
             {/* Top Row: Title */}
             <div className="flex flex-col gap-2">

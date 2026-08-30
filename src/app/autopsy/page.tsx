@@ -203,7 +203,7 @@ export default function AutopsyConsolePage() {
   }
 
   return (
-    <div className="relative flex flex-col gap-8 max-w-6xl mx-auto pb-16 pt-2">
+    <div className="relative flex flex-col gap-6 sm:gap-8 max-w-6xl mx-auto pb-16 pt-1 sm:pt-2">
       {/* Error Banners */}
       {(analysisError || loadError) && (
         <div className="border-[3px] border-red-500 bg-red-50 rounded-2xl p-4 flex items-start gap-3 shadow-[4px_4px_0_0_#000]">
@@ -233,7 +233,7 @@ export default function AutopsyConsolePage() {
       <SubjectHeader subject={activeSubject} />
 
       {/* Divider Line */}
-      <div className="w-full h-[2.5px] bg-black/80 my-1" />
+      <div className="w-full h-[2.5px] bg-black/80 my-0.5 sm:my-1" />
 
       {/* 02. Available Autopsy Reports Console */}
       <AutopsyReportsConsole

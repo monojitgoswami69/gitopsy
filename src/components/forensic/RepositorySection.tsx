@@ -116,7 +116,7 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
       {/* 04. Repository Portfolio */}
       <div className="border-[4px] border-black bg-white rounded-[12px] p-5 sm:p-6 pb-2.5 sm:pb-3 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-4 sm:gap-5 text-black">
         {/* Section Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b-[2px] border-black/15 pb-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 border-b-[2px] border-black/15 pb-4">
           <div>
             <h2 className="text-xl font-black uppercase tracking-tight flex items-center gap-2">
               <FolderGit2 className="size-6 text-black" /> 04. REPOSITORY PORTFOLIO
@@ -127,9 +127,9 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
           </div>
 
           {/* Minimal Search Line & Sort Controls */}
-          <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+          <div className="flex items-center gap-3 sm:gap-4 flex-wrap w-full sm:w-auto justify-center sm:justify-end">
             {/* Unboxed Underline Search Line */}
-            <div className="flex items-center gap-1.5 border-b-[2px] border-black/25 focus-within:border-black pb-0.5 w-32 sm:w-44 focus-within:w-52 transition-all">
+            <div className="flex items-center gap-1.5 border-b-[2px] border-black/25 focus-within:border-black pb-0.5 w-full sm:w-44 focus-within:sm:w-52 transition-all">
               <Search className="size-3.5 text-gray-500 stroke-[2.5] shrink-0" />
               <input
                 type="text"
@@ -150,12 +150,13 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
             </div>
 
             {/* Sort Controls */}
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <span className="text-xs font-black uppercase text-gray-500 mr-1">SORT:</span>
+            <div className="flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 w-full sm:w-auto">
+              <span className="text-xs font-black uppercase text-gray-500 mr-1 shrink-0">SORT:</span>
               <Button
                 size="sm"
                 variant={sortField === "commits" ? "main" : "outline"}
                 onClick={() => handleSort("commits")}
+                className="flex-1 sm:flex-initial justify-center"
               >
                 COMMITS {getSortIcon("commits")}
               </Button>
@@ -163,6 +164,7 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
                 size="sm"
                 variant={sortField === "recent" ? "main" : "outline"}
                 onClick={() => handleSort("recent")}
+                className="flex-1 sm:flex-initial justify-center"
               >
                 ACTIVITY {getSortIcon("recent")}
               </Button>
@@ -323,7 +325,7 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
                     </div>
 
                     {/* Core Engineering Activity Metrics Grid */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 text-xs">
                       <div className="border-[1.5px] border-black p-3 rounded-[6px] bg-white flex flex-col items-center justify-center text-center">
                         <span className="text-[10px] font-black uppercase text-gray-500 block">
                           COMMITS ANALYZED
@@ -436,14 +438,14 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
                     )}
 
                     {/* Timeline & Traceability Links */}
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-1 border-t border-black/10 text-[11px] font-mono text-gray-600 font-bold">
-                      <div className="flex items-center gap-3 flex-wrap">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-3 pt-1.5 border-t border-black/10 text-[11px] font-mono text-gray-600 font-bold text-center sm:text-left w-full">
+                      <div className="flex items-center justify-center sm:justify-start gap-2 sm:gap-3 flex-wrap w-full sm:w-auto">
                         <span>Created: {repo.createdAt.slice(0, 10)}</span>
                         <span>•</span>
                         <span>Last Push: {repo.lastPushedAt.slice(0, 10)}</span>
                       </div>
 
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-center sm:justify-end gap-4 w-full sm:w-auto">
                         <a
                           href={`https://github.com/${repo.fullName}/commits`}
                           target="_blank"

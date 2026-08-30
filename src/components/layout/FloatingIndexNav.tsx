@@ -28,10 +28,14 @@ const SECTIONS: SectionItem[] = [
 export function FloatingIndexNav() {
   const [isOpen, setIsOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<string>("section-headlines");
+  const [scrollProgress, setScrollProgress] = useState<number>(0);
 
   useEffect(() => {
+    const scrollContainer = document.getElementById("app-main-scroll");
+    const target = scrollContainer || window;
+
     const handleScroll = () => {
-      const scrollPos = window.scrollY + 200;
+      const scrollPos = (scrollContainer ? scrollContainer.scrollTop : window.scrollY) + 200;
       for (let i = SECTIONS.length - 1; i >= 0; i--) {
         const el = document.getElementById(SECTIONS[i].id);
         if (el && el.offsetTop <= scrollPos) {
@@ -39,10 +43,19 @@ export function FloatingIndexNav() {
           break;
         }
       }
+
+      const scrollTop = scrollContainer ? scrollContainer.scrollTop : window.scrollY;
+      const scrollHeight = scrollContainer ? scrollContainer.scrollHeight : document.documentElement.scrollHeight;
+      const clientHeight = scrollContainer ? scrollContainer.clientHeight : window.innerHeight;
+
+      const maxScroll = scrollHeight - clientHeight;
+      const progress =
+        maxScroll > 0 ? Math.min(100, Math.max(0, (scrollTop / maxScroll) * 100)) : 0;
+      setScrollProgress(progress);
     };
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    target.addEventListener("scroll", handleScroll, { passive: true });
+    return () => target.removeEventListener("scroll", handleScroll);
   }, []);
 
   const scrollToSection = (id: string) => {
@@ -65,13 +78,18 @@ export function FloatingIndexNav() {
   };
 
   const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    const scrollContainer = document.getElementById("app-main-scroll");
+    if (scrollContainer) {
+      scrollContainer.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-2">
+    <div className="fixed bottom-4 right-6 sm:bottom-6 sm:right-8 z-40 flex flex-col items-end gap-2 select-none">
       {isOpen && (
-        <div className="bg-white border-[3px] border-black rounded-[10px] p-3 shadow-[6px_6px_0_0_#000] w-64 flex flex-col gap-1 max-h-[70vh] overflow-y-auto mb-2">
+        <div className="bg-white border-[2.5px] border-black rounded-[8px] p-3 shadow-none w-60 sm:w-64 flex flex-col gap-1 max-h-[60vh] sm:max-h-[70vh] overflow-y-auto mb-2">
           <div className="flex items-center justify-between border-b-[2px] border-black pb-2 mb-1">
             <span className="text-xs font-black uppercase tracking-wider text-black">DOSSIER INDEX</span>
             <button
@@ -88,7 +106,7 @@ export function FloatingIndexNav() {
               onClick={() => scrollToSection(sec.id)}
               className={`text-left text-xs font-bold px-2 py-1.5 rounded transition-all flex items-center justify-between ${
                 activeSection === sec.id
-                  ? "bg-[#FFDC58] text-black font-black border border-black shadow-[2px_2px_0_0_#000]"
+                  ? "bg-[#FFDC58] text-black font-black border border-black shadow-none"
                   : "text-gray-700 hover:bg-amber-50"
               }`}
             >
@@ -101,19 +119,40 @@ export function FloatingIndexNav() {
       <div className="flex items-center gap-2">
         <button
           onClick={scrollToTop}
-          className="neo-btn bg-white text-black p-3 rounded-full border-[3px] border-black shadow-[3px_3px_0_0_#000] hover:bg-amber-50 transition-all"
-          title="Scroll to top"
-          aria-label="Scroll to top"
+          className="relative size-12 rounded-full flex items-center justify-center cursor-pointer shadow-none group hover:scale-105 active:scale-95 transition-transform"
+          title={`Scroll to top (${Math.round(scrollProgress)}% read)`}
+          aria-label={`Scroll to top (${Math.round(scrollProgress)}% read)`}
         >
-          <ArrowUp className="size-4" />
+          <svg className="absolute inset-0 size-full -rotate-90 pointer-events-none" viewBox="0 0 48 48">
+            <circle
+              cx="24"
+              cy="24"
+              r="20"
+              className="fill-white stroke-black"
+              strokeWidth="2.5"
+            />
+            <circle
+              cx="24"
+              cy="24"
+              r="16.5"
+              fill="none"
+              stroke="#FD9745"
+              strokeWidth="3.5"
+              strokeDasharray={103.67}
+              strokeDashoffset={103.67 - (scrollProgress / 100) * 103.67}
+              strokeLinecap="round"
+              className="transition-[stroke-dashoffset] duration-100 ease-out"
+            />
+          </svg>
+          <ArrowUp className="size-4 stroke-[3] text-black relative z-10 group-hover:-translate-y-0.5 transition-transform" />
         </button>
 
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="neo-btn bg-[#FFDC58] text-black px-4 py-2.5 rounded-[8px] border-[3px] border-black shadow-[4px_4px_0_0_#000] flex items-center gap-2 font-black text-xs uppercase tracking-wide hover:bg-[#FD9745] transition-all"
+          className="h-11 px-4.5 rounded-[6px] border-[2.5px] border-black bg-white text-black font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-amber-50 active:bg-gray-100 transition-colors shadow-none cursor-pointer"
           aria-label="Toggle Table of Contents"
         >
-          <List className="size-4" />
+          <List className="size-4 stroke-[2.5]" />
           <span>INDEX</span>
         </button>
       </div>

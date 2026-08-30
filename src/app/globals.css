@@ -240,6 +240,12 @@ h1, h2, h3, h4, h5, h6 {
   scroll-margin-top: 36px;
 }
 
+#app-main-scroll {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior-y: contain;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after {
     animation-duration: 0.01ms !important;

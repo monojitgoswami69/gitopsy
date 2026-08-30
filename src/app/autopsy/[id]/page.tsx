@@ -365,7 +365,7 @@ export default function AutopsyReportDetailPage() {
           )}
 
         {/* 02. Contribution Activity & Heatmap */}
-        <div id="section-activity" className="border-[4px] border-black bg-white rounded-[12px] p-5 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-2.5 text-black">
+        <div id="section-activity" className="border-[4px] border-black bg-white rounded-[12px] p-4 sm:p-5 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-2.5 text-black">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b-[3px] border-black pb-3">
             <div>
               <div className="flex items-center gap-2">
@@ -379,10 +379,10 @@ export default function AutopsyReportDetailPage() {
               </p>
             </div>
 
-            <Tabs value={heatmapMetric} onValueChange={(v) => setHeatmapMetric(v as any)}>
-              <TabsList>
-                <TabsTrigger value="COMMITS">COMMITS</TabsTrigger>
-                <TabsTrigger value="LINES">LINES CHURNED</TabsTrigger>
+            <Tabs value={heatmapMetric} onValueChange={(v) => setHeatmapMetric(v as any)} className="w-full sm:w-auto gap-0">
+              <TabsList className="w-full sm:w-auto">
+                <TabsTrigger value="COMMITS" className="flex-1 sm:flex-initial text-center justify-center">COMMITS</TabsTrigger>
+                <TabsTrigger value="LINES" className="flex-1 sm:flex-initial text-center justify-center">LINES CHURNED</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -390,29 +390,35 @@ export default function AutopsyReportDetailPage() {
           <HeatmapChart data={heatmapData} metricLabel={heatmapMetric} />
 
           {/* Peak Activity Highlights */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 border-t-[2px] border-black/15 pt-2.5">
-            <div className="border-[2px] border-black bg-amber-50 p-2.5 py-2 rounded-[6px] text-center">
-              <span className="text-[10px] font-black uppercase text-gray-500">PEAK ACTIVITY HOUR</span>
-              <div className="text-lg sm:text-xl font-black font-mono mt-0.5 text-black">
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-3 border-t-[2px] border-black/15 pt-2.5">
+            <div className="border-[1.5px] sm:border-[2px] border-black bg-amber-50 p-1.5 sm:p-2.5 py-1.5 sm:py-2 rounded-[6px] text-center flex flex-col justify-center min-w-0">
+              <span className="text-[8px] xs:text-[9px] sm:text-[10px] font-black uppercase text-gray-500 truncate">
+                PEAK HOUR
+              </span>
+              <div className="text-xs xs:text-sm sm:text-lg md:text-xl font-black font-mono mt-0.5 text-black truncate">
                 {analysis.summary.busiestHour}:00 {tzAbbr}
               </div>
             </div>
-            <div className="border-[2px] border-black bg-amber-50 p-2.5 py-2 rounded-[6px] text-center">
-              <span className="text-[10px] font-black uppercase text-gray-500">BUSIEST WEEKDAY</span>
-              <div className="text-lg sm:text-xl font-black mt-0.5 text-black">
+            <div className="border-[1.5px] sm:border-[2px] border-black bg-amber-50 p-1.5 sm:p-2.5 py-1.5 sm:py-2 rounded-[6px] text-center flex flex-col justify-center min-w-0">
+              <span className="text-[8px] xs:text-[9px] sm:text-[10px] font-black uppercase text-gray-500 truncate">
+                BUSIEST DAY
+              </span>
+              <div className="text-xs xs:text-sm sm:text-lg md:text-xl font-black mt-0.5 text-black truncate">
                 {analysis.summary.busiestWeekday}
               </div>
             </div>
-            <div className="border-[2px] border-black bg-amber-50 p-2.5 py-2 rounded-[6px] text-center">
-              <span className="text-[10px] font-black uppercase text-gray-500">BUSIEST MONTH</span>
-              <div className="text-lg sm:text-xl font-black mt-0.5 text-black">
+            <div className="border-[1.5px] sm:border-[2px] border-black bg-amber-50 p-1.5 sm:p-2.5 py-1.5 sm:py-2 rounded-[6px] text-center flex flex-col justify-center min-w-0">
+              <span className="text-[8px] xs:text-[9px] sm:text-[10px] font-black uppercase text-gray-500 truncate">
+                BUSIEST MONTH
+              </span>
+              <div className="text-xs xs:text-sm sm:text-lg md:text-xl font-black mt-0.5 text-black truncate">
                 {(() => {
                   const m = analysis.summary.busiestMonth;
                   if (!m || !m.includes("-")) return m || "N/A";
                   const [year, month] = m.split("-").map(Number);
                   if (!year || !month || isNaN(year) || isNaN(month)) return m;
                   return new Date(year, month - 1, 1).toLocaleDateString("en-US", {
-                    month: "long",
+                    month: "short",
                     year: "numeric",
                   });
                 })()}
@@ -422,7 +428,7 @@ export default function AutopsyReportDetailPage() {
         </div>
 
         {/* 03. Temporal Forensics */}
-        <div id="section-temporal" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-6 text-black">
+        <div id="section-temporal" className="border-[4px] border-black bg-white rounded-[12px] p-4 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-5 sm:gap-6 text-black">
           <div className="flex items-center justify-between border-b-[3px] border-black pb-4">
             <div>
               <div className="flex items-center gap-2">
@@ -437,28 +443,28 @@ export default function AutopsyReportDetailPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="border-[2px] border-black bg-amber-50 p-3 rounded-[6px] text-center">
-              <span className="text-[10px] font-black uppercase text-gray-500">NOCTURNAL RATIO (21:00-04:59 {tzAbbr})</span>
-              <div className="text-2xl font-black font-mono mt-1 text-purple-700">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4">
+            <div className="border-[2px] border-black bg-amber-50 p-2.5 sm:p-3 rounded-[6px] text-center">
+              <span className="text-[9px] sm:text-[10px] font-black uppercase text-gray-500">NOCTURNAL RATIO ({tzAbbr})</span>
+              <div className="text-xl sm:text-2xl font-black font-mono mt-1 text-purple-700">
                 {analysis.summary.nightCommitPercentage}%
               </div>
             </div>
-            <div className="border-[2px] border-black bg-amber-50 p-3 rounded-[6px] text-center">
-              <span className="text-[10px] font-black uppercase text-gray-500">WEEKEND CADENCE (SAT &amp; SUN)</span>
-              <div className="text-2xl font-black font-mono mt-1 text-blue-700">
+            <div className="border-[2px] border-black bg-amber-50 p-2.5 sm:p-3 rounded-[6px] text-center">
+              <span className="text-[9px] sm:text-[10px] font-black uppercase text-gray-500">WEEKEND CADENCE</span>
+              <div className="text-xl sm:text-2xl font-black font-mono mt-1 text-blue-700">
                 {analysis.summary.weekendCommitPercentage}%
               </div>
             </div>
-            <div className="border-[2px] border-black bg-amber-50 p-3 rounded-[6px] text-center">
-              <span className="text-[10px] font-black uppercase text-gray-500">LONGEST STREAK</span>
-              <div className="text-2xl font-black font-mono mt-1 text-amber-600">
+            <div className="border-[2px] border-black bg-amber-50 p-2.5 sm:p-3 rounded-[6px] text-center">
+              <span className="text-[9px] sm:text-[10px] font-black uppercase text-gray-500">LONGEST STREAK</span>
+              <div className="text-xl sm:text-2xl font-black font-mono mt-1 text-amber-600">
                 {analysis.summary.longestStreakDays} DAYS
               </div>
             </div>
-            <div className="border-[2px] border-black bg-amber-50 p-3 rounded-[6px] text-center">
-              <span className="text-[10px] font-black uppercase text-gray-500">TOTAL ACTIVE DAYS</span>
-              <div className="text-2xl font-black font-mono mt-1 text-emerald-700">
+            <div className="border-[2px] border-black bg-amber-50 p-2.5 sm:p-3 rounded-[6px] text-center">
+              <span className="text-[9px] sm:text-[10px] font-black uppercase text-gray-500">TOTAL ACTIVE DAYS</span>
+              <div className="text-xl sm:text-2xl font-black font-mono mt-1 text-emerald-700">
                 {analysis.summary.totalActiveDays} DAYS
               </div>
             </div>
@@ -478,7 +484,7 @@ export default function AutopsyReportDetailPage() {
         />
 
         {/* 06. Language DNA & Dialects */}
-        <div id="section-languages" className="border-[4px] border-black bg-white rounded-[12px] p-5 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-6 text-black">
+        <div id="section-languages" className="border-[4px] border-black bg-white rounded-[12px] p-4 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-5 sm:gap-6 text-black">
           <div className="flex items-center justify-between border-b-[3px] border-black pb-4">
             <div>
               <div className="flex items-center gap-2">
@@ -494,7 +500,7 @@ export default function AutopsyReportDetailPage() {
           </div>
 
           <div className="w-full flex justify-center">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center justify-center w-full max-w-5xl">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-center justify-center w-full max-w-5xl">
               {/* Left Column: Donut Chart & Interactive Legend */}
               <div className="lg:col-span-5 flex flex-col items-center justify-center w-full">
                 <LanguagesSunburst languages={analysis.languages} />
@@ -557,7 +563,7 @@ export default function AutopsyReportDetailPage() {
         <CommitForensicsSection commitForensics={analysis.commitForensics} />
 
         {/* 08. Code Churn Blast Radius */}
-        <div id="section-churn" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-6 text-black">
+        <div id="section-churn" className="border-[4px] border-black bg-white rounded-[12px] p-4 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-5 sm:gap-6 text-black">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b-[3px] border-black pb-4">
             <div>
               <div className="flex items-center gap-2">
@@ -571,10 +577,10 @@ export default function AutopsyReportDetailPage() {
               </p>
             </div>
 
-            <Tabs value={churnGranularity} onValueChange={(v) => setChurnGranularity(v as any)}>
-              <TabsList>
-                <TabsTrigger value="WEEKLY">WEEKLY</TabsTrigger>
-                <TabsTrigger value="MONTHLY">MONTHLY</TabsTrigger>
+            <Tabs value={churnGranularity} onValueChange={(v) => setChurnGranularity(v as any)} className="w-full sm:w-auto gap-0">
+              <TabsList className="w-full sm:w-auto">
+                <TabsTrigger value="WEEKLY" className="flex-1 sm:flex-initial text-center justify-center">WEEKLY</TabsTrigger>
+                <TabsTrigger value="MONTHLY" className="flex-1 sm:flex-initial text-center justify-center">MONTHLY</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -583,7 +589,7 @@ export default function AutopsyReportDetailPage() {
         </div>
 
         {/* 09. Collaboration Record */}
-        <div id="section-collaboration" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-6 text-black">
+        <div id="section-collaboration" className="border-[4px] border-black bg-white rounded-[12px] p-4 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-5 sm:gap-6 text-black">
           <div className="flex items-center justify-between border-b-[3px] border-black pb-4">
             <div>
               <div className="flex items-center gap-2">
@@ -598,34 +604,34 @@ export default function AutopsyReportDetailPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="border-[1.5px] border-black p-3.5 rounded-[8px] bg-amber-50/70 flex flex-col items-center justify-center text-center">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4">
+            <div className="border-[1.5px] border-black p-3 sm:p-3.5 rounded-[8px] bg-amber-50/70 flex flex-col items-center justify-center text-center">
               <span className="text-[10px] font-black uppercase text-gray-500">PRs AUTHORED</span>
-              <div className="text-2xl font-black font-mono mt-1 text-black">
+              <div className="text-xl sm:text-2xl font-black font-mono mt-1 text-black">
                 {analysis.summary.prsAuthored}
               </div>
               <span className="text-[10px] text-gray-600 font-bold">{analysis.summary.prsMerged} merged</span>
             </div>
 
-            <div className="border-[1.5px] border-black p-3.5 rounded-[8px] bg-amber-50/70 flex flex-col items-center justify-center text-center">
+            <div className="border-[1.5px] border-black p-3 sm:p-3.5 rounded-[8px] bg-amber-50/70 flex flex-col items-center justify-center text-center">
               <span className="text-[10px] font-black uppercase text-gray-500">MERGE COMPLETION</span>
-              <div className="text-2xl font-black font-mono mt-1 text-emerald-700">
+              <div className="text-xl sm:text-2xl font-black font-mono mt-1 text-emerald-700">
                 {analysis.summary.mergeRatePercentage !== null ? `${analysis.summary.mergeRatePercentage}%` : "N/A"}
               </div>
               <span className="text-[10px] text-gray-600 font-bold">of authored PRs</span>
             </div>
 
-            <div className="border-[1.5px] border-black p-3.5 rounded-[8px] bg-amber-50/70 flex flex-col items-center justify-center text-center">
+            <div className="border-[1.5px] border-black p-3 sm:p-3.5 rounded-[8px] bg-amber-50/70 flex flex-col items-center justify-center text-center">
               <span className="text-[10px] font-black uppercase text-gray-500">CODE REVIEWS SUBMITTED</span>
-              <div className="text-2xl font-black font-mono mt-1 text-blue-700">
+              <div className="text-xl sm:text-2xl font-black font-mono mt-1 text-blue-700">
                 {analysis.summary.reviewsAuthored}
               </div>
               <span className="text-[10px] text-gray-600 font-bold">peer reviews</span>
             </div>
 
-            <div className="border-[1.5px] border-black p-3.5 rounded-[8px] bg-amber-50/70 flex flex-col items-center justify-center text-center">
+            <div className="border-[1.5px] border-black p-3 sm:p-3.5 rounded-[8px] bg-amber-50/70 flex flex-col items-center justify-center text-center">
               <span className="text-[10px] font-black uppercase text-gray-500">MULTI-CONTRIBUTOR SHARE</span>
-              <div className="text-2xl font-black font-mono mt-1 text-purple-700">
+              <div className="text-xl sm:text-2xl font-black font-mono mt-1 text-purple-700">
                 {analysis.summary.multiContributorRepoShare || 0}%
               </div>
               <span className="text-[10px] text-gray-600 font-bold">collaborative repos</span>
@@ -644,7 +650,7 @@ export default function AutopsyReportDetailPage() {
 
         {/* 12. Special Findings & Case Notes */}
         {analysis.easterEggs.length > 0 && (
-          <div id="section-case-notes" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-6 text-black">
+          <div id="section-case-notes" className="border-[4px] border-black bg-white rounded-[12px] p-4 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-5 sm:gap-6 text-black">
             <div className="flex items-center justify-between border-b-[3px] border-black pb-4">
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
@@ -660,7 +666,7 @@ export default function AutopsyReportDetailPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
               {analysis.easterEggs.map((egg) => (
                 <div
                   key={egg.id}
@@ -680,10 +686,10 @@ export default function AutopsyReportDetailPage() {
         )}
 
         {/* 13. Wrapped Recap & Launcher */}
-        <div id="section-wrapped" className="border-[4px] border-black bg-[#FFDC58] rounded-[12px] p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 text-black">
+        <div id="section-wrapped" className="border-[4px] border-black bg-[#FFDC58] rounded-[12px] p-4 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 text-black">
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
-              <h2 className="text-2xl font-black uppercase tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight">
                 13. GITOPSY FORENSIC WRAPPED
               </h2>
             </div>
@@ -697,7 +703,7 @@ export default function AutopsyReportDetailPage() {
             size="lg"
             variant="accent"
             onClick={() => setIsWrappedOpen(true)}
-            className="whitespace-nowrap shadow-[4px_4px_0_0_#000]"
+            className="whitespace-nowrap shadow-[4px_4px_0_0_#000] w-full sm:w-auto"
           >
             LAUNCH WRAPPED
           </Button>

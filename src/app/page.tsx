@@ -37,20 +37,20 @@ export default function LandingPage() {
   return (
     <div className="flex flex-col gap-14 py-6 max-w-6xl mx-auto text-black">
       {/* ------------------- SECTION 1: HERO ------------------- */}
-      <section id="hero" className="flex flex-col items-center text-center pt-8 pb-4">
+      <section id="hero" className="flex flex-col items-center text-center pt-6 sm:pt-8 pb-4">
         {/* Headline */}
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className="text-4xl sm:text-6xl lg:text-7xl font-black uppercase tracking-tight max-w-5xl leading-[1.05] mb-6"
+          className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black uppercase tracking-tight max-w-5xl leading-[1.08] mb-5 sm:mb-6"
         >
           Your GitHub,{" "}
           <motion.span
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.15, duration: 0.4 }}
-            className="bg-[#FFDC58] text-black px-4 py-1 border-[3px] border-black shadow-[4px_4px_0_0_#000] inline-block my-1 rounded-2xl"
+            className="bg-[#FFDC58] text-black px-3 sm:px-4 py-0.5 sm:py-1 border-[2.5px] sm:border-[3px] border-black shadow-[3px_3px_0_0_#000] sm:shadow-[4px_4px_0_0_#000] inline-block my-1 rounded-xl sm:rounded-2xl"
           >
             forensically examined.
           </motion.span>
@@ -61,7 +61,7 @@ export default function LandingPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className="text-base sm:text-xl font-semibold text-gray-800 max-w-3xl leading-relaxed mb-8"
+          className="text-sm sm:text-lg md:text-xl font-semibold text-gray-800 max-w-3xl leading-relaxed mb-6 sm:mb-8 px-2"
         >
           Gitopsy is a privacy-first, local analytics engine for your GitHub activity. It audits 24-hour UTC commit patterns, code churn, message conventions, and workflow archetypes using deterministic calculations directly in your browser.
         </motion.p>
@@ -71,24 +71,24 @@ export default function LandingPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.5 }}
-          className="flex flex-wrap items-center justify-center gap-4 mb-4"
+          className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 mb-4"
         >
           {isAuthenticated ? (
             <Link
               href="/autopsy"
-              className="bg-[#FFDC58] text-black border-[3px] border-black px-8 py-4 text-sm font-black uppercase shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all flex items-center gap-2.5 rounded-2xl"
+              className="bg-[#FFDC58] text-black border-[2.5px] sm:border-[3px] border-black px-6 sm:px-8 py-3.5 sm:py-4 text-xs sm:text-sm font-black uppercase shadow-[4px_4px_0_0_#000] sm:shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] sm:hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all flex items-center gap-2 sm:gap-2.5 rounded-xl sm:rounded-2xl"
             >
               <span>Visit Console</span>
-              <ArrowRight className="size-5 stroke-[3]" />
+              <ArrowRight className="size-4 sm:size-5 stroke-[3]" />
             </Link>
           ) : (
             <a
               href="/api/auth/login"
-              className="bg-[#FFDC58] text-black border-[3px] border-black px-8 py-4 text-sm font-black uppercase shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all flex items-center gap-2.5 rounded-2xl"
+              className="bg-[#FFDC58] text-black border-[2.5px] sm:border-[3px] border-black px-6 sm:px-8 py-3.5 sm:py-4 text-xs sm:text-sm font-black uppercase shadow-[4px_4px_0_0_#000] sm:shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] sm:hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all flex items-center gap-2 sm:gap-2.5 rounded-xl sm:rounded-2xl"
             >
-              <Lock className="size-5" />
+              <Lock className="size-4 sm:size-5" />
               <span>Connect GitHub (PKCE)</span>
-              <ArrowRight className="size-5 stroke-[3]" />
+              <ArrowRight className="size-4 sm:size-5 stroke-[3]" />
             </a>
           )}
         </motion.div>
@@ -103,18 +103,18 @@ export default function LandingPage() {
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         className="max-w-6xl mx-auto w-full"
       >
-        <div className="text-center mb-8">
+        <div className="text-center mb-6 sm:mb-8">
           <h2 className="text-2xl sm:text-4xl font-black uppercase tracking-tight">How It Works</h2>
-          <p className="text-xs sm:text-sm text-gray-700 font-bold max-w-xl mx-auto mt-2">
+          <p className="text-xs sm:text-sm text-gray-700 font-bold max-w-xl mx-auto mt-2 px-2">
             Three simple steps from repository history to a complete forensic analysis.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
           {/* Step 1 */}
-          <div className="group bg-white border-[3px] border-black p-6 shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150 rounded-3xl cursor-default">
-            <div className="flex items-center gap-2.5 mb-3">
-              <span className="text-xl font-mono font-black text-[#CA8A04] shrink-0">
+          <div className="group bg-white border-[3px] border-black p-5 sm:p-6 shadow-[4px_4px_0_0_#000] sm:shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] sm:hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150 rounded-2xl sm:rounded-3xl cursor-default">
+            <div className="flex items-center gap-2.5 mb-2.5 sm:mb-3">
+              <span className="text-lg sm:text-xl font-mono font-black text-[#CA8A04] shrink-0">
                 01
               </span>
               <h3 className="text-base sm:text-lg font-black uppercase">
@@ -127,9 +127,9 @@ export default function LandingPage() {
           </div>
 
           {/* Step 2 */}
-          <div className="group bg-white border-[3px] border-black p-6 shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150 rounded-3xl cursor-default">
-            <div className="flex items-center gap-2.5 mb-3">
-              <span className="text-xl font-mono font-black text-[#DC2626] shrink-0">
+          <div className="group bg-white border-[3px] border-black p-5 sm:p-6 shadow-[4px_4px_0_0_#000] sm:shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] sm:hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150 rounded-2xl sm:rounded-3xl cursor-default">
+            <div className="flex items-center gap-2.5 mb-2.5 sm:mb-3">
+              <span className="text-lg sm:text-xl font-mono font-black text-[#DC2626] shrink-0">
                 02
               </span>
               <h3 className="text-base sm:text-lg font-black uppercase">
@@ -142,9 +142,9 @@ export default function LandingPage() {
           </div>
 
           {/* Step 3 */}
-          <div className="group bg-white border-[3px] border-black p-6 shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150 rounded-3xl cursor-default">
-            <div className="flex items-center gap-2.5 mb-3">
-              <span className="text-xl font-mono font-black text-[#2563EB] shrink-0">
+          <div className="group bg-white border-[3px] border-black p-5 sm:p-6 shadow-[4px_4px_0_0_#000] sm:shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] sm:hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150 rounded-2xl sm:rounded-3xl cursor-default">
+            <div className="flex items-center gap-2.5 mb-2.5 sm:mb-3">
+              <span className="text-lg sm:text-xl font-mono font-black text-[#2563EB] shrink-0">
                 03
               </span>
               <h3 className="text-base sm:text-lg font-black uppercase">
@@ -167,16 +167,16 @@ export default function LandingPage() {
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         className="max-w-6xl mx-auto w-full"
       >
-        <div className="text-center mb-8">
+        <div className="text-center mb-6 sm:mb-8">
           <h2 className="text-2xl sm:text-4xl font-black uppercase tracking-tight">Forensic Specifications</h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           {/* Feature 1 */}
-          <div className="group bg-white border-[3px] border-black p-6 shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150 rounded-3xl cursor-default">
-            <div className="flex items-center gap-2.5 mb-3">
+          <div className="group bg-white border-[3px] border-black p-5 sm:p-6 shadow-[4px_4px_0_0_#000] sm:shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] sm:hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150 rounded-2xl sm:rounded-3xl cursor-default">
+            <div className="flex items-center gap-2.5 mb-2.5 sm:mb-3">
               <Clock className="size-5 sm:size-6 text-[#CA8A04] group-hover:scale-110 transition-transform shrink-0 stroke-[2.5]" />
-              <h3 className="text-lg font-black uppercase">24-Hour Temporal Analysis</h3>
+              <h3 className="text-base sm:text-lg font-black uppercase">24-Hour Temporal Analysis</h3>
             </div>
             <p className="text-xs text-gray-700 font-semibold leading-relaxed">
               24-hour UTC clocks, weekday cadence matrices, consecutive streaks, and nocturnal ratios calculated from true author commit timestamps.
@@ -184,10 +184,10 @@ export default function LandingPage() {
           </div>
 
           {/* Feature 2 */}
-          <div className="group bg-white border-[3px] border-black p-6 shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150 rounded-3xl cursor-default">
-            <div className="flex items-center gap-2.5 mb-3">
+          <div className="group bg-white border-[3px] border-black p-5 sm:p-6 shadow-[4px_4px_0_0_#000] sm:shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] sm:hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150 rounded-2xl sm:rounded-3xl cursor-default">
+            <div className="flex items-center gap-2.5 mb-2.5 sm:mb-3">
               <FileCode2 className="size-5 sm:size-6 text-[#2563EB] group-hover:scale-110 transition-transform shrink-0 stroke-[2.5]" />
-              <h3 className="text-lg font-black uppercase">Commit Forensics &amp; Churn</h3>
+              <h3 className="text-base sm:text-lg font-black uppercase">Commit Forensics &amp; Churn</h3>
             </div>
             <p className="text-xs text-gray-700 font-semibold leading-relaxed">
               Regex message intent categorization (feat, fix, refactor, chore), size spectrum distributions, and monthly code churn volume.
@@ -195,10 +195,10 @@ export default function LandingPage() {
           </div>
 
           {/* Feature 3 */}
-          <div className="group bg-white border-[3px] border-black p-6 shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150 rounded-3xl cursor-default">
-            <div className="flex items-center gap-2.5 mb-3">
+          <div className="group bg-white border-[3px] border-black p-5 sm:p-6 shadow-[4px_4px_0_0_#000] sm:shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] sm:hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150 rounded-2xl sm:rounded-3xl cursor-default">
+            <div className="flex items-center gap-2.5 mb-2.5 sm:mb-3">
               <Scale className="size-5 sm:size-6 text-[#16A34A] group-hover:scale-110 transition-transform shrink-0 stroke-[2.5]" />
-              <h3 className="text-lg font-black uppercase">The Gitopsy Courtroom</h3>
+              <h3 className="text-base sm:text-lg font-black uppercase">The Gitopsy Courtroom</h3>
             </div>
             <p className="text-xs text-gray-700 font-semibold leading-relaxed">
               An interactive trial simulation charging you with verified crimes against sleep and git hygiene based on real commit statistics.
@@ -206,10 +206,10 @@ export default function LandingPage() {
           </div>
 
           {/* Feature 4 */}
-          <div className="group bg-white border-[3px] border-black p-6 shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150 rounded-3xl cursor-default">
-            <div className="flex items-center gap-2.5 mb-3">
+          <div className="group bg-white border-[3px] border-black p-5 sm:p-6 shadow-[4px_4px_0_0_#000] sm:shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] sm:hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150 rounded-2xl sm:rounded-3xl cursor-default">
+            <div className="flex items-center gap-2.5 mb-2.5 sm:mb-3">
               <Sparkles className="size-5 sm:size-6 text-[#9333EA] group-hover:scale-110 transition-transform shrink-0 stroke-[2.5]" />
-              <h3 className="text-lg font-black uppercase">Gitopsy Wrapped</h3>
+              <h3 className="text-base sm:text-lg font-black uppercase">Gitopsy Wrapped</h3>
             </div>
             <p className="text-xs text-gray-700 font-semibold leading-relaxed">
               A multi-chapter visual walkthrough celebrating your annual records, primary specimen, and developer diagnosis.

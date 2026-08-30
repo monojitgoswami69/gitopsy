@@ -44,20 +44,20 @@ export function CommitForensicsSection({ commitForensics }: CommitForensicsSecti
 
   return (
     <div id="section-commits" className="flex flex-col gap-8">
-      <div className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-6 text-black">
+      <div className="border-[4px] border-black bg-white rounded-[12px] p-4 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-5 sm:gap-6 text-black">
         <div className="flex items-center justify-between border-b-[3px] border-black pb-4">
           <div>
             <h2 className="text-xl font-black uppercase tracking-tight flex items-center gap-2">
               <FileCode2 className="size-6 text-black" /> 07. COMMIT FORENSICS &amp; MESSAGE HYGIENE
             </h2>
-            <p className="text-xs font-bold text-gray-600">
+            <p className="text-xs font-bold text-gray-600 mt-0.5">
               Examined {totalAnalyzed.toLocaleString()} historical commits across message intent, character length, and size spectrums.
             </p>
           </div>
         </div>
 
         {/* Churn Key Numbers */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4">
           <div className="border-[1.5px] border-black p-3.5 rounded-[8px] bg-amber-50/70 flex flex-col items-center justify-center text-center">
             <span className="text-[10px] font-black uppercase text-gray-500">AVERAGE COMMIT</span>
             <div className="text-xl font-black font-mono mt-1 text-black">
@@ -90,8 +90,8 @@ export function CommitForensicsSection({ commitForensics }: CommitForensicsSecti
         </div>
 
         {/* Message Categorization Bar */}
-        <div className="flex flex-col gap-3.5 border-[1.5px] border-black p-4 sm:p-5 rounded-[8px] bg-white">
-          <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3.5 border-[1.5px] border-black p-3.5 sm:p-5 rounded-[8px] bg-white">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <span className="text-xs font-black uppercase tracking-wider text-gray-700">
               COMMIT MESSAGE INTENT BREAKDOWN
             </span>
@@ -116,9 +116,9 @@ export function CommitForensicsSection({ commitForensics }: CommitForensicsSecti
           </div>
 
           {/* Intent Legends (Unboxed & Centered) */}
-          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 pt-1 text-[11px] font-mono">
+          <div className="flex flex-wrap items-center justify-center gap-x-3 sm:gap-x-4 gap-y-1.5 pt-1 text-[10.5px] sm:text-[11px] font-mono">
             {messageCategories.map((cat, idx) => (
-              <div key={cat.category} className="inline-flex items-center gap-1.5">
+              <div key={cat.category} className="inline-flex items-center gap-1.5 shrink-0">
                 <span
                   className="size-2 rounded-full border border-black/40 shrink-0"
                   style={{
@@ -134,11 +134,13 @@ export function CommitForensicsSection({ commitForensics }: CommitForensicsSecti
           </div>
 
           {/* Additional Hygiene Context */}
-          <div className="flex items-center justify-center gap-4 text-[11px] font-mono font-bold text-gray-500 flex-wrap pt-2 border-t border-black/10">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-3 text-[10.5px] sm:text-[11px] font-mono font-bold text-gray-500 pt-2 border-t border-black/10 text-center">
             {shortMessageCount > 0 && (
               <span>⚡ {shortMessageCount} short descriptions (&lt; 10 chars)</span>
             )}
-            {shortMessageCount > 0 && longMessageCount > 0 && <span>•</span>}
+            {shortMessageCount > 0 && longMessageCount > 0 && (
+              <span className="hidden sm:inline text-gray-300">•</span>
+            )}
             {longMessageCount > 0 && (
               <span>📝 {longMessageCount} extended descriptions (≥ 80 chars)</span>
             )}
@@ -150,26 +152,26 @@ export function CommitForensicsSection({ commitForensics }: CommitForensicsSecti
           <span className="text-xs font-black uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
             <Scale className="size-4" /> COMMIT SIZE SPECTRUM DISTRIBUTION
           </span>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            <div className="border-[1.5px] border-black p-3 rounded-[6px] bg-amber-50/70 text-center">
-              <span className="text-[10px] font-black uppercase text-gray-600">TINY (&lt;10 lines)</span>
-              <div className="text-lg font-black font-mono mt-1">{sizeDistribution.tiny}</div>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3">
+            <div className="border-[1.5px] border-black p-2.5 sm:p-3 rounded-[6px] bg-amber-50/70 text-center">
+              <span className="text-[9.5px] sm:text-[10px] font-black uppercase text-gray-600">TINY (&lt;10 lines)</span>
+              <div className="text-base sm:text-lg font-black font-mono mt-0.5 sm:mt-1">{sizeDistribution.tiny}</div>
             </div>
-            <div className="border-[1.5px] border-black p-3 rounded-[6px] bg-amber-50/70 text-center">
-              <span className="text-[10px] font-black uppercase text-gray-600">SMALL (10-50)</span>
-              <div className="text-lg font-black font-mono mt-1">{sizeDistribution.small}</div>
+            <div className="border-[1.5px] border-black p-2.5 sm:p-3 rounded-[6px] bg-amber-50/70 text-center">
+              <span className="text-[9.5px] sm:text-[10px] font-black uppercase text-gray-600">SMALL (10-50)</span>
+              <div className="text-base sm:text-lg font-black font-mono mt-0.5 sm:mt-1">{sizeDistribution.small}</div>
             </div>
-            <div className="border-[1.5px] border-black p-3 rounded-[6px] bg-amber-50/70 text-center">
-              <span className="text-[10px] font-black uppercase text-gray-600">MEDIUM (50-200)</span>
-              <div className="text-lg font-black font-mono mt-1">{sizeDistribution.medium}</div>
+            <div className="border-[1.5px] border-black p-2.5 sm:p-3 rounded-[6px] bg-amber-50/70 text-center">
+              <span className="text-[9.5px] sm:text-[10px] font-black uppercase text-gray-600">MEDIUM (50-200)</span>
+              <div className="text-base sm:text-lg font-black font-mono mt-0.5 sm:mt-1">{sizeDistribution.medium}</div>
             </div>
-            <div className="border-[1.5px] border-black p-3 rounded-[6px] bg-amber-50/70 text-center">
-              <span className="text-[10px] font-black uppercase text-gray-600">LARGE (200-1k)</span>
-              <div className="text-lg font-black font-mono mt-1">{sizeDistribution.large}</div>
+            <div className="border-[1.5px] border-black p-2.5 sm:p-3 rounded-[6px] bg-amber-50/70 text-center">
+              <span className="text-[9.5px] sm:text-[10px] font-black uppercase text-gray-600">LARGE (200-1k)</span>
+              <div className="text-base sm:text-lg font-black font-mono mt-0.5 sm:mt-1">{sizeDistribution.large}</div>
             </div>
-            <div className="border-[1.5px] border-rose-900 p-3 rounded-[6px] bg-rose-100/80 text-center">
-              <span className="text-[10px] font-black uppercase text-rose-900">MONSTER (&gt;1k)</span>
-              <div className="text-lg font-black font-mono mt-1 text-rose-900">{sizeDistribution.monster}</div>
+            <div className="col-span-2 sm:col-span-1 border-[1.5px] border-rose-900 p-2.5 sm:p-3 rounded-[6px] bg-rose-100/80 text-center">
+              <span className="text-[9.5px] sm:text-[10px] font-black uppercase text-rose-900">MONSTER (&gt;1k)</span>
+              <div className="text-base sm:text-lg font-black font-mono mt-0.5 sm:mt-1 text-rose-900">{sizeDistribution.monster}</div>
             </div>
           </div>
         </div>

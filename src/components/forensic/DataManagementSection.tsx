@@ -51,7 +51,7 @@ export function DataManagementSection({ analysis, onAnalysisUpdated }: DataManag
   };
 
   return (
-    <div id="section-data" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-6 text-black">
+    <div id="section-data" className="border-[4px] border-black bg-white rounded-[12px] p-4 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-5 sm:gap-6 text-black">
       <div className="flex items-center justify-between border-b-[3px] border-black pb-4">
         <div>
           <h2 className="text-xl font-black uppercase tracking-tight">
@@ -63,9 +63,9 @@ export function DataManagementSection({ analysis, onAnalysisUpdated }: DataManag
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         {/* Export Card */}
-        <div className="border-[3px] border-black p-5 rounded-[8px] bg-[#FFFBEB] flex flex-col justify-between gap-4 shadow-[3.5px_3.5px_0_0_#000]">
+        <div className="border-[3px] border-black p-4 sm:p-5 rounded-[8px] bg-[#FFFBEB] flex flex-col justify-between gap-4 shadow-[3.5px_3.5px_0_0_#000]">
           <div className="flex flex-col gap-2">
             <h3 className="font-black text-base uppercase flex items-center gap-2">
               <Download className="size-5" /> EXPORT DOSSIER (JSON)
@@ -82,7 +82,7 @@ export function DataManagementSection({ analysis, onAnalysisUpdated }: DataManag
         </div>
 
         {/* Import Card */}
-        <div className="border-[3px] border-black p-5 rounded-[8px] bg-[#EFF6FF] flex flex-col justify-between gap-4 shadow-[3.5px_3.5px_0_0_#000]">
+        <div className="border-[3px] border-black p-4 sm:p-5 rounded-[8px] bg-[#EFF6FF] flex flex-col justify-between gap-4 shadow-[3.5px_3.5px_0_0_#000]">
           <div className="flex flex-col gap-2">
             <h3 className="font-black text-base uppercase flex items-center gap-2">
               <Upload className="size-5" /> IMPORT DOSSIER FILE
@@ -109,7 +109,7 @@ export function DataManagementSection({ analysis, onAnalysisUpdated }: DataManag
       )}
 
       {/* Purge Local Storage */}
-      <div className="border-[3px] border-black bg-red-50 p-5 rounded-[8px] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-[3.5px_3.5px_0_0_#000]">
+      <div className="border-[3px] border-black bg-red-50 p-4 sm:p-5 rounded-[8px] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-[3.5px_3.5px_0_0_#000]">
         <div className="flex items-start gap-3">
           <AlertTriangle className="size-6 text-red-600 shrink-0 mt-0.5" />
           <div>

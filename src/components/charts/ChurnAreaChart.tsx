@@ -106,10 +106,11 @@ export function ChurnAreaChart({
     return {
       animationDurationUpdate: 0,
       grid: {
-        left: 55,
-        right: 25,
-        top: 28,
-        bottom: 36,
+        left: 10,
+        right: 15,
+        top: 25,
+        bottom: 10,
+        containLabel: true,
       },
       legend: {
         show: false,

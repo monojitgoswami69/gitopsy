@@ -91,8 +91,8 @@ export function AutopsyProgressModal({
   const canResume = countdown <= 0;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/35 backdrop-blur-[6px] animate-in fade-in duration-200">
-      <div className="w-full max-w-2xl bg-[#FFFDF9] border-[4px] border-black rounded-[16px] p-6 sm:p-7 shadow-[10px_10px_0_0_#000] text-black flex flex-col gap-5 relative max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-black/35 backdrop-blur-[6px] animate-in fade-in duration-200">
+      <div className="w-full max-w-2xl bg-[#FFFDF9] border-[4px] border-black rounded-[14px] sm:rounded-[16px] p-4 sm:p-7 shadow-[6px_6px_0_0_#000] sm:shadow-[10px_10px_0_0_#000] text-black flex flex-col gap-4 sm:gap-5 relative max-h-[92vh] overflow-y-auto">
         {/* Top Header Bar */}
         <div className="flex items-center justify-between border-b-[3px] border-black pb-3.5">
           <div className="flex items-center gap-2.5">

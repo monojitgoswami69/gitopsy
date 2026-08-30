@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowUp, List, ChevronRight } from "lucide-react";
+import { ArrowLeft, ArrowUp, List, ChevronRight, X } from "lucide-react";
 
 interface SectionItem {
   id: string;
@@ -34,6 +34,7 @@ export function DossierIndexNav({ onLaunchWrapped }: DossierIndexNavProps) {
   const [activeSection, setActiveSection] = useState<string>("section-headlines");
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [headerOffset, setHeaderOffset] = useState<number>(84);
+  const [scrollProgress, setScrollProgress] = useState<number>(0);
   const isScrollingRef = useRef(false);
 
   // Dynamically compute exact header bottom boundary + 20px across all viewports and browser zoom levels
@@ -89,6 +90,25 @@ export function DossierIndexNav({ onLaunchWrapped }: DossierIndexNavProps) {
       }
 
       setActiveSection(currentId);
+
+      // Compute scroll percentage (0% to 100%)
+      const scrollTop =
+        scrollContainer === window
+          ? window.scrollY
+          : (scrollContainer as HTMLElement).scrollTop;
+      const scrollHeight =
+        scrollContainer === window
+          ? document.documentElement.scrollHeight
+          : (scrollContainer as HTMLElement).scrollHeight;
+      const clientHeight =
+        scrollContainer === window
+          ? window.innerHeight
+          : (scrollContainer as HTMLElement).clientHeight;
+
+      const maxScroll = scrollHeight - clientHeight;
+      const progress =
+        maxScroll > 0 ? Math.min(100, Math.max(0, (scrollTop / maxScroll) * 100)) : 0;
+      setScrollProgress(progress);
     };
 
     scrollContainer.addEventListener("scroll", handleScroll, { passive: true });
@@ -100,6 +120,23 @@ export function DossierIndexNav({ onLaunchWrapped }: DossierIndexNavProps) {
       window.removeEventListener("scroll", handleScroll);
     };
   }, []);
+
+  // Dismiss mobile floating index menu on outside tap
+  useEffect(() => {
+    if (!isMobileOpen) return;
+    const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest("#mobile-floating-index-container")) {
+        setIsMobileOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("touchstart", handleOutsideClick);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("touchstart", handleOutsideClick);
+    };
+  }, [isMobileOpen]);
 
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
@@ -215,68 +252,112 @@ export function DossierIndexNav({ onLaunchWrapped }: DossierIndexNavProps) {
         </div>
       </aside>
 
-      {/* Mobile / Tablet Collapsible Sticky Bar */}
-      <div className="lg:hidden w-full sticky top-0 z-30 bg-[#F4EFE6]/95 backdrop-blur-md border-b-2 border-black py-2 mb-4">
-        <div className="flex items-center justify-between gap-2">
-          <Link
-            href="/autopsy"
-            className="text-xs font-mono font-black uppercase text-gray-700 hover:text-black flex items-center gap-1 shrink-0 px-2 py-1"
-          >
-            <ArrowLeft className="size-3.5 stroke-[2.5]" />
-            <span>CONSOLE</span>
-          </Link>
+      {/* Mobile Top Actions (Console Link & Wrapped Button) */}
+      <div className="lg:hidden w-full flex items-center justify-between gap-3 mb-4 pt-1 pb-2 border-b-2 border-black/10">
+        <Link
+          href="/autopsy"
+          className="text-xs font-mono font-black uppercase text-gray-800 hover:text-black flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/[0.05] hover:bg-black/[0.09] border border-black/15 transition-all"
+        >
+          <ArrowLeft className="size-3.5 stroke-[2.5]" />
+          <span>CONSOLE</span>
+        </Link>
 
+        {onLaunchWrapped && (
           <button
-            onClick={() => setIsMobileOpen(!isMobileOpen)}
-            className="flex-1 bg-white border-2 border-black rounded-lg px-3 py-1.5 shadow-[2px_2px_0_0_#000] flex items-center justify-between text-xs font-mono font-bold text-black"
+            onClick={onLaunchWrapped}
+            className="bg-[#FFDC58] hover:bg-[#FACC15] border-2 border-black px-3.5 py-1.5 rounded-lg shadow-[2px_2px_0_0_#000] text-black font-black text-xs uppercase flex items-center gap-1.5 transition-all active:shadow-none"
           >
-            <span className="flex items-center gap-1.5 truncate">
-              <List className="size-3.5 shrink-0" />
-              <span className="truncate">INDEX: {SECTIONS.find((s) => s.id === activeSection)?.label || "01. Case Summary"}</span>
-            </span>
-            <ChevronRight className={`size-3.5 shrink-0 transition-transform ${isMobileOpen ? "rotate-90" : ""}`} />
+            <span>LAUNCH WRAPPED</span>
           </button>
+        )}
+      </div>
 
-          {onLaunchWrapped && (
-            <button
-              onClick={onLaunchWrapped}
-              className="bg-[#FFDC58] border-2 border-black px-2.5 py-1.5 rounded-lg shadow-[2px_2px_0_0_#000] text-black font-black text-xs shrink-0"
-            >
-              <span>WRAPPED</span>
-            </button>
-          )}
-
-          <button
-            onClick={scrollToTop}
-            className="bg-white border-2 border-black p-1.5 rounded-lg shadow-[2px_2px_0_0_#000] text-black shrink-0"
-            title="Scroll to top"
-            aria-label="Scroll to top"
-          >
-            <ArrowUp className="size-3.5 stroke-[2.5]" />
-          </button>
-        </div>
-
+      {/* Mobile Floating Index (Bottom Left) */}
+      <div
+        id="mobile-floating-index-container"
+        className="lg:hidden fixed bottom-4 left-6 sm:left-8 z-40 flex flex-col items-start gap-2 select-none"
+      >
         {isMobileOpen && (
           <div
-            className="bg-white border-2 border-black rounded-lg p-2 shadow-[4px_4px_0_0_#000] mt-2 flex flex-col gap-1 max-h-60 overflow-y-auto overscroll-contain"
+            className="bg-white border-[2.5px] border-black rounded-[8px] p-2.5 shadow-none w-64 sm:w-72 flex flex-col gap-1 max-h-[60vh] overflow-y-auto overscroll-contain mb-2 text-black animate-in fade-in slide-in-from-bottom-2 duration-150"
             data-lenis-prevent="true"
             onWheel={(e) => e.stopPropagation()}
           >
-            {SECTIONS.map((sec) => (
+            <div className="flex items-center justify-between border-b-[2px] border-black pb-2 mb-1">
+              <span className="text-xs font-mono font-black uppercase tracking-wider text-black">
+                DOSSIER INDEX
+              </span>
               <button
-                key={sec.id}
-                onClick={() => scrollToSection(sec.id)}
-                className={`text-left text-xs font-mono px-2 py-1.5 rounded ${
-                  activeSection === sec.id
-                    ? "bg-[#FFDC58] font-black text-black border border-black"
-                    : "text-gray-700 hover:bg-amber-50 font-bold"
-                }`}
+                onClick={() => setIsMobileOpen(false)}
+                className="p-1 hover:bg-gray-100 rounded border border-black/20"
+                aria-label="Close index"
               >
-                {sec.label}
+                <X className="size-3.5" />
               </button>
-            ))}
+            </div>
+
+            {SECTIONS.map((sec) => {
+              const isActive = activeSection === sec.id;
+              return (
+                <button
+                  key={sec.id}
+                  onClick={() => scrollToSection(sec.id)}
+                  className={`text-left text-xs font-mono px-2.5 py-1.5 rounded transition-all flex items-center justify-between ${
+                    isActive
+                      ? "bg-[#FFDC58] text-black font-black border border-black shadow-none"
+                      : "text-gray-700 hover:bg-amber-50 font-bold"
+                  }`}
+                >
+                  <span className="truncate">{sec.label}</span>
+                </button>
+              );
+            })}
           </div>
         )}
+
+        <button
+          onClick={() => setIsMobileOpen(!isMobileOpen)}
+          className="h-11 px-4.5 rounded-[6px] border-[2.5px] border-black bg-white text-black font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-amber-50 active:bg-gray-100 transition-colors shadow-none cursor-pointer"
+          aria-label="Toggle Dossier Index"
+        >
+          <List className="size-4 stroke-[2.5]" />
+          <span>INDEX</span>
+        </button>
+      </div>
+
+      {/* Mobile Floating Go To Top (Bottom Right) with Circular Progress Ring */}
+      <div className="lg:hidden fixed bottom-4 right-6 sm:right-8 z-40 select-none">
+        <button
+          onClick={scrollToTop}
+          className="relative size-12 rounded-full flex items-center justify-center cursor-pointer shadow-none group hover:scale-105 active:scale-95 transition-transform"
+          title={`Scroll to top (${Math.round(scrollProgress)}% read)`}
+          aria-label={`Scroll to top (${Math.round(scrollProgress)}% read)`}
+        >
+          <svg className="absolute inset-0 size-full -rotate-90 pointer-events-none" viewBox="0 0 48 48">
+            {/* Background circle fill with black border */}
+            <circle
+              cx="24"
+              cy="24"
+              r="20"
+              className="fill-white stroke-black"
+              strokeWidth="2.5"
+            />
+            {/* Dynamic Active Progress Ring */}
+            <circle
+              cx="24"
+              cy="24"
+              r="16.5"
+              fill="none"
+              stroke="#FD9745"
+              strokeWidth="3.5"
+              strokeDasharray={103.67}
+              strokeDashoffset={103.67 - (scrollProgress / 100) * 103.67}
+              strokeLinecap="round"
+              className="transition-[stroke-dashoffset] duration-100 ease-out"
+            />
+          </svg>
+          <ArrowUp className="size-4 stroke-[3] text-black relative z-10 group-hover:-translate-y-0.5 transition-transform" />
+        </button>
       </div>
     </>
   );

@@ -67,7 +67,7 @@ export default function RootLayout({
         <SmoothScroll>
           <ForensicWatermark />
           <HeaderNav />
-          <main id="app-main-scroll" className="flex-1 w-full overflow-y-auto overflow-x-hidden px-4 sm:px-6 py-6 scroll-smooth z-10 relative bg-grid-pattern">
+          <main id="app-main-scroll" className="flex-1 w-full overflow-y-auto overflow-x-hidden px-3 sm:px-6 py-4 sm:py-6 z-10 relative bg-grid-pattern">
             {children}
           </main>
           <KonamiListener />

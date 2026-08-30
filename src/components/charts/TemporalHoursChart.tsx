@@ -23,7 +23,7 @@ export function TemporalHoursChart({
 
   const hourOptions: EChartsOption = useMemo(() => {
     return {
-      grid: { left: 45, right: 20, top: 30, bottom: 30 },
+      grid: { left: 10, right: 15, top: 25, bottom: 10, containLabel: true },
       xAxis: {
         type: "category",
         data: hours,
@@ -88,7 +88,7 @@ export function TemporalHoursChart({
 
   const weekdayOptions: EChartsOption = useMemo(() => {
     return {
-      grid: { left: 45, right: 20, top: 30, bottom: 30 },
+      grid: { left: 10, right: 15, top: 25, bottom: 10, containLabel: true },
       xAxis: {
         type: "category",
         data: weekdays,

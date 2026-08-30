@@ -27,8 +27,8 @@ export function WrappedViewer({
       tag: "CONFIDENTIAL",
       bg: "bg-[#FFDC58]",
       content: (
-        <div className="flex flex-col items-center text-center gap-4">
-          <div className="relative size-24 md:size-32 overflow-hidden rounded-[16px] border-[3px] border-black bg-white shadow-[4px_4px_0_0_#000] animate-bounce">
+        <div className="flex flex-col items-center text-center gap-3 sm:gap-4">
+          <div className="relative size-20 sm:size-24 md:size-32 overflow-hidden rounded-[14px] sm:rounded-[16px] border-[3px] border-black bg-white shadow-[4px_4px_0_0_#000] animate-bounce">
             <Image
               src="/gitopsy-logo.png"
               alt="Gitopsy Logo"
@@ -37,10 +37,10 @@ export function WrappedViewer({
               priority
             />
           </div>
-          <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tight">
+          <h1 className="text-2xl sm:text-4xl md:text-6xl font-black uppercase tracking-tight">
             YOUR GITHUB, UNDER EXAMINATION
           </h1>
-          <p className="text-lg md:text-xl font-black max-w-xl text-black">
+          <p className="text-base sm:text-lg md:text-xl font-black max-w-xl text-black">
             Subject: @{report.subject.login}
           </p>
           <span className="text-xs font-mono font-bold bg-black text-[#FFDC58] px-3 py-1 rounded">
@@ -54,12 +54,12 @@ export function WrappedViewer({
       tag: "EVIDENCE #1",
       bg: "bg-[#4D96FF]",
       content: (
-        <div className="flex flex-col items-center text-center gap-3">
-          <span className="text-lg font-black uppercase">We tracked your author timestamps</span>
-          <div className="text-7xl md:text-9xl font-black font-mono my-2 text-black">
+        <div className="flex flex-col items-center text-center gap-2 sm:gap-3">
+          <span className="text-base sm:text-lg font-black uppercase">We tracked your author timestamps</span>
+          <div className="text-5xl sm:text-7xl md:text-8xl font-black font-mono my-1 sm:my-2 text-black">
             {report.summary.totalCommits.toLocaleString()}
           </div>
-          <p className="text-xl font-black uppercase">
+          <p className="text-base sm:text-xl font-black uppercase">
             Total Commits Recorded Across {report.summary.reposAnalyzed} Repositories
           </p>
         </div>
@@ -70,17 +70,17 @@ export function WrappedViewer({
       tag: "EVIDENCE #2",
       bg: "bg-[#6BCB77]",
       content: (
-        <div className="flex flex-col items-center text-center gap-4">
-          <h2 className="text-3xl md:text-5xl font-black uppercase">Historical Change Volume</h2>
-          <div className="flex flex-col sm:flex-row gap-6 my-4">
-            <div className="border-[3px] border-black bg-white p-5 rounded-[8px] shadow-[4px_4px_0_0_#000]">
-              <div className="text-3xl font-black text-emerald-600 font-mono">
+        <div className="flex flex-col items-center text-center gap-3 sm:gap-4">
+          <h2 className="text-2xl sm:text-3xl md:text-5xl font-black uppercase">Historical Change Volume</h2>
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-6 my-2 sm:my-4">
+            <div className="border-[3px] border-black bg-white p-4 sm:p-5 rounded-[8px] shadow-[3.5px_3.5px_0_0_#000] sm:shadow-[4px_4px_0_0_#000]">
+              <div className="text-2xl sm:text-3xl font-black text-emerald-600 font-mono">
                 +{report.summary.linesAdded.toLocaleString()}
               </div>
               <span className="text-xs font-black uppercase">Lines Added</span>
             </div>
-            <div className="border-[3px] border-black bg-white p-5 rounded-[8px] shadow-[4px_4px_0_0_#000]">
-              <div className="text-3xl font-black text-rose-600 font-mono">
+            <div className="border-[3px] border-black bg-white p-4 sm:p-5 rounded-[8px] shadow-[3.5px_3.5px_0_0_#000] sm:shadow-[4px_4px_0_0_#000]">
+              <div className="text-2xl sm:text-3xl font-black text-rose-600 font-mono">
                 -{report.summary.linesDeleted.toLocaleString()}
               </div>
               <span className="text-xs font-black uppercase">Lines Incinerated</span>
@@ -97,12 +97,12 @@ export function WrappedViewer({
       tag: "EVIDENCE #3",
       bg: "bg-[#FF6B6B]",
       content: (
-        <div className="flex flex-col items-center text-center gap-3">
-          <span className="text-base font-black uppercase">Most Active Repository</span>
-          <div className="text-3xl md:text-6xl font-black uppercase my-2 bg-white px-6 py-3 border-[4px] border-black shadow-[6px_6px_0_0_#000]">
+        <div className="flex flex-col items-center text-center gap-2 sm:gap-3">
+          <span className="text-sm sm:text-base font-black uppercase">Most Active Repository</span>
+          <div className="text-2xl sm:text-3xl md:text-5xl font-black uppercase my-1 sm:my-2 bg-white px-4 sm:px-6 py-2 sm:py-3 border-[3px] sm:border-[4px] border-black shadow-[4px_4px_0_0_#000] sm:shadow-[6px_6px_0_0_#000]">
             {topRepo.name}
           </div>
-          <p className="text-xl font-black">
+          <p className="text-base sm:text-xl font-black">
             {topRepo.commitCount.toLocaleString()} commits • {topRepo.stars} stars
           </p>
         </div>
@@ -113,12 +113,12 @@ export function WrappedViewer({
       tag: "EVIDENCE #4",
       bg: "bg-[#C084FC]",
       content: (
-        <div className="flex flex-col items-center text-center gap-3">
-          <span className="text-base font-black uppercase">Top Language Detected</span>
-          <div className="text-4xl md:text-7xl font-black uppercase my-2 font-mono bg-white px-6 py-3 border-[4px] border-black shadow-[6px_6px_0_0_#000]">
+        <div className="flex flex-col items-center text-center gap-2 sm:gap-3">
+          <span className="text-sm sm:text-base font-black uppercase">Top Language Detected</span>
+          <div className="text-2xl sm:text-4xl md:text-6xl font-black uppercase my-1 sm:my-2 font-mono bg-white px-4 sm:px-6 py-2 sm:py-3 border-[3px] sm:border-[4px] border-black shadow-[4px_4px_0_0_#000] sm:shadow-[6px_6px_0_0_#000]">
             {topLang.name}
           </div>
-          <p className="text-xl font-black">
+          <p className="text-base sm:text-xl font-black">
             {topLang.percentage}% of all GitHub-reported code bytes
           </p>
         </div>
@@ -129,12 +129,12 @@ export function WrappedViewer({
       tag: "EVIDENCE #5",
       bg: "bg-[#FD9745]",
       content: (
-        <div className="flex flex-col items-center text-center gap-3">
-          <span className="text-base font-black uppercase">Peak Activity Hour</span>
-          <div className="text-6xl md:text-8xl font-black font-mono my-2 text-black">
+        <div className="flex flex-col items-center text-center gap-2 sm:gap-3">
+          <span className="text-sm sm:text-base font-black uppercase">Peak Activity Hour</span>
+          <div className="text-5xl sm:text-6xl md:text-8xl font-black font-mono my-1 sm:my-2 text-black">
             {report.summary.busiestHour}:00 {report.summary.timezoneAbbr || "local"}
           </div>
-          <p className="text-xl font-black">
+          <p className="text-base sm:text-xl font-black">
             {report.summary.nightCommitPercentage}% of your total commits occurred late at night.
           </p>
         </div>
@@ -145,12 +145,12 @@ export function WrappedViewer({
       tag: "EVIDENCE #6",
       bg: "bg-[#FFDC58]",
       content: (
-        <div className="flex flex-col items-center text-center gap-3">
-          <span className="text-base font-black uppercase">Longest Consecutive Days</span>
-          <div className="text-7xl md:text-9xl font-black font-mono my-2 text-black">
+        <div className="flex flex-col items-center text-center gap-2 sm:gap-3">
+          <span className="text-sm sm:text-base font-black uppercase">Longest Consecutive Days</span>
+          <div className="text-5xl sm:text-7xl md:text-8xl font-black font-mono my-1 sm:my-2 text-black">
             {report.summary.longestStreakDays} DAYS
           </div>
-          <p className="text-xl font-black max-w-md">
+          <p className="text-base sm:text-xl font-black max-w-md">
             Uninterrupted daily author timestamps recorded in version control.
           </p>
         </div>
@@ -161,18 +161,18 @@ export function WrappedViewer({
       tag: "VERDICT",
       bg: "bg-white",
       content: (
-        <div className="flex flex-col items-center text-center gap-4 text-black">
-          <Badge variant="coral" className="text-sm px-4 py-1">FINAL DIAGNOSIS</Badge>
+        <div className="flex flex-col items-center text-center gap-3 sm:gap-4 text-black">
+          <Badge variant="coral" className="text-xs sm:text-sm px-3 sm:px-4 py-1">FINAL DIAGNOSIS</Badge>
           <div
-            className="text-2xl md:text-4xl font-black uppercase px-6 py-3 border-[4px] border-black shadow-[6px_6px_0_0_#000]"
+            className="text-xl sm:text-2xl md:text-4xl font-black uppercase px-4 sm:px-6 py-2 sm:py-3 border-[3px] sm:border-[4px] border-black shadow-[4px_4px_0_0_#000] sm:shadow-[6px_6px_0_0_#000]"
             style={{ backgroundColor: report.primaryClassification?.badgeAccent || "#FFDC58" }}
           >
             {report.primaryClassification?.title}
           </div>
-          <p className="text-base font-bold max-w-lg italic">
+          <p className="text-sm sm:text-base font-bold max-w-lg italic">
             &ldquo;{report.primaryClassification?.tagline}&rdquo;
           </p>
-          <div className="border-[2px] border-black bg-amber-50 p-4 rounded-[8px] text-xs font-mono font-bold max-w-md text-left">
+          <div className="border-[2px] border-black bg-amber-50 p-3 sm:p-4 rounded-[8px] text-xs font-mono font-bold max-w-md text-left w-full">
             <div>Subject: @{report.subject.login}</div>
             <div>Total Commits: {report.summary.totalCommits.toLocaleString()}</div>
             <div>Top Language: {topLang.name}</div>
@@ -206,9 +206,9 @@ export function WrappedViewer({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-3 sm:p-4">
       <div
-        className={`relative w-full max-w-2xl min-h-[500px] border-[5px] border-black rounded-[14px] p-8 md:p-12 shadow-[12px_12px_0_0_#000] flex flex-col justify-between transition-all duration-300 ${chapters[chapter].bg}`}
+        className={`relative w-full max-w-2xl min-h-[420px] sm:min-h-[500px] max-h-[92vh] overflow-y-auto border-[4px] sm:border-[5px] border-black rounded-[12px] sm:rounded-[14px] p-5 sm:p-8 md:p-12 shadow-[6px_6px_0_0_#000] sm:shadow-[12px_12px_0_0_#000] flex flex-col justify-between transition-all duration-300 ${chapters[chapter].bg}`}
       >
         {/* Header Bar */}
         <div className="flex items-center justify-between border-b-[3px] border-black pb-3">
@@ -228,12 +228,12 @@ export function WrappedViewer({
         </div>
 
         {/* Dynamic Center Stage Content */}
-        <div className="my-auto py-6 flex items-center justify-center">
+        <div className="my-auto py-4 sm:py-6 flex items-center justify-center">
           {chapters[chapter].content}
         </div>
 
         {/* Navigation Controls */}
-        <div className="flex items-center justify-between pt-4 border-t-[3px] border-black">
+        <div className="flex items-center justify-between pt-3 sm:pt-4 border-t-[3px] border-black gap-2">
           <Button
             size="sm"
             variant="outline"

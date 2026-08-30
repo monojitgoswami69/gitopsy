@@ -11,7 +11,7 @@ interface CourtSectionProps {
 
 export function CourtSection({ charges, defendantLogin }: CourtSectionProps) {
   return (
-    <div id="section-court" className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-6 text-black">
+    <div id="section-court" className="border-[4px] border-black bg-white rounded-[12px] p-4 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-5 sm:gap-6 text-black">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b-[3px] border-black pb-4">
         <div>
           <div className="flex items-center gap-2">
@@ -27,11 +27,11 @@ export function CourtSection({ charges, defendantLogin }: CourtSectionProps) {
       </div>
 
       {/* Direct Grid Display of All Charges (No Tabs) */}
-      <div className={`grid grid-cols-1 ${charges.length > 1 ? "md:grid-cols-2" : ""} gap-5`}>
+      <div className={`grid grid-cols-1 ${charges.length > 1 ? "md:grid-cols-2" : ""} gap-4 sm:gap-5`}>
         {charges.map((charge) => (
           <div
             key={charge.id}
-            className="border-[3px] border-black bg-[#FFFBEB] rounded-[10px] p-5 shadow-[4px_4px_0_0_#000] flex flex-col justify-between gap-4 text-black hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[3px_3px_0_0_#000] transition-all"
+            className="border-[3px] border-black bg-[#FFFBEB] rounded-[10px] p-4 sm:p-5 shadow-[3.5px_3.5px_0_0_#000] sm:shadow-[4px_4px_0_0_#000] flex flex-col justify-between gap-4 text-black hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[3px_3px_0_0_#000] transition-all"
           >
             <div className="flex flex-col gap-3">
               <div className="flex items-start justify-between gap-3 border-b-[2px] border-black/15 pb-2.5">

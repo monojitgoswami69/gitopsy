@@ -58,16 +58,16 @@ export default function RepositoryAutopsyPage({
       </div>
 
       {/* Header Banner */}
-      <div className="border-[4px] border-black bg-white rounded-[12px] p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col md:flex-row items-start md:items-center justify-between gap-6 text-black">
+      <div className="border-[4px] border-black bg-white rounded-[12px] p-4 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sm:gap-6 text-black">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 flex-wrap">
             <Badge variant="purple">SPECIMEN DOSSIER</Badge>
             {specimen.isPrivate && <Badge variant="neutral"><Lock className="size-3" /> PRIVATE</Badge>}
             {specimen.isArchived && <Badge variant="dark">ARCHIVED</Badge>}
-            <h1 className="text-2xl md:text-3xl font-black uppercase font-mono">{specimen.name}</h1>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-black uppercase font-mono">{specimen.name}</h1>
           </div>
           <p className="text-xs font-mono font-bold text-gray-700">{specimen.fullName}</p>
-          <div className="flex items-center gap-4 text-xs font-bold text-gray-800 mt-1">
+          <div className="flex items-center gap-3 sm:gap-4 text-xs font-bold text-gray-800 mt-1 flex-wrap">
             <span className="flex items-center gap-1">
               <Star className="size-3.5 text-amber-500 fill-amber-500" /> {specimen.stars} stars
             </span>
@@ -78,12 +78,12 @@ export default function RepositoryAutopsyPage({
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 w-full md:w-auto">
           <a
             href={`https://github.com/${specimen.fullName}`}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 text-xs font-black bg-[#FFDC58] hover:bg-[#FD9745] px-4 py-2 border-2 border-black rounded shadow-[2px_2px_0_0_#000] transition-all text-black"
+            className="inline-flex items-center justify-center gap-1 text-xs font-black bg-[#FFDC58] hover:bg-[#FD9745] px-4 py-2 border-2 border-black rounded shadow-[2px_2px_0_0_#000] transition-all text-black w-full md:w-auto"
           >
             VIEW ON GITHUB <ExternalLink className="size-3.5" />
           </a>
@@ -91,24 +91,24 @@ export default function RepositoryAutopsyPage({
       </div>
 
       {/* Activity Overview Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="border-[3px] border-black bg-white p-4 rounded-[10px] shadow-[3px_3px_0_0_#000]">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4">
+        <div className="border-[3px] border-black bg-white p-3.5 sm:p-4 rounded-[10px] shadow-[3px_3px_0_0_#000]">
           <span className="text-[10px] font-black uppercase text-gray-500">ANALYZED COMMITS</span>
-          <div className="text-2xl font-black font-mono mt-1 text-black">{specimen.commitCount}</div>
+          <div className="text-xl sm:text-2xl font-black font-mono mt-1 text-black">{specimen.commitCount}</div>
         </div>
-        <div className="border-[3px] border-black bg-white p-4 rounded-[10px] shadow-[3px_3px_0_0_#000]">
+        <div className="border-[3px] border-black bg-white p-3.5 sm:p-4 rounded-[10px] shadow-[3px_3px_0_0_#000]">
           <span className="text-[10px] font-black uppercase text-gray-500">NET CHANGE</span>
-          <div className="text-2xl font-black font-mono mt-1 text-emerald-700">
+          <div className="text-xl sm:text-2xl font-black font-mono mt-1 text-emerald-700">
             {specimen.netLines >= 0 ? "+" : ""}{specimen.netLines.toLocaleString()}
           </div>
         </div>
-        <div className="border-[3px] border-black bg-white p-4 rounded-[10px] shadow-[3px_3px_0_0_#000]">
+        <div className="border-[3px] border-black bg-white p-3.5 sm:p-4 rounded-[10px] shadow-[3px_3px_0_0_#000]">
           <span className="text-[10px] font-black uppercase text-gray-500">ACTIVITY SPAN</span>
-          <div className="text-2xl font-black font-mono mt-1 text-blue-700">{specimen.activitySpanDays} DAYS</div>
+          <div className="text-xl sm:text-2xl font-black font-mono mt-1 text-blue-700">{specimen.activitySpanDays} DAYS</div>
         </div>
-        <div className="border-[3px] border-black bg-white p-4 rounded-[10px] shadow-[3px_3px_0_0_#000]">
+        <div className="border-[3px] border-black bg-white p-3.5 sm:p-4 rounded-[10px] shadow-[3px_3px_0_0_#000]">
           <span className="text-[10px] font-black uppercase text-gray-500">STATUS</span>
-          <div className="text-base font-black uppercase mt-2">
+          <div className="text-xs sm:text-base font-black uppercase mt-2">
             <Badge variant={isDormant ? "coral" : "lime"}>
               {isDormant ? `DORMANT (${specimen.daysSinceLastPush}d)` : `ACTIVE (${specimen.daysSinceLastPush}d ago)`}
             </Badge>
@@ -118,7 +118,7 @@ export default function RepositoryAutopsyPage({
 
       {/* Language Breakdown */}
       {specimen.languages.length > 0 && (
-        <div className="border-[3px] border-black bg-white rounded-[10px] p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-4 text-black">
+        <div className="border-[3px] border-black bg-white rounded-[10px] p-4 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-4 text-black">
           <h3 className="text-base font-black uppercase tracking-tight">
             REPORTED LANGUAGE BYTES IN REPOSITORY
           </h3>
