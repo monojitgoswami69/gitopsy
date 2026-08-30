@@ -73,6 +73,7 @@ export default function AutopsyReportDetailPage() {
         if (found) {
           setAnalysis(found);
           setLoadError(null);
+          document.title = `@${found.subject.login} • Forensic Autopsy Dossier | GITOPSY`;
         } else {
           setLoadError(`Report "${reportId}" not found in local storage.`);
         }

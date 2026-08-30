@@ -59,6 +59,7 @@ export default function AutopsyConsolePage() {
       await loadLatestSavedAnalysis();
       await loadExistingCheckpoint();
 
+      document.title = "Forensic Examination Console | GITOPSY";
       setIsLoading(false);
     }
 
