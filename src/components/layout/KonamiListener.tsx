@@ -1,10 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { usePreferencesStore } from "@/lib/store/preferencesStore";
-import { EasterEggModal } from "@/components/forensic/EasterEggModal";
 import { DeterministicEasterEgg } from "@/types/domain";
 import confetti from "canvas-confetti";
+
+const EasterEggModal = dynamic(
+  () => import("@/components/forensic/EasterEggModal").then((mod) => mod.EasterEggModal),
+  { ssr: false }
+);
 
 const KONAMI_SEQUENCE = [
   "ArrowUp",

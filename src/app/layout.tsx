@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import { JetBrains_Mono, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { HeaderNav } from "@/components/layout/HeaderNav";
-import { Footer } from "@/components/layout/Footer";
 import { KonamiListener } from "@/components/layout/KonamiListener";
 import { ForensicWatermark } from "@/components/layout/ForensicWatermark";
 import { SmoothScroll } from "@/components/providers/SmoothScroll";
+import { PwaProvider } from "@/components/providers/PwaProvider";
 import { GlobalAutopsyModal } from "@/components/layout/GlobalAutopsyModal";
 
 const jetbrainsMono = JetBrains_Mono({
@@ -76,6 +76,11 @@ export const metadata: Metadata = {
     description: socialDescription,
     images: ["/og.png"],
     creator: "@gitopsy",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Gitopsy",
   },
   robots: {
     index: true,
@@ -167,15 +172,17 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-[#F4EFE6] text-[#121212] font-body h-full w-full overflow-hidden flex flex-col selection:bg-[#FFDC58] selection:text-black relative">
-        <SmoothScroll>
-          <ForensicWatermark />
-          <HeaderNav />
-          <main id="app-main-scroll" className="flex-1 w-full overflow-y-auto overflow-x-hidden px-3 sm:px-6 py-4 sm:py-6 z-10 relative bg-grid-pattern">
-            {children}
-          </main>
-          <KonamiListener />
-          <GlobalAutopsyModal />
-        </SmoothScroll>
+        <PwaProvider>
+          <SmoothScroll>
+            <ForensicWatermark />
+            <HeaderNav />
+            <main id="app-main-scroll" className="flex-1 w-full overflow-y-auto overflow-x-hidden px-3 sm:px-6 py-4 sm:py-6 z-10 relative bg-grid-pattern">
+              {children}
+            </main>
+            <KonamiListener />
+            <GlobalAutopsyModal />
+          </SmoothScroll>
+        </PwaProvider>
       </body>
     </html>
   );

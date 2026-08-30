@@ -1,15 +1,18 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuthStore } from "@/lib/store/authStore";
+import { usePwa } from "@/components/providers/PwaProvider";
 import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
+import { LogOut, Download } from "lucide-react";
 
 export function HeaderNav() {
   const { isAuthenticated, username, avatarUrl, profile, disconnect, checkSession, fetchProfile } =
     useAuthStore();
+  const { isInstallable, isStandalone, installApp } = usePwa();
+  const [avatarError, setAvatarError] = useState(false);
 
   useEffect(() => {
     checkSession().then((tok) => {
@@ -26,9 +29,7 @@ export function HeaderNav() {
 
   const displayUsername = username || profile?.login || profile?.name;
   const displayAvatar =
-    avatarUrl ||
-    profile?.avatarUrl ||
-    (displayUsername ? `https://github.com/${displayUsername}.png` : "/favicon/favicon-32x32.png");
+    !avatarError && (avatarUrl || profile?.avatarUrl || (displayUsername ? `https://github.com/${displayUsername}.png` : null));
 
   return (
     <header className="w-full shrink-0 z-40 border-b-[3px] border-black bg-[#F4EFE6]/90 backdrop-blur-md px-3 sm:px-6 py-2.5 sm:py-3 shadow-[0_3px_0_0_#000] flex items-center justify-between relative">
@@ -56,6 +57,20 @@ export function HeaderNav() {
 
       {/* Right Action Controls */}
       <div className="flex items-center gap-2 sm:gap-3 z-10">
+        {/* Install PWA Button (Visible on Desktop/Mobile when installable) */}
+        {isInstallable && !isStandalone && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={installApp}
+            className="hidden xs:flex items-center gap-1.5 text-xs py-1 px-2.5 h-8 bg-[#FFDC58] hover:bg-[#FACC15] font-black uppercase"
+            aria-label="Install Gitopsy Application"
+          >
+            <Download className="size-3.5 stroke-[2.5]" />
+            <span>INSTALL</span>
+          </Button>
+        )}
+
         {isAuthenticated ? (
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Leftmost: Leave / Disconnect icon */}
@@ -76,12 +91,19 @@ export function HeaderNav() {
             )}
 
             {/* Absolute Right: Profile Picture */}
-            <div className="relative size-8 sm:size-8.5 shrink-0 overflow-hidden rounded-full border-2 border-black bg-white">
-              <img
-                src={displayAvatar}
-                alt={displayUsername || "User avatar"}
-                className="size-full object-cover"
-              />
+            <div className="relative size-8 sm:size-8.5 shrink-0 overflow-hidden rounded-full border-2 border-black bg-white flex items-center justify-center">
+              {displayAvatar ? (
+                <img
+                  src={displayAvatar}
+                  alt={displayUsername || "User avatar"}
+                  className="size-full object-cover"
+                  onError={() => setAvatarError(true)}
+                />
+              ) : (
+                <div className="size-full bg-[#FFDC58] font-mono font-black text-black text-xs flex items-center justify-center">
+                  {(displayUsername || "U").slice(0, 1).toUpperCase()}
+                </div>
+              )}
             </div>
           </div>
         ) : (

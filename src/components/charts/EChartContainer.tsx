@@ -67,20 +67,40 @@ export function EChartContainer({
 
     instanceRef.current.setOption(brutalistOptions, true);
 
+    let rafId: number | null = null;
     const handleResize = () => {
-      instanceRef.current?.resize();
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        if (instanceRef.current && !instanceRef.current.isDisposed()) {
+          instanceRef.current.resize();
+        }
+      });
     };
 
-    window.addEventListener("resize", handleResize);
+    window.addEventListener("resize", handleResize, { passive: true });
+
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined" && chartRef.current) {
+      resizeObserver = new ResizeObserver(() => handleResize());
+      resizeObserver.observe(chartRef.current);
+    }
 
     return () => {
       window.removeEventListener("resize", handleResize);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
     };
   }, [options, onEvents]);
 
   useEffect(() => {
     return () => {
-      instanceRef.current?.dispose();
+      if (instanceRef.current && !instanceRef.current.isDisposed()) {
+        instanceRef.current.dispose();
+      }
       instanceRef.current = null;
     };
   }, []);

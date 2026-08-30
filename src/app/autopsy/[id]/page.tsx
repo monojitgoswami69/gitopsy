@@ -7,13 +7,18 @@ import { gitopsyDb } from "@/lib/db";
 import { GitopsyAnalysis } from "@/types/domain";
 import { SubjectHeader } from "@/components/forensic/SubjectHeader";
 import { HeadlineMetrics } from "@/components/forensic/HeadlineMetrics";
+import dynamic from "next/dynamic";
 import { RepositorySection } from "@/components/forensic/RepositorySection";
 import { CommitForensicsSection } from "@/components/forensic/CommitForensicsSection";
 import { ClassificationsSection } from "@/components/forensic/ClassificationsSection";
 import { CourtSection } from "@/components/forensic/CourtSection";
 import { DataManagementSection } from "@/components/forensic/DataManagementSection";
-import { WrappedViewer } from "@/components/forensic/WrappedViewer";
 import { DossierIndexNav } from "@/components/layout/DossierIndexNav";
+
+const WrappedViewer = dynamic(
+  () => import("@/components/forensic/WrappedViewer").then((mod) => mod.WrappedViewer),
+  { ssr: false }
+);
 import Image from "next/image";
 import { HeatmapChart } from "@/components/charts/HeatmapChart";
 import { TemporalHoursChart } from "@/components/charts/TemporalHoursChart";

@@ -22,9 +22,10 @@ export function RadarDnaChart({ indicators }: { indicators: CodeDnaIndicator[] }
         shape: "polygon",
         splitNumber: 4,
         axisName: {
-          fontWeight: "bold",
+          fontWeight: 900,
           fontSize: 11,
-          fontFamily: "monospace",
+          fontFamily: "'JetBrains Mono', monospace",
+          color: "#000000",
         },
         splitLine: {
           lineStyle: {
