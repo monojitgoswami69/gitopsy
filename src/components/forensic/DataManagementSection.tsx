@@ -52,11 +52,11 @@ export function DataManagementSection({ analysis, onAnalysisUpdated }: DataManag
           <div className="flex items-center gap-2.5">
             <Database className="size-5 sm:size-6 text-black stroke-[2.2] shrink-0" />
             <h2 className="text-xl font-bold uppercase tracking-tight">
-              LOCAL STORAGE &amp; DATA MANAGEMENT
+              THE EVIDENCE LOCKER
             </h2>
           </div>
           <p className="text-xs font-bold text-neutral-800 mt-1">
-            Control your in-browser Dexie IndexedDB records. 100% token-redacted exports.
+            Your report stays in your browser. Inspect it, export it, or clear the file when you&apos;re done.
           </p>
         </div>
       </div>
@@ -66,16 +66,16 @@ export function DataManagementSection({ analysis, onAnalysisUpdated }: DataManag
         <div className="border-[2px] border-black p-4 sm:p-5 rounded-[8px] bg-[#FFFBEB] flex flex-col justify-between gap-4 shadow-[1.5px_1.5px_0_0_#000]">
           <div className="flex flex-col gap-2">
             <h3 className="font-black text-base uppercase flex items-center gap-2">
-              <Download className="size-5" /> EXPORT DOSSIER (JSON)
+              <Download className="size-5" /> EXPORT DOSSIER
             </h3>
             <p className="text-xs text-gray-700 font-semibold leading-relaxed">
-              Download a complete, structured JSON snapshot of all metrics, classifications, awards, and
+              Download a complete, structured snapshot of all metrics, classifications, distinctions, and
               findings. All authentication tokens and secrets are guaranteed 100% redacted.
             </p>
           </div>
 
           <Button variant="main" size="md" className="w-full font-black shadow-[2px_2px_0_0_#000] hover:shadow-[1px_1px_0_0_#000]" onClick={handleExportJson}>
-            <Download className="size-4" /> DOWNLOAD DOSSIER (JSON)
+            <Download className="size-4" /> EXPORT DOSSIER
           </Button>
         </div>
 
@@ -83,18 +83,18 @@ export function DataManagementSection({ analysis, onAnalysisUpdated }: DataManag
         <div className="border-[2px] border-black p-4 sm:p-5 rounded-[8px] bg-[#EFF6FF] flex flex-col justify-between gap-4 shadow-[1.5px_1.5px_0_0_#000]">
           <div className="flex flex-col gap-2">
             <h3 className="font-black text-base uppercase flex items-center gap-2">
-              <Upload className="size-5" /> IMPORT DOSSIER FILE
+              <Upload className="size-5" /> IMPORT DOSSIER
             </h3>
             <p className="text-xs text-gray-700 font-semibold leading-relaxed">
-              Upload a previously exported Gitopsy JSON file. The report will be rigorously validated against
-              the forensic schema with Zod.
+              Upload a previously exported Gitopsy file. The report will be verified and loaded into
+              your local browser session.
             </p>
           </div>
 
           <label className="cursor-pointer block w-full">
             <input type="file" accept=".json" onChange={handleImportJson} className="hidden" />
             <div className="w-full h-11 px-5 inline-flex items-center justify-center font-black tracking-wide uppercase transition-all duration-100 cursor-pointer select-none rounded-[6px] bg-[#4D96FF] hover:bg-[#6ba6ff] text-black border-[2px] border-black shadow-[2px_2px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0_0_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none gap-2 text-sm">
-              <Upload className="size-4" /> SELECT DOSSIER FILE
+              <Upload className="size-4" /> IMPORT DOSSIER
             </div>
           </label>
         </div>

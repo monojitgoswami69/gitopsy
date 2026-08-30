@@ -17,11 +17,11 @@ export function CourtSection({ charges, defendantLogin }: CourtSectionProps) {
           <div className="flex items-center gap-2.5">
             <Scale className="size-5 sm:size-6 text-black stroke-[2.2] shrink-0" />
             <h2 className="text-xl font-bold uppercase tracking-tight">
-              GITOPSY COURTROOM INDICTMENTS
+              THE GITOPSY COURTROOM
             </h2>
           </div>
           <p className="text-xs font-bold text-neutral-800 mt-1">
-            Formal forensic indictments filed on behalf of sensible sleep cycles and git history hygiene for @{defendantLogin}.
+            The evidence has been presented. The court is now in session.
           </p>
         </div>
       </div>
@@ -43,7 +43,7 @@ export function CourtSection({ charges, defendantLogin }: CourtSectionProps) {
 
               <div className="flex flex-col gap-1">
                 <span className="text-[9px] font-black uppercase tracking-wider text-gray-500">
-                  FORMAL ALLEGATION:
+                  ALLEGATION:
                 </span>
                 <p className="text-xs font-bold text-gray-900 leading-relaxed bg-white p-3 rounded-[6px] border-[1.5px] border-black/30">
                   &ldquo;{charge.allegation}&rdquo;
@@ -52,7 +52,7 @@ export function CourtSection({ charges, defendantLogin }: CourtSectionProps) {
 
               <div className="flex flex-col gap-1">
                 <span className="text-[9px] font-black uppercase tracking-wider text-gray-500">
-                  VERIFIED METRIC EVIDENCE:
+                  EVIDENCE:
                 </span>
                 <div className="bg-white p-3 rounded-[6px] border-[1.5px] border-black/30 font-mono text-xs font-bold text-emerald-900 flex items-start gap-2">
                   <CheckCircle2 className="size-4 text-emerald-700 shrink-0 mt-0.5" />

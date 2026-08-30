@@ -107,11 +107,16 @@ export function HeadlineMetrics({ summary, topLanguage }: HeadlineMetricsProps) 
 
   return (
     <div id="section-headlines" className="flex flex-col gap-3 sm:gap-4">
-      <div className="flex items-center gap-2.5">
-        <Activity className="size-5 sm:size-6 text-black stroke-[2.2] shrink-0" />
-        <h2 className="text-xl font-bold uppercase tracking-tight text-black">
-          EXECUTIVE HEADLINE METRICS
-        </h2>
+      <div>
+        <div className="flex items-center gap-2.5">
+          <Activity className="size-5 sm:size-6 text-black stroke-[2.2] shrink-0" />
+          <h2 className="text-xl font-bold uppercase tracking-tight text-black">
+            THE CASE AT A GLANCE
+          </h2>
+        </div>
+        <p className="text-xs font-bold text-neutral-800 mt-1">
+          A quick look at the numbers behind your GitHub history.
+        </p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, ArrowUp, List, ChevronRight, ChevronUp, X } from "lucide-react";
@@ -22,15 +22,15 @@ const SECTIONS: SectionItem[] = [
   { id: "section-collaboration", label: "Collaboration" },
   { id: "section-classifications", label: "Gitopsy Awards" },
   { id: "section-court", label: "Courtroom" },
-  { id: "section-wrapped", label: "Wrapped Recap" },
+  { id: "section-developer-card", label: "Developer Card" },
   { id: "section-data", label: "Data & Privacy" },
 ];
 
 interface DossierIndexNavProps {
-  onLaunchWrapped?: () => void;
+  onLaunchCard?: () => void;
 }
 
-export function DossierIndexNav({ onLaunchWrapped }: DossierIndexNavProps) {
+export function DossierIndexNav({ onLaunchCard }: DossierIndexNavProps) {
   const [activeSection, setActiveSection] = useState<string>("section-headlines");
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [headerOffset, setHeaderOffset] = useState<number>(84);
@@ -68,6 +68,26 @@ export function DossierIndexNav({ onLaunchWrapped }: DossierIndexNavProps) {
       document.getElementById("app-main-scroll") || window;
 
     const handleScroll = () => {
+      // 1. ALWAYS compute and update scroll percentage in real-time
+      const scrollTop =
+        scrollContainer === window
+          ? window.scrollY
+          : (scrollContainer as HTMLElement).scrollTop;
+      const scrollHeight =
+        scrollContainer === window
+          ? document.documentElement.scrollHeight
+          : (scrollContainer as HTMLElement).scrollHeight;
+      const clientHeight =
+        scrollContainer === window
+          ? window.innerHeight
+          : (scrollContainer as HTMLElement).clientHeight;
+
+      const maxScroll = scrollHeight - clientHeight;
+      const progress =
+        maxScroll > 0 ? Math.min(100, Math.max(0, (scrollTop / maxScroll) * 100)) : 0;
+      setScrollProgress(progress);
+
+      // 2. If programmatically scrolling to a section, preserve activeSection highlight during transit
       if (isScrollingRef.current) return;
 
       const containerTop =
@@ -90,25 +110,6 @@ export function DossierIndexNav({ onLaunchWrapped }: DossierIndexNavProps) {
       }
 
       setActiveSection(currentId);
-
-      // Compute scroll percentage (0% to 100%)
-      const scrollTop =
-        scrollContainer === window
-          ? window.scrollY
-          : (scrollContainer as HTMLElement).scrollTop;
-      const scrollHeight =
-        scrollContainer === window
-          ? document.documentElement.scrollHeight
-          : (scrollContainer as HTMLElement).scrollHeight;
-      const clientHeight =
-        scrollContainer === window
-          ? window.innerHeight
-          : (scrollContainer as HTMLElement).clientHeight;
-
-      const maxScroll = scrollHeight - clientHeight;
-      const progress =
-        maxScroll > 0 ? Math.min(100, Math.max(0, (scrollTop / maxScroll) * 100)) : 0;
-      setScrollProgress(progress);
     };
 
     scrollContainer.addEventListener("scroll", handleScroll, { passive: true });
@@ -118,6 +119,10 @@ export function DossierIndexNav({ onLaunchWrapped }: DossierIndexNavProps) {
     return () => {
       scrollContainer.removeEventListener("scroll", handleScroll);
       window.removeEventListener("scroll", handleScroll);
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
     };
   }, []);
 
@@ -137,6 +142,57 @@ export function DossierIndexNav({ onLaunchWrapped }: DossierIndexNavProps) {
       document.removeEventListener("touchstart", handleOutsideClick);
     };
   }, [isMobileOpen]);
+
+  const rafRef = useRef<number | null>(null);
+
+  const startRafScrollTracking = useCallback(() => {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+
+    const scrollContainer = document.getElementById("app-main-scroll") || window;
+    let prevTop = -1;
+    let idleFrames = 0;
+    const startTime = performance.now();
+
+    const checkFrame = () => {
+      const scrollTop =
+        scrollContainer === window
+          ? window.scrollY
+          : (scrollContainer as HTMLElement).scrollTop;
+      const scrollHeight =
+        scrollContainer === window
+          ? document.documentElement.scrollHeight
+          : (scrollContainer as HTMLElement).scrollHeight;
+      const clientHeight =
+        scrollContainer === window
+          ? window.innerHeight
+          : (scrollContainer as HTMLElement).clientHeight;
+
+      const maxScroll = scrollHeight - clientHeight;
+      const progress =
+        maxScroll > 0 ? Math.min(100, Math.max(0, (scrollTop / maxScroll) * 100)) : 0;
+      setScrollProgress(progress);
+
+      if (Math.abs(scrollTop - prevTop) < 0.5) {
+        idleFrames++;
+      } else {
+        idleFrames = 0;
+        prevTop = scrollTop;
+      }
+
+      const elapsed = performance.now() - startTime;
+      if (idleFrames < 10 && elapsed < 2000) {
+        rafRef.current = requestAnimationFrame(checkFrame);
+      } else {
+        rafRef.current = null;
+        isScrollingRef.current = false;
+      }
+    };
+
+    rafRef.current = requestAnimationFrame(checkFrame);
+  }, []);
 
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
@@ -159,19 +215,19 @@ export function DossierIndexNav({ onLaunchWrapped }: DossierIndexNavProps) {
         el.scrollIntoView({ behavior: "smooth", block: "start" });
       }
 
-      setTimeout(() => {
-        isScrollingRef.current = false;
-      }, 700);
+      startRafScrollTracking();
     }
   };
 
   const scrollToTop = () => {
+    isScrollingRef.current = true;
     const scrollContainer = document.getElementById("app-main-scroll");
     if (scrollContainer) {
       scrollContainer.scrollTo({ top: 0, behavior: "smooth" });
     } else {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
+    startRafScrollTracking();
   };
 
   return (
@@ -228,15 +284,15 @@ export function DossierIndexNav({ onLaunchWrapped }: DossierIndexNavProps) {
             </nav>
           </div>
 
-          {/* Quick Actions (Launch Wrapped above divider, Scroll To Top centered below divider) */}
+          {/* Quick Actions (Launch Developer Card above divider, Scroll To Top centered below divider) */}
           <div className="pt-2 flex flex-col gap-2.5">
-            {onLaunchWrapped && (
+            {onLaunchCard && (
               <button
-                onClick={onLaunchWrapped}
+                onClick={onLaunchCard}
                 className="w-full bg-[#FFDC58] hover:bg-[#FACC15] text-black border-2 border-black rounded-lg py-2 px-3 shadow-[2.5px_2.5px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] font-jetbrains text-xs sm:text-[13px] uppercase tracking-wider flex items-center justify-center transition-all cursor-pointer"
                 style={{ fontWeight: 800 }}
               >
-                <span>LAUNCH WRAPPED</span>
+                <span>DEVELOPER CARD</span>
               </button>
             )}
 
@@ -255,7 +311,7 @@ export function DossierIndexNav({ onLaunchWrapped }: DossierIndexNavProps) {
         </div>
       </aside>
 
-      {/* Mobile Top Actions (Console Link & Wrapped Button) */}
+      {/* Mobile Top Actions (Console Link & Developer Card Button) */}
       <div className="lg:hidden w-full flex items-center justify-between gap-3 mb-4 pt-1 pb-2 border-b-2 border-black/10">
         <Link
           href="/autopsy"
@@ -266,13 +322,13 @@ export function DossierIndexNav({ onLaunchWrapped }: DossierIndexNavProps) {
           <span>CONSOLE</span>
         </Link>
 
-        {onLaunchWrapped && (
+        {onLaunchCard && (
           <button
-            onClick={onLaunchWrapped}
+            onClick={onLaunchCard}
             className="bg-[#FFDC58] hover:bg-[#FACC15] border-2 border-black px-3.5 py-1.5 rounded-lg shadow-[2px_2px_0_0_#000] text-black font-jetbrains text-xs uppercase flex items-center gap-1.5 transition-all active:shadow-none"
             style={{ fontWeight: 800 }}
           >
-            <span>LAUNCH WRAPPED</span>
+            <span>DEVELOPER CARD</span>
           </button>
         )}
       </div>
@@ -309,17 +365,10 @@ export function DossierIndexNav({ onLaunchWrapped }: DossierIndexNavProps) {
                 className="overflow-hidden flex flex-col"
               >
                 {/* Header inside the expanding pill */}
-                <div className="flex items-center justify-between px-3.5 pt-3 pb-2 border-b-[2px] border-black/15">
+                <div className="flex items-center justify-center px-3.5 pt-3 pb-2 border-b-[2px] border-black/15">
                   <span className="text-xs font-jetbrains font-bold uppercase tracking-wider text-black">
                     DOSSIER INDEX
                   </span>
-                  <button
-                    onClick={() => setIsMobileOpen(false)}
-                    className="p-1 hover:bg-black/5 rounded-[6px] border border-black/20 cursor-pointer text-black"
-                    aria-label="Close index"
-                  >
-                    <X className="size-3.5" />
-                  </button>
                 </div>
 
                 {/* Section Items List (utilizes available vertical height) */}
@@ -339,12 +388,11 @@ export function DossierIndexNav({ onLaunchWrapped }: DossierIndexNavProps) {
                         }}
                         className={`text-left text-xs font-jetbrains px-3 py-1.5 rounded-[6px] transition-all flex items-center justify-between cursor-pointer ${
                           isActive
-                            ? "bg-[#FFDC58] text-black font-bold border border-black shadow-none"
+                            ? "bg-[#FFF3B0] text-black font-bold border border-black/70 shadow-none"
                             : "text-neutral-800 hover:bg-amber-100/60 font-medium"
                         }`}
                       >
                         <span className="truncate">{sec.label}</span>
-                        {isActive && <span className="text-[10px] font-bold">●</span>}
                       </button>
                     );
                   })}
@@ -395,7 +443,7 @@ export function DossierIndexNav({ onLaunchWrapped }: DossierIndexNavProps) {
                     strokeDasharray={81.68}
                     strokeDashoffset={81.68 - (scrollProgress / 100) * 81.68}
                     strokeLinecap="round"
-                    className="transition-[stroke-dashoffset] duration-100 ease-out"
+                    className="transition-none"
                   />
                 </svg>
                 <ArrowUp className="size-3.5 stroke-[3] text-black" />

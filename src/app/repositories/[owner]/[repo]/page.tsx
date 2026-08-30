@@ -61,7 +61,7 @@ export default function RepositoryAutopsyPage({
       <div className="border-[4px] border-black bg-white rounded-[12px] p-4 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sm:gap-6 text-black">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant="purple">SPECIMEN DOSSIER</Badge>
+            <Badge variant="purple">REPOSITORY DOSSIER</Badge>
             {specimen.isPrivate && <Badge variant="neutral"><Lock className="size-3" /> PRIVATE</Badge>}
             {specimen.isArchived && <Badge variant="dark">ARCHIVED</Badge>}
             <h1 className="text-xl sm:text-2xl md:text-3xl font-black uppercase font-mono">{specimen.name}</h1>

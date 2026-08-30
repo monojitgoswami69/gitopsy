@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     "GitHub Analytics",
     "Developer Intelligence",
     "Forensic Git Analysis",
-    "GitHub Wrapped",
+    "Developer Card",
     "Developer Archetype",
     "Code Churn Analysis",
     "Commit Forensics",

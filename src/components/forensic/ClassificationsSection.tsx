@@ -26,11 +26,11 @@ export function ClassificationsSection({ classifications }: ClassificationsSecti
           <div className="flex items-center gap-2.5">
             <Trophy className="size-5 sm:size-6 text-black stroke-[2.2] shrink-0" />
             <h2 className="text-xl font-bold uppercase tracking-tight text-black">
-              THE GITOPSY AWARDS
+              YOUR GITOPSY FINDINGS
             </h2>
           </div>
           <p className="text-xs font-bold text-neutral-800 mt-1">
-            Evidence-based behavioral patterns derived strictly from verified timestamps, churn ratios, and repository distributions.
+            Patterns emerged. We gave them names.
           </p>
         </div>
       </div>

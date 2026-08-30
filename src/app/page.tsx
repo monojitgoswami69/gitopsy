@@ -10,7 +10,7 @@ import {
   Clock,
   FileCode2,
   Scale,
-  Sparkles,
+  IdCard,
 } from "lucide-react";
 import { useAuthStore } from "@/lib/store/authStore";
 import { useAutopsyStore } from "@/lib/store/autopsyStore";
@@ -63,7 +63,7 @@ export default function LandingPage() {
           transition={{ delay: 0.1, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
           className="text-sm sm:text-lg md:text-xl font-semibold text-gray-800 max-w-3xl leading-relaxed mb-6 sm:mb-8 px-2"
         >
-          Gitopsy is a privacy-first, local analytics engine for your GitHub activity. It audits 24-hour UTC commit patterns, code churn, message conventions, and workflow archetypes using deterministic calculations directly in your browser.
+          A forensic look at the commits, repositories, habits, and patterns hiding in your GitHub history.
         </motion.p>
 
         {/* CTAs */}
@@ -168,7 +168,7 @@ export default function LandingPage() {
         className="max-w-6xl mx-auto w-full"
       >
         <div className="text-center mb-6 sm:mb-8">
-          <h2 className="text-2xl sm:text-4xl font-black uppercase tracking-tight">Forensic Specifications</h2>
+          <h2 className="text-2xl sm:text-4xl font-black uppercase tracking-tight">The Forensic Breakdown</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
@@ -176,10 +176,10 @@ export default function LandingPage() {
           <div className="group bg-white border-[3px] border-black p-5 sm:p-6 shadow-[4px_4px_0_0_#000] sm:shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] sm:hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150 rounded-2xl sm:rounded-3xl cursor-default">
             <div className="flex items-center gap-2.5 mb-2.5 sm:mb-3">
               <Clock className="size-5 sm:size-6 text-[#CA8A04] group-hover:scale-110 transition-transform shrink-0 stroke-[2.5]" />
-              <h3 className="text-base sm:text-lg font-black uppercase">24-Hour Temporal Analysis</h3>
+              <h3 className="text-base sm:text-lg font-black uppercase">When the Coding Happens</h3>
             </div>
             <p className="text-xs text-gray-700 font-semibold leading-relaxed">
-              24-hour UTC clocks, weekday cadence matrices, consecutive streaks, and nocturnal ratios calculated from true author commit timestamps.
+              24-hour clocks, weekday rhythms, streaks, and nocturnal habits logged on your timeline.
             </p>
           </div>
 
@@ -187,10 +187,10 @@ export default function LandingPage() {
           <div className="group bg-white border-[3px] border-black p-5 sm:p-6 shadow-[4px_4px_0_0_#000] sm:shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] sm:hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150 rounded-2xl sm:rounded-3xl cursor-default">
             <div className="flex items-center gap-2.5 mb-2.5 sm:mb-3">
               <FileCode2 className="size-5 sm:size-6 text-[#2563EB] group-hover:scale-110 transition-transform shrink-0 stroke-[2.5]" />
-              <h3 className="text-base sm:text-lg font-black uppercase">Commit Forensics &amp; Churn</h3>
+              <h3 className="text-base sm:text-lg font-black uppercase">The Commit Record &amp; Churn</h3>
             </div>
             <p className="text-xs text-gray-700 font-semibold leading-relaxed">
-              Regex message intent categorization (feat, fix, refactor, chore), size spectrum distributions, and monthly code churn volume.
+              Message patterns, commit size spectrums, additions, deletions, and rewrites.
             </p>
           </div>
 
@@ -201,18 +201,18 @@ export default function LandingPage() {
               <h3 className="text-base sm:text-lg font-black uppercase">The Gitopsy Courtroom</h3>
             </div>
             <p className="text-xs text-gray-700 font-semibold leading-relaxed">
-              An interactive trial simulation charging you with verified crimes against sleep and git hygiene based on real commit statistics.
+              A lighthearted tribunal charging you with questionable git hygiene and late-night commits.
             </p>
           </div>
 
           {/* Feature 4 */}
           <div className="group bg-white border-[3px] border-black p-5 sm:p-6 shadow-[4px_4px_0_0_#000] sm:shadow-[6px_6px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] sm:hover:shadow-[4px_4px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all duration-150 rounded-2xl sm:rounded-3xl cursor-default">
             <div className="flex items-center gap-2.5 mb-2.5 sm:mb-3">
-              <Sparkles className="size-5 sm:size-6 text-[#9333EA] group-hover:scale-110 transition-transform shrink-0 stroke-[2.5]" />
-              <h3 className="text-base sm:text-lg font-black uppercase">Gitopsy Wrapped</h3>
+              <IdCard className="size-5 sm:size-6 text-[#9333EA] group-hover:scale-110 transition-transform shrink-0 stroke-[2.5]" />
+              <h3 className="text-base sm:text-lg font-black uppercase">The Developer Card</h3>
             </div>
             <p className="text-xs text-gray-700 font-semibold leading-relaxed">
-              A multi-chapter visual walkthrough celebrating your annual records, primary specimen, and developer diagnosis.
+              A distilled, high-impact social identity card summarizing your primary classification and cadence.
             </p>
           </div>
         </div>
@@ -220,10 +220,10 @@ export default function LandingPage() {
 
       {/* ------------------- FOOTER ------------------- */}
       <footer className="max-w-5xl mx-auto w-full text-center mt-6">
-        <div className="pt-6 border-t-2 border-black/20 flex flex-col sm:flex-row items-center justify-between text-xs font-bold uppercase text-gray-700 gap-3 sm:gap-4">
-          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-2">
-            <div className="flex items-center gap-2">
-              <div className="relative size-5 shrink-0">
+        <div className="pt-4 border-t-2 border-black/20 flex items-center justify-between text-xs font-bold uppercase text-gray-700 gap-3 sm:gap-4">
+          <div className="flex items-center gap-2 flex-nowrap mx-auto sm:mx-0">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <div className="relative size-4 sm:size-5 shrink-0">
                 <Image
                   src="/gitopsy-logo.png"
                   alt="Gitopsy Logo"
@@ -232,17 +232,17 @@ export default function LandingPage() {
                   className="object-contain"
                 />
               </div>
-              <span>© Gitopsy 2026</span>
+              <span className="whitespace-nowrap">© Gitopsy 2026</span>
             </div>
-            <span className="hidden sm:inline text-black/40">•</span>
+            <span className="text-black/40">•</span>
             <a
               href="https://github.com/monojitgoswami69/gitopsy"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-black transition-colors flex items-center gap-1.5 hover:underline"
+              className="hover:text-black transition-colors flex items-center gap-1 hover:underline whitespace-nowrap"
               title="GitHub Repository"
             >
-              <svg className="size-4 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+              <svg className="size-3.5 sm:size-4 fill-current shrink-0" viewBox="0 0 24 24" aria-hidden="true">
                 <path
                   fillRule="evenodd"
                   clipRule="evenodd"
@@ -255,7 +255,7 @@ export default function LandingPage() {
           <a
             href="#hero"
             onClick={(e) => handleScrollToSection(e, "hero")}
-            className="hover:underline hover:text-black transition-colors"
+            className="hidden sm:inline-block hover:underline hover:text-black transition-colors"
           >
             Back to top ↑
           </a>

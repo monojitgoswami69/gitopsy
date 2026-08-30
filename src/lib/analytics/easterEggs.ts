@@ -39,7 +39,7 @@ export function detectDeterministicEasterEggs(
     eggs.push({
       id: "egg-42",
       title: "CASE NOTE: THE NUMBER 42",
-      trigger: "A verified metric equaled exactly 42",
+      trigger: "A metric on the record equaled exactly 42",
       unlockedAt: now,
       dialogue: "42 detected in your engineering logs. Deep Thought confirms your commits are mathematically justified.",
     });
@@ -50,7 +50,7 @@ export function detectDeterministicEasterEggs(
     eggs.push({
       id: "egg-69",
       title: "CASE NOTE: STATISTICAL MILESTONE (69)",
-      trigger: "A verified metric equaled 69",
+      trigger: "A metric on the record equaled 69",
       unlockedAt: now,
       dialogue: "69 detected in the temporal logs. The forensic examination documents this statistical milestone.",
     });
@@ -61,7 +61,7 @@ export function detectDeterministicEasterEggs(
     eggs.push({
       id: "egg-420",
       title: "CASE NOTE: MILESTONE 420",
-      trigger: "A verified metric equaled 420",
+      trigger: "A metric on the record equaled 420",
       unlockedAt: now,
       dialogue: "420 detected across your recorded metrics.",
     });
@@ -72,7 +72,7 @@ export function detectDeterministicEasterEggs(
     eggs.push({
       id: "egg-1337",
       title: "CASE NOTE: 1337 CLEARANCE",
-      trigger: "A verified metric equaled 1337",
+      trigger: "A metric on the record equaled 1337",
       unlockedAt: now,
       dialogue: "1337 detected in the codebase logs. Elite authorization recognized in the forensic report.",
     });

@@ -41,7 +41,7 @@ export function ForensicWatermark() {
               </text>
             </svg>
             <div className="text-[7.5px] font-black tracking-[0.2em] uppercase text-[#1E3A8A] mb-0.5">
-              VERIFIED AUDIT
+              OFFICIAL AUDIT
             </div>
             <div className="text-xs font-black tracking-widest border-y border-[#1E3A8A] py-0.5 px-2 uppercase">
               EXHIBIT A
@@ -81,7 +81,7 @@ export function ForensicWatermark() {
         style={{ filter: "url(#rubber-stamp-grunge)" }}
       >
         <div className="border-2 border-dashed border-[#991B1B] rounded-lg px-4 py-1.5 text-[#991B1B] font-mono text-center flex flex-col items-center">
-          <span className="text-[7.5px] font-black tracking-[0.25em] uppercase">VERIFIED GITHUB ARTIFACT</span>
+          <span className="text-[7.5px] font-black tracking-[0.25em] uppercase">OFFICIAL GITHUB ARTIFACT</span>
           <span className="text-[10px] font-black tracking-wider uppercase my-0.5 text-[#991B1B]">
             AUTHENTICATED SPECIMEN
           </span>
@@ -157,7 +157,7 @@ export function ForensicWatermark() {
             21 AUG 2026
           </span>
           <span className="text-[6.5px] font-bold tracking-wider uppercase text-[#B91C1C]/90">
-            DETERMINISTIC CLIENT AUDIT
+            LOCAL IN-BROWSER AUDIT
           </span>
         </div>
       </div>
@@ -169,7 +169,7 @@ export function ForensicWatermark() {
       >
         <div className="border-2 border-[#B91C1C] rounded-full px-5 py-1 text-[#B91C1C] font-mono flex items-center gap-2 bg-[#B91C1C]/5">
           <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-[0.22em]">
-            ★ AUTOPSY ARCHIVE RECORD • CASE VERIFIED ★
+            ★ AUTOPSY ARCHIVE RECORD • CASE FILED ★
           </span>
         </div>
       </div>

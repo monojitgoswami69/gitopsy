@@ -121,11 +121,11 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
             <div className="flex items-center gap-2.5">
               <FolderGit2 className="size-5 sm:size-6 text-black stroke-[2.2] shrink-0" />
               <h2 className="text-xl font-bold uppercase tracking-tight">
-                REPOSITORY PORTFOLIO
+                THE REPOSITORY PORTFOLIO
               </h2>
             </div>
             <p className="text-xs font-bold text-neutral-800 mt-1">
-              Displaying {repositories.length} contributed repositories with verified commit activity.
+              The projects that make up your GitHub footprint, from workhorses to abandoned side projects.
             </p>
           </div>
 
@@ -487,11 +487,11 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
               <div className="flex items-center gap-2.5">
                 <Trophy className="size-5 sm:size-6 text-black stroke-[2.2] shrink-0" />
                 <h2 className="text-xl font-bold uppercase tracking-tight text-black">
-                  REPOSITORY AWARDS
+                  DISTINCTIONS FROM THE LAB
                 </h2>
               </div>
               <p className="text-xs font-bold text-neutral-800 mt-1">
-                Evidence-based repository awards based on verifiable commit, churn, and longevity milestones.
+                Some repositories left a bigger mark on the record than others.
               </p>
             </div>
           </div>
@@ -512,7 +512,7 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
                       </span>
                       <div>
                         <span className="text-[10px] font-black uppercase tracking-wider text-gray-500 block">
-                          AWARD
+                          DISTINCTION
                         </span>
                         <h3 className="text-sm sm:text-base font-black uppercase tracking-tight text-black leading-tight">
                           {award.title}
@@ -539,11 +539,11 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
                     </p>
                   </div>
 
-                  {/* Verified Evidence Drawer */}
+                  {/* Evidence Drawer */}
                   <div className="bg-white border-[1.5px] border-black/30 rounded-[6px] p-3 flex flex-col gap-1 mt-auto">
                     <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-gray-700">
                       <CheckCircle2 className="size-3 text-emerald-700 shrink-0" />
-                      <span>VERIFIED EVIDENCE</span>
+                      <span>EVIDENCE</span>
                     </div>
                     <p className="text-xs font-mono font-bold text-black leading-snug">
                       {award.evidence}

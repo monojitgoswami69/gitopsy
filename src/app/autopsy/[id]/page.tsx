@@ -15,8 +15,8 @@ import { CourtSection } from "@/components/forensic/CourtSection";
 import { DataManagementSection } from "@/components/forensic/DataManagementSection";
 import { DossierIndexNav } from "@/components/layout/DossierIndexNav";
 
-const WrappedViewer = dynamic(
-  () => import("@/components/forensic/WrappedViewer").then((mod) => mod.WrappedViewer),
+const DeveloperCardModal = dynamic(
+  () => import("@/components/forensic/DeveloperCardModal").then((mod) => mod.DeveloperCardModal),
   { ssr: false }
 );
 import Image from "next/image";
@@ -44,6 +44,7 @@ import {
   AlertTriangle,
   GitPullRequest,
   Users2,
+  IdCard,
 } from "lucide-react";
 
 export default function AutopsyReportDetailPage() {
@@ -56,7 +57,7 @@ export default function AutopsyReportDetailPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [heatmapMetric, setHeatmapMetric] = useState<"COMMITS" | "LINES">("COMMITS");
   const [isMobile, setIsMobile] = useState(false);
-  const [isWrappedOpen, setIsWrappedOpen] = useState(false);
+  const [isCardModalOpen, setIsCardModalOpen] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -206,9 +207,9 @@ export default function AutopsyReportDetailPage() {
     })();
 
   return (
-    <div className="w-full relative pb-24 lg:pb-16">
+    <div className="w-full relative pb-20 lg:pb-2">
       {/* Standalone Left Sidebar Index Navigation */}
-      <DossierIndexNav onLaunchWrapped={() => setIsWrappedOpen(true)} />
+      <DossierIndexNav onLaunchCard={() => setIsCardModalOpen(true)} />
 
       {/* Main Continuous Flowing Dossier */}
       <div className="w-full lg:pl-56 xl:pl-68 flex flex-col gap-10 min-w-0 pr-2 sm:pr-4">
@@ -271,11 +272,11 @@ export default function AutopsyReportDetailPage() {
               <div className="flex items-center gap-2.5">
                 <Calendar className="size-5 sm:size-6 text-black stroke-[2.2] shrink-0" />
                 <h2 className="text-lg sm:text-xl font-bold uppercase tracking-tight">
-                  CONTRIBUTION ACTIVITY &amp; ANNUAL HEATMAP
+                  THE ACTIVITY SCENE
                 </h2>
               </div>
               <p className="text-xs font-bold text-neutral-800 mt-1">
-                Daily author timestamp cadence collected directly from version control logs in your local timezone ({userTz}).
+                A year of commits, streaks, bursts, and suspiciously busy hours.
               </p>
             </div>
 
@@ -336,11 +337,11 @@ export default function AutopsyReportDetailPage() {
               <div className="flex items-center gap-2.5">
                 <Clock className="size-5 sm:size-6 text-black stroke-[2.2] shrink-0" />
                 <h2 className="text-xl font-bold uppercase tracking-tight">
-                  TEMPORAL PROFILE &amp; CADENCE
+                  WHEN THE CODING HAPPENS
                 </h2>
               </div>
               <p className="text-xs font-bold text-neutral-800 mt-1">
-                24-hour clock and weekday distributions in your local timezone ({userTz}).
+                Day shifts, night shifts, weekend habits, and everything in between.
               </p>
             </div>
           </div>
@@ -392,11 +393,11 @@ export default function AutopsyReportDetailPage() {
               <div className="flex items-center gap-2.5">
                 <Globe2 className="size-5 sm:size-6 text-black stroke-[2.2] shrink-0" />
                 <h2 className="text-xl font-bold uppercase tracking-tight">
-                  PROGRAMMING LANGUAGE DNA &amp; COMPOSITION
+                  THE CODE DNA
                 </h2>
               </div>
               <p className="text-xs font-bold text-neutral-800 mt-1">
-                Exact language byte distributions across all examined repositories.
+                The languages hiding in your repositories, and which ones dominate the scene.
               </p>
             </div>
           </div>
@@ -471,11 +472,11 @@ export default function AutopsyReportDetailPage() {
               <div className="flex items-center gap-2.5">
                 <FileCode2 className="size-5 sm:size-6 text-black stroke-[2.2] shrink-0" />
                 <h2 className="text-xl font-bold uppercase tracking-tight">
-                  HISTORICAL CODE CHURN TIMELINE
+                  THE CODE THAT CAME AND WENT
                 </h2>
               </div>
               <p className="text-xs font-bold text-neutral-800 mt-1">
-                Gross additions (+lines) and deletions (-lines) plotted across time from version control diffs.
+                Additions, deletions, rewrites, and the occasional demolition job.
               </p>
             </div>
           </div>
@@ -490,11 +491,11 @@ export default function AutopsyReportDetailPage() {
               <div className="flex items-center gap-2.5">
                 <GitPullRequest className="size-5 sm:size-6 text-black stroke-[2.2] shrink-0" />
                 <h2 className="text-xl font-bold uppercase tracking-tight">
-                  COLLABORATION RECORD &amp; PULL REQUESTS
+                  THE COLLABORATION RECORD
                 </h2>
               </div>
               <p className="text-xs font-bold text-neutral-800 mt-1">
-                Verified pull request throughput, code reviews submitted, and multi-contributor footprint.
+                Pull requests, reviews, shared repositories, and signs of life beyond your own keyboard.
               </p>
             </div>
           </div>
@@ -543,28 +544,27 @@ export default function AutopsyReportDetailPage() {
           defendantLogin={analysis.subject.login}
         />
 
-        {/* Wrapped Recap & Launcher */}
-        <div id="section-wrapped" className="border-[4px] border-black bg-[#FFDC58] rounded-[12px] p-4 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 text-black">
+        {/* Developer Card Launcher */}
+        <div id="section-developer-card" className="border-[4px] border-black bg-[#FFDC58] rounded-[12px] p-4 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 text-black">
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center gap-2.5">
-              <Gift className="size-5 sm:size-6 text-black stroke-[2.2] shrink-0" />
+              <IdCard className="size-5 sm:size-6 text-black stroke-[2.2] shrink-0" />
               <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-tight">
-                GITOPSY FORENSIC WRAPPED
+                THE GITOPSY DEVELOPER CARD
               </h2>
             </div>
             <p className="text-xs font-bold text-neutral-900 max-w-lg leading-relaxed mt-1">
-              Launch the full-screen 15-chapter presentation summarizing your headline records,
-              dominant repository, and developer assessment.
+              Your GitHub identity, distilled into one high-impact card worth sharing.
             </p>
           </div>
 
           <Button
             size="lg"
             variant="accent"
-            onClick={() => setIsWrappedOpen(true)}
-            className="whitespace-nowrap shadow-[4px_4px_0_0_#000] w-full sm:w-auto"
+            onClick={() => setIsCardModalOpen(true)}
+            className="whitespace-nowrap shadow-[4px_4px_0_0_#000] w-full sm:w-auto font-black"
           >
-            LAUNCH WRAPPED
+            OPEN YOUR DEVELOPER CARD
           </Button>
         </div>
 
@@ -575,11 +575,11 @@ export default function AutopsyReportDetailPage() {
         />
 
         {/* Footer — Minimalistic (matches landing page) */}
-        <footer className="w-full text-center mt-6">
-          <div className="pt-6 border-t-2 border-black/20 flex flex-col sm:flex-row items-center justify-between text-xs font-bold uppercase text-gray-700 gap-3 sm:gap-4">
-            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-2">
-              <div className="flex items-center gap-2">
-                <div className="relative size-5 shrink-0">
+        <footer className="w-full text-center mt-[-12px]">
+          <div className="pt-4 border-t-2 border-black/20 flex items-center justify-between text-xs font-bold uppercase text-gray-700 gap-3 sm:gap-4">
+            <div className="flex items-center gap-2 flex-nowrap mx-auto sm:mx-0">
+              <div className="flex items-center gap-1.5 shrink-0">
+                <div className="relative size-4 sm:size-5 shrink-0">
                   <Image
                     src="/gitopsy-logo.png"
                     alt="Gitopsy Logo"
@@ -588,17 +588,17 @@ export default function AutopsyReportDetailPage() {
                     className="object-contain"
                   />
                 </div>
-                <span>© Gitopsy {new Date().getFullYear()}</span>
+                <span className="whitespace-nowrap">© Gitopsy {new Date().getFullYear()}</span>
               </div>
-              <span className="hidden sm:inline text-black/40">•</span>
+              <span className="text-black/40">•</span>
               <a
                 href="https://github.com/monojitgoswami69/gitopsy"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-black transition-colors flex items-center gap-1.5 hover:underline"
+                className="hover:text-black transition-colors flex items-center gap-1 hover:underline whitespace-nowrap"
                 title="GitHub Repository"
               >
-                <svg className="size-4 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+                <svg className="size-3.5 sm:size-4 fill-current shrink-0" viewBox="0 0 24 24" aria-hidden="true">
                   <path
                     fillRule="evenodd"
                     clipRule="evenodd"
@@ -613,7 +613,7 @@ export default function AutopsyReportDetailPage() {
                 const el = document.getElementById("app-main-scroll");
                 if (el) el.scrollTo({ top: 0, behavior: "smooth" });
               }}
-              className="hover:underline hover:text-black transition-colors cursor-pointer"
+              className="hidden sm:inline-block hover:underline hover:text-black transition-colors cursor-pointer"
             >
               Back to top ↑
             </button>
@@ -621,11 +621,11 @@ export default function AutopsyReportDetailPage() {
         </footer>
       </div>
 
-      {/* Full-Screen Wrapped Modal */}
-      {isWrappedOpen && (
-        <WrappedViewer
+      {/* Developer Card Modal */}
+      {isCardModalOpen && (
+        <DeveloperCardModal
           report={analysis}
-          onClose={() => setIsWrappedOpen(false)}
+          onClose={() => setIsCardModalOpen(false)}
         />
       )}
     </div>
