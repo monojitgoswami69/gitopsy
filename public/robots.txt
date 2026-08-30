@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /api/
 
-Sitemap: https://gitopsy.dev/sitemap.xml
+Sitemap: https://gitopsy.mgbuilds.in/sitemap.xml

@@ -20,10 +20,12 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_APP_URL || "https://gitopsy.dev";
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL || "https://gitopsy.mgbuilds.in";
 const siteTitle = "GITOPSY • Your GitHub, Under Examination";
-const siteDescription =
-  "Forensic GitHub engineering intelligence & developer autopsy. In-browser analysis of your commits, PRs, code churn, and coding archetype.";
+const searchDescription =
+  "Forensic GitHub engineering intelligence and developer autopsy. In-browser analysis of your commits, PRs, code churn, and coding archetype.";
+const socialDescription =
+  "Forensic GitHub intelligence & developer autopsy. In-browser analysis of your commits, PRs, and code churn.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -31,7 +33,7 @@ export const metadata: Metadata = {
     default: siteTitle,
     template: "%s | GITOPSY",
   },
-  description: siteDescription,
+  description: searchDescription,
   applicationName: "GITOPSY",
   authors: [{ name: "Monojit Goswami", url: "https://github.com/monojitgoswami69" }],
   creator: "Monojit Goswami",
@@ -57,7 +59,7 @@ export const metadata: Metadata = {
     url: siteUrl,
     siteName: "GITOPSY",
     title: siteTitle,
-    description: siteDescription,
+    description: socialDescription,
     images: [
       {
         url: "/og.png",
@@ -71,7 +73,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: siteTitle,
-    description: siteDescription,
+    description: socialDescription,
     images: ["/og.png"],
     creator: "@gitopsy",
   },
@@ -112,7 +114,7 @@ const jsonLd = {
   "@type": "WebApplication",
   name: "GITOPSY",
   url: siteUrl,
-  description: siteDescription,
+  description: searchDescription,
   applicationCategory: "DeveloperApplication",
   operatingSystem: "Any",
   offers: {
@@ -142,7 +144,7 @@ export default function RootLayout({
     >
       <head>
         <meta property="og:title" content={siteTitle} />
-        <meta property="og:description" content={siteDescription} />
+        <meta property="og:description" content={socialDescription} />
         <meta property="og:image" content={`${siteUrl}/og.png`} />
         <meta property="og:image:secure_url" content={`${siteUrl}/og.png`} />
         <meta property="og:image:type" content="image/png" />
@@ -156,7 +158,7 @@ export default function RootLayout({
         <meta name="twitter:site" content="@gitopsy" />
         <meta name="twitter:creator" content="@gitopsy" />
         <meta name="twitter:title" content={siteTitle} />
-        <meta name="twitter:description" content={siteDescription} />
+        <meta name="twitter:description" content={socialDescription} />
         <meta name="twitter:image" content={`${siteUrl}/og.png`} />
         <meta name="twitter:image:alt" content="GITOPSY - Forensic GitHub Intelligence & Analytics" />
         <script
