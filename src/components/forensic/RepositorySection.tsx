@@ -118,10 +118,13 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
         {/* Section Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 border-b-[2px] border-black/15 pb-4">
           <div>
-            <h2 className="text-xl font-black uppercase tracking-tight flex items-center gap-2">
-              <FolderGit2 className="size-6 text-black" /> 04. REPOSITORY PORTFOLIO
-            </h2>
-            <p className="text-xs font-bold text-gray-600 mt-0.5">
+            <div className="flex items-center gap-2.5">
+              <FolderGit2 className="size-5 sm:size-6 text-black stroke-[2.2] shrink-0" />
+              <h2 className="text-xl font-bold uppercase tracking-tight">
+                REPOSITORY PORTFOLIO
+              </h2>
+            </div>
+            <p className="text-xs font-bold text-neutral-800 mt-1">
               Displaying {repositories.length} contributed repositories with verified commit activity.
             </p>
           </div>
@@ -200,7 +203,7 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
                   className={`transition-all duration-150 ${
                     isExpanded
                       ? "bg-[#FFFDF7] border-[2px] border-black rounded-[10px] my-2.5 p-4 sm:p-5"
-                      : "hover:bg-amber-50/40 px-3 rounded-[6px] border-b border-black/10 last:border-b-0"
+                      : "hover:bg-amber-50/40 px-3 border-b border-black/25 last:border-b-0"
                   }`}
                 >
                   {/* Summary Row (Clickable Header) */}
@@ -477,27 +480,29 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
 
       {/* 05. Repository Awards Overview */}
       {awards.length > 0 && (
-        <div id="section-distinctions" className="flex flex-col gap-4">
-          <div className="flex items-center gap-2">
-            <Trophy className="size-6 text-[#FD9745]" />
+        <div id="section-distinctions" className="border-[4px] border-black bg-white rounded-[12px] p-4 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-5 sm:gap-6 text-black">
+          {/* Section Header */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b-[3px] border-black pb-4">
             <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-xl font-black uppercase tracking-tight text-black">
-                  05. REPOSITORY AWARDS
+              <div className="flex items-center gap-2.5">
+                <Trophy className="size-5 sm:size-6 text-black stroke-[2.2] shrink-0" />
+                <h2 className="text-xl font-bold uppercase tracking-tight text-black">
+                  REPOSITORY AWARDS
                 </h2>
               </div>
-              <p className="text-xs font-bold text-gray-600 mt-0.5">
+              <p className="text-xs font-bold text-neutral-800 mt-1">
                 Evidence-based repository awards based on verifiable commit, churn, and longevity milestones.
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* In-Box Grid Cards with Minimal Drop Shadows (2 Per Row) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
             {awards.map((award) => {
               return (
                 <div
                   key={award.id}
-                  className="border-[3px] border-black bg-white rounded-[12px] p-5 shadow-[3.5px_3.5px_0_0_#000] flex flex-col justify-between gap-4 text-black hover:translate-x-[1.5px] hover:translate-y-[1.5px] hover:shadow-[2px_2px_0_0_#000] active:translate-x-[3.5px] active:translate-y-[3.5px] active:shadow-none transition-all duration-150"
+                  className="border-[2px] border-black bg-[#FFFBEB] rounded-[8px] p-4 sm:p-5 shadow-[1.5px_1.5px_0_0_#000] flex flex-col justify-between gap-4 text-black hover:translate-x-[0.5px] hover:translate-y-[0.5px] hover:shadow-[1px_1px_0_0_#000] transition-all"
                 >
                   <div className="flex flex-col gap-3">
                     {/* Header: Direct Emoji + Title */}
@@ -520,7 +525,7 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
                       href={`https://github.com/${award.repoFullName}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-fit max-w-full px-2.5 py-1 bg-neutral-100 hover:bg-[#FFDC58] text-black border-[1.5px] border-black rounded-[6px] shadow-[1.5px_1.5px_0_0_#000] hover:translate-x-[0.5px] hover:translate-y-[0.5px] hover:shadow-[1px_1px_0_0_#000] active:translate-x-[1.5px] active:translate-y-[1.5px] active:shadow-none text-xs font-mono font-bold flex items-center gap-1.5 transition-all truncate group/repo"
+                      className="w-fit max-w-full px-2.5 py-1 bg-white hover:bg-[#FFDC58] text-black border-[1.5px] border-black rounded-[6px] shadow-[1px_1px_0_0_#000] hover:translate-x-[0.5px] hover:translate-y-[0.5px] hover:shadow-none text-xs font-mono font-bold flex items-center gap-1.5 transition-all truncate group/repo"
                       title={`Open ${award.repoFullName} on GitHub`}
                     >
                       <FolderGit2 className="size-3 text-gray-700 group-hover/repo:text-black shrink-0" />
@@ -529,13 +534,13 @@ export function RepositorySection({ repositories, awards }: RepositorySectionPro
                     </a>
 
                     {/* Description */}
-                    <p className="text-xs font-semibold text-gray-700 leading-relaxed">
+                    <p className="text-xs font-semibold text-gray-800 leading-relaxed">
                       {award.description}
                     </p>
                   </div>
 
                   {/* Verified Evidence Drawer */}
-                  <div className="bg-[#FFFDF5] border-[1.5px] border-black rounded-[8px] p-3 flex flex-col gap-1 mt-auto">
+                  <div className="bg-white border-[1.5px] border-black/30 rounded-[6px] p-3 flex flex-col gap-1 mt-auto">
                     <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-gray-700">
                       <CheckCircle2 className="size-3 text-emerald-700 shrink-0" />
                       <span>VERIFIED EVIDENCE</span>

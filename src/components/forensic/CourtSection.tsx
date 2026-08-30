@@ -14,13 +14,13 @@ export function CourtSection({ charges, defendantLogin }: CourtSectionProps) {
     <div id="section-court" className="border-[4px] border-black bg-white rounded-[12px] p-4 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-5 sm:gap-6 text-black">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b-[3px] border-black pb-4">
         <div>
-          <div className="flex items-center gap-2">
-            <Scale className="size-6 text-black" />
-            <h2 className="text-xl font-black uppercase tracking-tight">
-              11. GITOPSY COURTROOM INDICTMENTS
+          <div className="flex items-center gap-2.5">
+            <Scale className="size-5 sm:size-6 text-black stroke-[2.2] shrink-0" />
+            <h2 className="text-xl font-bold uppercase tracking-tight">
+              GITOPSY COURTROOM INDICTMENTS
             </h2>
           </div>
-          <p className="text-xs font-bold text-gray-600 mt-0.5">
+          <p className="text-xs font-bold text-neutral-800 mt-1">
             Formal forensic indictments filed on behalf of sensible sleep cycles and git history hygiene for @{defendantLogin}.
           </p>
         </div>
@@ -31,7 +31,7 @@ export function CourtSection({ charges, defendantLogin }: CourtSectionProps) {
         {charges.map((charge) => (
           <div
             key={charge.id}
-            className="border-[3px] border-black bg-[#FFFBEB] rounded-[10px] p-4 sm:p-5 shadow-[3.5px_3.5px_0_0_#000] sm:shadow-[4px_4px_0_0_#000] flex flex-col justify-between gap-4 text-black hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[3px_3px_0_0_#000] transition-all"
+            className="border-[2px] border-black bg-[#FFFBEB] rounded-[8px] p-4 sm:p-5 shadow-[1.5px_1.5px_0_0_#000] flex flex-col justify-between gap-4 text-black hover:translate-x-[0.5px] hover:translate-y-[0.5px] hover:shadow-[1px_1px_0_0_#000] transition-all"
           >
             <div className="flex flex-col gap-3">
               <div className="flex items-start justify-between gap-3 border-b-[2px] border-black/15 pb-2.5">

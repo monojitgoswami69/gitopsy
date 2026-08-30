@@ -120,4 +120,58 @@ describe("Developer Assessments Engine", () => {
     expect(atomic).toBeDefined();
     expect(atomic?.evidence.every((e) => e.isSatisfied)).toBe(true);
   });
+
+  it("should assess SOLO OPERATOR and ARTISANAL BUILDER when criteria are met", () => {
+    const soloRepo: RepositoryAnalysis = {
+      ...baseRepo,
+      stars: 0,
+      forks: 0,
+    };
+    const classifications = computeDeveloperClassifications({
+      commits: [],
+      repositories: [soloRepo],
+      temporal: {
+        heatmapCalendar: [],
+        byHour: new Array(24).fill(3),
+        byWeekday: new Array(7).fill(10),
+        byMonth: [],
+        longestInactiveGapDays: 0,
+        peakDailyCommits: 5,
+      },
+      summary: {
+        totalCommits: 70,
+        totalActiveDays: 30,
+        longestStreakDays: 8,
+        nightCommitPercentage: 10,
+        weekendCommitPercentage: 10,
+        busiestHour: 15,
+        busiestWeekday: "Wednesday",
+        prsAuthored: 0,
+        reviewsAuthored: 0,
+      } as any,
+      churn: {
+        churnRatio: 0.2,
+        totalDeletions: 200,
+        totalAdditions: 800,
+      },
+      commitForensics: {
+        medianCommitSize: 25,
+        averageMessageLength: 20,
+        shortMessageCount: 1,
+        longMessageCount: 1,
+        conventionalCommitCount: 50,
+        detailedCommitsCount: 40,
+      },
+      languages: [{ name: "TypeScript", bytes: 10000, percentage: 100, isFunctional: true }],
+      commitCategories: [{ category: "FEAT", count: 70, percentage: 100 }],
+    });
+
+    const soloOp = classifications.find((c) => c.id === "solo-operator");
+    expect(soloOp).toBeDefined();
+    expect(soloOp?.evidence.every((e) => e.isSatisfied)).toBe(true);
+
+    const artisanal = classifications.find((c) => c.id === "artisanal-builder");
+    expect(artisanal).toBeDefined();
+    expect(artisanal?.evidence.every((e) => e.isSatisfied)).toBe(true);
+  });
 });

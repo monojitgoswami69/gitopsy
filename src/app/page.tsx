@@ -220,19 +220,21 @@ export default function LandingPage() {
 
       {/* ------------------- FOOTER ------------------- */}
       <footer className="max-w-5xl mx-auto w-full text-center mt-6">
-        <div className="pt-6 border-t-2 border-black/20 flex flex-col sm:flex-row items-center justify-between text-xs font-bold uppercase text-gray-700 gap-4">
-          <div className="flex items-center gap-2">
-            <div className="relative size-5 shrink-0">
-              <Image
-                src="/gitopsy-logo.png"
-                alt="Gitopsy Logo"
-                width={20}
-                height={20}
-                className="object-contain"
-              />
+        <div className="pt-6 border-t-2 border-black/20 flex flex-col sm:flex-row items-center justify-between text-xs font-bold uppercase text-gray-700 gap-3 sm:gap-4">
+          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-2">
+            <div className="flex items-center gap-2">
+              <div className="relative size-5 shrink-0">
+                <Image
+                  src="/gitopsy-logo.png"
+                  alt="Gitopsy Logo"
+                  width={20}
+                  height={20}
+                  className="object-contain"
+                />
+              </div>
+              <span>© Gitopsy 2026</span>
             </div>
-            <span>© Gitopsy 2026</span>
-            <span className="text-black/40">•</span>
+            <span className="hidden sm:inline text-black/40">•</span>
             <a
               href="https://github.com/monojitgoswami69/gitopsy"
               target="_blank"
@@ -250,15 +252,13 @@ export default function LandingPage() {
               <span>GitHub</span>
             </a>
           </div>
-          <div className="flex items-center gap-4">
-            <a
-              href="#hero"
-              onClick={(e) => handleScrollToSection(e, "hero")}
-              className="hover:underline hover:text-black transition-colors"
-            >
-              Back to top ↑
-            </a>
-          </div>
+          <a
+            href="#hero"
+            onClick={(e) => handleScrollToSection(e, "hero")}
+            className="hover:underline hover:text-black transition-colors"
+          >
+            Back to top ↑
+          </a>
         </div>
       </footer>
     </div>

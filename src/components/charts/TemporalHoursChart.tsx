@@ -28,13 +28,13 @@ export function TemporalHoursChart({
         type: "category",
         data: hours,
         axisLine: { lineStyle: { color: "#000", width: 2 } },
-        axisLabel: { color: "#000", fontWeight: "bold", fontSize: 10 },
+        axisLabel: { color: "#000", fontWeight: 900, fontFamily: "'JetBrains Mono', monospace", fontSize: 10 },
       },
       yAxis: {
         type: "value",
         axisLine: { lineStyle: { color: "#000", width: 2 } },
         splitLine: { lineStyle: { color: "#E5E7EB", width: 1.5 } },
-        axisLabel: { color: "#000", fontWeight: "bold" },
+        axisLabel: { color: "#000", fontWeight: 900, fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5 },
       },
       series: [
         {
@@ -61,7 +61,7 @@ export function TemporalHoursChart({
         extraCssText: "background: transparent !important; border: none !important; padding: 0 !important; box-shadow: none !important; pointer-events: none;",
         textStyle: {
           color: "#000000",
-          fontFamily: "monospace",
+          fontFamily: "'JetBrains Mono', monospace",
           fontSize: 11,
         },
         axisPointer: {
@@ -93,13 +93,13 @@ export function TemporalHoursChart({
         type: "category",
         data: weekdays,
         axisLine: { lineStyle: { color: "#000", width: 2 } },
-        axisLabel: { color: "#000", fontWeight: "bold", fontSize: 11 },
+        axisLabel: { color: "#000", fontWeight: 900, fontFamily: "'JetBrains Mono', monospace", fontSize: 11 },
       },
       yAxis: {
         type: "value",
         axisLine: { lineStyle: { color: "#000", width: 2 } },
         splitLine: { lineStyle: { color: "#E5E7EB", width: 1.5 } },
-        axisLabel: { color: "#000", fontWeight: "bold" },
+        axisLabel: { color: "#000", fontWeight: 900, fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5 },
       },
       series: [
         {
@@ -157,8 +157,9 @@ export function TemporalHoursChart({
       <div className="border-[2px] border-black bg-white p-3.5 rounded-[8px]">
         <h4 className="text-xs font-black uppercase tracking-wider mb-2 flex items-center justify-between">
           <span>24-Hour Forensic Clock ({tzLabel})</span>
-          <span className="text-[10px] font-bold bg-[#C084FC] px-2 py-0.5 border border-black rounded">
-            Purple = Night Owl
+          <span className="inline-flex items-center gap-1.5 text-[10.5px] font-mono font-bold bg-white px-2 py-0.5 border border-black rounded text-black">
+            <span className="size-2 rounded-full bg-[#C084FC] border border-black shrink-0" />
+            Night Owl
           </span>
         </h4>
         <EChartContainer options={hourOptions} height="240px" />
@@ -166,8 +167,9 @@ export function TemporalHoursChart({
       <div className="border-[2px] border-black bg-white p-3.5 rounded-[8px]">
         <h4 className="text-xs font-black uppercase tracking-wider mb-2 flex items-center justify-between">
           <span>Weekday Cadence Distribution</span>
-          <span className="text-[10px] font-bold bg-[#4D96FF] px-2 py-0.5 border border-black rounded text-black">
-            Blue = Weekend
+          <span className="inline-flex items-center gap-1.5 text-[10.5px] font-mono font-bold bg-white px-2 py-0.5 border border-black rounded text-black">
+            <span className="size-2 rounded-full bg-[#4D96FF] border border-black shrink-0" />
+            Weekend
           </span>
         </h4>
         <EChartContainer options={weekdayOptions} height="240px" />

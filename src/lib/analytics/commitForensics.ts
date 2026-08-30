@@ -215,12 +215,12 @@ export function analyzeCommitForensics(
   // Pick top 4 distinct remarks
   const remarks = candidateRemarks.slice(0, 4);
 
-  // Top 3 volume commits
+  // Top 3 commits ranked by net code volume (additions - deletions)
   const topVolumeCommits = [...detailedCommits]
     .sort((a, b) => {
-      const volA = a.additions + a.deletions;
-      const volB = b.additions + b.deletions;
-      if (volB !== volA) return volB - volA;
+      const netA = a.additions - a.deletions;
+      const netB = b.additions - b.deletions;
+      if (netB !== netA) return netB - netA;
       return a.sha.localeCompare(b.sha);
     })
     .slice(0, 3)

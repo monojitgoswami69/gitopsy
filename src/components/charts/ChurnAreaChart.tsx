@@ -15,7 +15,6 @@ export interface ChurnItem {
 
 export function ChurnAreaChart({
   data,
-  granularity = "WEEKLY",
 }: {
   data: ChurnItem[];
   granularity?: "WEEKLY" | "MONTHLY";
@@ -184,8 +183,9 @@ export function ChurnAreaChart({
         },
         axisLabel: {
           color: "#000000",
-          fontWeight: "bold",
-          fontSize: 10,
+          fontWeight: 900,
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: 10.5,
           interval: 0,
           hideOverlap: true,
         },
@@ -201,8 +201,9 @@ export function ChurnAreaChart({
         },
         axisLabel: {
           color: "#000000",
-          fontWeight: "bold",
-          fontSize: 10,
+          fontWeight: 900,
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: 10.5,
           formatter: (v: number) => {
             const abs = Math.abs(v);
             if (abs === 0) return "0";
@@ -218,7 +219,7 @@ export function ChurnAreaChart({
           type: "bar",
           data: additions,
           barGap: "-100%",
-          barMaxWidth: granularity === "WEEKLY" ? 16 : 28,
+          barMaxWidth: 28,
           barMinHeight: 6,
           cursor: "pointer",
           emphasis: {
@@ -235,7 +236,7 @@ export function ChurnAreaChart({
           type: "bar",
           data: deletions,
           barGap: "-100%",
-          barMaxWidth: granularity === "WEEKLY" ? 16 : 28,
+          barMaxWidth: 28,
           barMinHeight: 6,
           cursor: "pointer",
           emphasis: {
@@ -249,7 +250,7 @@ export function ChurnAreaChart({
         },
       ],
     };
-  }, [data, granularity, lockedIndex]);
+  }, [data, lockedIndex]);
 
   return (
     <div ref={containerRef} className="w-full flex flex-col items-center">

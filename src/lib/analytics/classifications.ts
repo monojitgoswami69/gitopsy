@@ -488,6 +488,56 @@ export function computeDeveloperClassifications(ctx: ClassificationContext): Dev
     ],
   });
 
+  // 17. SOLO OPERATOR (consolidated from easter egg)
+  const isSolo = totalCommits >= 40 && (summary as any).prsAuthored === 0 && (summary as any).reviewsAuthored === 0;
+  classifications.push({
+    id: "solo-operator",
+    title: "SOLO OPERATOR",
+    tagline: "Direct branch and trunk deployment workflow.",
+    description: "Substantial direct commit volume logged without formal pull requests or peer code review overhead.",
+    badgeAccent: "#10B981",
+    evidenceStrength: getStrength(totalCommits, totalCommits - 40),
+    evidence: [
+      {
+        criterion: "Direct commit volume",
+        actualValue: `${totalCommits} commits`,
+        threshold: "≥ 40 commits",
+        isSatisfied: totalCommits >= 40,
+      },
+      {
+        criterion: "Pull requests & reviews overhead",
+        actualValue: "0 PRs / 0 reviews",
+        threshold: "0 PRs and 0 reviews",
+        isSatisfied: Boolean((summary as any).prsAuthored === 0 && (summary as any).reviewsAuthored === 0),
+      },
+    ],
+  });
+
+  // 18. ARTISANAL BUILDER (consolidated from easter egg)
+  const isArtisanal = totalCommits >= 60 && repositories.every((r) => r.stars === 0 && r.forks === 0);
+  classifications.push({
+    id: "artisanal-builder",
+    title: "ARTISANAL BUILDER",
+    tagline: "Independent craft across solo personal repositories.",
+    description: "Consistent development logged across private or independent repositories without public star tracking.",
+    badgeAccent: "#EAB308",
+    evidenceStrength: getStrength(totalCommits, totalCommits - 60),
+    evidence: [
+      {
+        criterion: "Total analyzed commits",
+        actualValue: `${totalCommits} commits`,
+        threshold: "≥ 60 commits",
+        isSatisfied: totalCommits >= 60,
+      },
+      {
+        criterion: "Solo independent repositories",
+        actualValue: `${totalRepos} repos (0 stars, 0 forks)`,
+        threshold: "100% solo repos",
+        isSatisfied: repositories.every((r) => r.stars === 0 && r.forks === 0),
+      },
+    ],
+  });
+
   // Sort satisfied classifications first, then by evidence strength
   return classifications.sort((a, b) => {
     const aSatisfied = a.evidence.every((e) => e.isSatisfied) ? 1 : 0;

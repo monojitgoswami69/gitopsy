@@ -5,13 +5,17 @@
 
 import { RepositoryAnalysis, RepositoryAward } from "@/types/domain";
 
+interface CandidateAward extends RepositoryAward {
+  marginScore: number;
+}
+
 export function generateRepositoryAwards(
   repos: RepositoryAnalysis[],
   totalUserCommits: number
 ): RepositoryAward[] {
-  const awards: RepositoryAward[] = [];
-  if (repos.length === 0) return awards;
+  if (repos.length === 0) return [];
 
+  const candidates: CandidateAward[] = [];
   const totalCommits = Math.max(1, totalUserCommits);
   const activeRepos = repos.filter((r) => !r.isArchived);
 
@@ -20,7 +24,9 @@ export function generateRepositoryAwards(
   const sortedByCommits = [...repos].sort((a, b) => b.commitCount - a.commitCount || a.daysSinceLastPush - b.daysSinceLastPush);
   const workhorse = sortedByCommits[0];
   if (workhorse && workhorse.commitCount >= 10) {
-    awards.push({
+    const commitMargin = (workhorse.commitCount - 10) / 10;
+    const portfolioShare = (workhorse.commitCount / totalCommits) * 2;
+    candidates.push({
       id: "award-workhorse",
       title: "THE WORKHORSE",
       category: "VELOCITY",
@@ -28,6 +34,7 @@ export function generateRepositoryAwards(
       badge: "⚡",
       description: "Carried the largest sustained volume of commits and active engineering output.",
       evidence: `${workhorse.commitCount.toLocaleString()} total commits recorded (${Math.round((workhorse.commitCount / totalCommits) * 100)}% of total output).`,
+      marginScore: commitMargin + portfolioShare,
     });
   }
 
@@ -35,7 +42,9 @@ export function generateRepositoryAwards(
   // Repository commanding >= 40% of the user's total code activity (min 15 commits)
   const mainCharacter = repos.find((r) => r.commitCount / totalCommits >= 0.4 && r.commitCount >= 15);
   if (mainCharacter) {
-    awards.push({
+    const shareMargin = ((mainCharacter.commitCount / totalCommits - 0.4) / 0.4) * 2.5;
+    const countMargin = (mainCharacter.commitCount - 15) / 15;
+    candidates.push({
       id: "award-main-character",
       title: "THE MAIN CHARACTER",
       category: "SCALE",
@@ -43,6 +52,7 @@ export function generateRepositoryAwards(
       badge: "👑",
       description: "Commands the dominant share of your developer portfolio.",
       evidence: `${Math.round((mainCharacter.commitCount / totalCommits) * 100)}% of all user commits concentrated here.`,
+      marginScore: shareMargin + countMargin,
     });
   }
 
@@ -50,7 +60,9 @@ export function generateRepositoryAwards(
   // Single repository containing >= 65% of all code volume (min 20 commits)
   const monolith = repos.find((r) => r.commitCount / totalCommits >= 0.65 && r.commitCount >= 20);
   if (monolith) {
-    awards.push({
+    const shareMargin = ((monolith.commitCount / totalCommits - 0.65) / 0.65) * 3.5;
+    const countMargin = (monolith.commitCount - 20) / 20;
+    candidates.push({
       id: "award-monolith",
       title: "THE MONOLITH",
       category: "SCALE",
@@ -58,6 +70,7 @@ export function generateRepositoryAwards(
       badge: "🗿",
       description: "Overwhelming concentration of code volume and commit gravity.",
       evidence: `${Math.round((monolith.commitCount / totalCommits) * 100)}% of your entire GitHub output lives in this single repository.`,
+      marginScore: shareMargin + countMargin,
     });
   }
 
@@ -67,7 +80,9 @@ export function generateRepositoryAwards(
     .filter((r) => r.commitCount >= 5 && r.daysSinceLastPush >= 180)
     .sort((a, b) => b.daysSinceLastPush - a.daysSinceLastPush)[0];
   if (ghostTown) {
-    awards.push({
+    const dormancyMargin = (ghostTown.daysSinceLastPush - 180) / 180;
+    const commitWeight = Math.min(1.5, (ghostTown.commitCount - 5) / 10);
+    candidates.push({
       id: "award-ghost-town",
       title: "THE GHOST TOWN",
       category: "SURVIVAL",
@@ -75,6 +90,7 @@ export function generateRepositoryAwards(
       badge: "🏚️",
       description: "Historical codebase now in long-term dormancy.",
       evidence: `Untouched for ${ghostTown.daysSinceLastPush} days after logging ${ghostTown.commitCount} commits.`,
+      marginScore: dormancyMargin + commitWeight,
     });
   }
 
@@ -84,7 +100,10 @@ export function generateRepositoryAwards(
     (r) => r.activitySpanDays >= 180 && r.daysSinceLastPush <= 30 && r.commitCount >= 8
   );
   if (comebackKid) {
-    awards.push({
+    const spanMargin = (comebackKid.activitySpanDays - 180) / 180;
+    const recencyMargin = (30 - comebackKid.daysSinceLastPush) / 30;
+    const countMargin = (comebackKid.commitCount - 8) / 8;
+    candidates.push({
       id: "award-comeback-kid",
       title: "THE COMEBACK KID",
       category: "SURVIVAL",
@@ -92,6 +111,7 @@ export function generateRepositoryAwards(
       badge: "🧟",
       description: "Long-standing codebase revived with recent active contributions.",
       evidence: `Active span of ${comebackKid.activitySpanDays} days; updated within the last ${comebackKid.daysSinceLastPush} days.`,
+      marginScore: spanMargin + recencyMargin + countMargin,
     });
   }
 
@@ -101,7 +121,9 @@ export function generateRepositoryAwards(
     (r) => r.commitCount >= 4 && r.commitCount <= 15 && r.fullName !== workhorse?.fullName && r.daysSinceLastPush <= 180
   );
   if (sideQuest) {
-    awards.push({
+    const compactBalance = 1 - Math.abs(sideQuest.commitCount - 8) / 8;
+    const recencyScore = (180 - sideQuest.daysSinceLastPush) / 180;
+    candidates.push({
       id: "award-side-quest",
       title: "THE SIDE QUEST",
       category: "CRAFT",
@@ -109,6 +131,7 @@ export function generateRepositoryAwards(
       badge: "🧪",
       description: "A focused, modest initiative developed alongside primary repositories.",
       evidence: `${sideQuest.commitCount} commits logged in a compact, active scope.`,
+      marginScore: compactBalance + recencyScore,
     });
   }
 
@@ -120,7 +143,8 @@ export function generateRepositoryAwards(
   const chaosEngine = sortedByChurnRatio[0];
   if (chaosEngine && (chaosEngine.additions + chaosEngine.deletions) / chaosEngine.commitCount > 250) {
     const avgChurn = Math.round((chaosEngine.additions + chaosEngine.deletions) / chaosEngine.commitCount);
-    awards.push({
+    const churnMargin = (avgChurn - 250) / 250;
+    candidates.push({
       id: "award-chaos-engine",
       title: "THE CHAOS ENGINE",
       category: "CHAOS",
@@ -128,6 +152,7 @@ export function generateRepositoryAwards(
       badge: "🌪️",
       description: "Highest line modification blast radius per commit.",
       evidence: `Averaged ${avgChurn.toLocaleString()} lines churned per individual commit.`,
+      marginScore: churnMargin,
     });
   }
 
@@ -135,7 +160,9 @@ export function generateRepositoryAwards(
   // High community reception with compact commit volume (<= 25 commits and >= 15 stars)
   const sleeperHit = repos.find((r) => r.commitCount <= 25 && r.stars >= 15);
   if (sleeperHit) {
-    awards.push({
+    const starMargin = (sleeperHit.stars - 15) / 15;
+    const efficiency = (25 - sleeperHit.commitCount) / 25;
+    candidates.push({
       id: "award-sleeper-hit",
       title: "THE SLEEPER HIT",
       category: "SCALE",
@@ -143,6 +170,7 @@ export function generateRepositoryAwards(
       badge: "🌟",
       description: "Exceptional community reception relative to repository commit volume.",
       evidence: `${sleeperHit.stars} stars accumulated across ${sleeperHit.commitCount} recorded commits.`,
+      marginScore: starMargin + efficiency,
     });
   }
 
@@ -153,14 +181,18 @@ export function generateRepositoryAwards(
     return significantLangs.length >= 3;
   });
   if (multiLangRepo) {
-    awards.push({
+    const significantLangs = multiLangRepo.languages.filter((l) => l.percentage >= 10);
+    const langCountMargin = (significantLangs.length - 3) * 1.5;
+    const breadthMargin = significantLangs.reduce((acc, l) => acc + (l.percentage - 10), 0) / 100;
+    candidates.push({
       id: "award-swiss-knife",
       title: "THE SWISS ARMY KNIFE",
       category: "CRAFT",
       repoFullName: multiLangRepo.fullName,
       badge: "🛠️",
       description: "Multi-disciplinary codebase utilizing multiple active programming languages.",
-      evidence: `${multiLangRepo.languages.filter((l) => l.percentage >= 10).length} distinct languages each hold ≥ 10% of codebase bytes.`,
+      evidence: `${significantLangs.length} distinct languages each hold ≥ 10% of codebase bytes.`,
+      marginScore: langCountMargin + breadthMargin + 0.5,
     });
   }
 
@@ -171,7 +203,9 @@ export function generateRepositoryAwards(
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   const eternalFlame = nonForkActive[0];
   if (eternalFlame && eternalFlame.activitySpanDays >= 365) {
-    awards.push({
+    const spanMargin = (eternalFlame.activitySpanDays - 365) / 365;
+    const recencyMargin = (30 - eternalFlame.daysSinceLastPush) / 30;
+    candidates.push({
       id: "award-eternal-flame",
       title: "THE ETERNAL FLAME",
       category: "SURVIVAL",
@@ -179,8 +213,13 @@ export function generateRepositoryAwards(
       badge: "🕯️",
       description: "Longest-lived non-fork repository with active maintenance in the last 30 days.",
       evidence: `Active lifespan of ${eternalFlame.activitySpanDays} days; maintained continuously since ${eternalFlame.createdAt.slice(0, 10)}.`,
+      marginScore: spanMargin + recencyMargin,
     });
   }
 
-  return awards;
+  // Rank by highest margin of qualification and strictly cap at topmost 6
+  return candidates
+    .sort((a, b) => b.marginScore - a.marginScore)
+    .slice(0, 6)
+    .map(({ marginScore: _, ...award }) => award);
 }

@@ -19,32 +19,34 @@ export function ClassificationsSection({ classifications }: ClassificationsSecti
   }
 
   return (
-    <div id="section-classifications" className="flex flex-col gap-6">
-      <div className="flex items-center gap-2">
-        <Trophy className="size-6 text-black" />
+    <div id="section-classifications" className="border-[4px] border-black bg-white rounded-[12px] p-4 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-5 sm:gap-6 text-black">
+      {/* Section Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b-[3px] border-black pb-4">
         <div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="text-xl font-black uppercase tracking-tight text-black">
-              10. THE GITOPSY AWARDS
+          <div className="flex items-center gap-2.5">
+            <Trophy className="size-5 sm:size-6 text-black stroke-[2.2] shrink-0" />
+            <h2 className="text-xl font-bold uppercase tracking-tight text-black">
+              THE GITOPSY AWARDS
             </h2>
           </div>
-          <p className="text-xs font-bold text-gray-600 mt-0.5">
+          <p className="text-xs font-bold text-neutral-800 mt-1">
             Evidence-based behavioral patterns derived strictly from verified timestamps, churn ratios, and repository distributions.
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+      {/* In-Box Grid Cards with Minimal Drop Shadows */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
         {derivedAwards.map((arch) => (
           <div
             key={arch.id}
-            className="border-[4px] border-black bg-white rounded-[10px] sm:rounded-[12px] p-4 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col justify-between gap-4 sm:gap-5 hover:translate-x-[1.5px] hover:translate-y-[1.5px] hover:shadow-[2px_2px_0_0_#000] active:translate-x-[3.5px] active:translate-y-[3.5px] active:shadow-none transition-all duration-150"
+            className="border-[2px] border-black bg-[#FFFBEB] rounded-[8px] p-4 sm:p-5 shadow-[1.5px_1.5px_0_0_#000] flex flex-col justify-between gap-4 text-black hover:translate-x-[0.5px] hover:translate-y-[0.5px] hover:shadow-[1px_1px_0_0_#000] transition-all"
           >
             {/* Top Row: Title */}
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between gap-2">
                 <div
-                  className="text-sm sm:text-base font-black uppercase px-2.5 py-1 border-[2px] border-black rounded"
+                  className="text-sm sm:text-base font-black uppercase px-2.5 py-1 border-[1.5px] border-black rounded shadow-[1px_1px_0_0_#000]"
                   style={{ backgroundColor: arch.badgeAccent || "#FFDC58" }}
                 >
                   {arch.title}
@@ -52,29 +54,33 @@ export function ClassificationsSection({ classifications }: ClassificationsSecti
               </div>
 
               <p className="text-xs font-bold text-gray-800 italic mt-1">&ldquo;{arch.tagline}&rdquo;</p>
-              <p className="text-xs font-semibold text-gray-600 leading-relaxed">{arch.description}</p>
+              <p className="text-xs font-semibold text-gray-700 leading-relaxed">{arch.description}</p>
             </div>
 
             {/* Evidence Checklist Drawer */}
-            <div className="border-t-[2px] border-black/15 pt-3 flex flex-col gap-2 bg-amber-50/60 p-3 rounded-[6px] border border-black/10">
-              <span className="text-[10px] font-black uppercase tracking-wider text-gray-600">
+            <div className="border-t-[1.5px] border-black/15 pt-3 flex flex-col gap-1.5 bg-white p-3 sm:p-3.5 rounded-[6px] border border-black/20">
+              <span className="text-[10px] font-black uppercase tracking-wider text-gray-600 mb-0.5">
                 OBSERVED EVIDENCE:
               </span>
-
               {arch.evidence.map((item, idx) => (
-                <div key={idx} className="flex items-start justify-between gap-2 text-xs font-bold">
-                  <div className="flex items-start gap-1.5">
-                    <CheckCircle2 className="size-4 text-emerald-700 shrink-0 mt-0.5" />
-                    <span className="text-black">
+                <div
+                  key={idx}
+                  className="flex flex-col xs:flex-row xs:items-start justify-between gap-1 xs:gap-3 text-xs font-bold py-1 border-b border-black/5 last:border-b-0"
+                >
+                  <div className="flex items-start gap-1.5 flex-1 min-w-0">
+                    <CheckCircle2 className="size-3.5 text-emerald-700 shrink-0 mt-0.5" />
+                    <span className="text-black leading-snug">
                       {item.criterion}
                     </span>
                   </div>
 
-                  <div className="font-mono text-[11px] shrink-0 text-right">
+                  <div className="font-mono text-[11px] text-left xs:text-right pl-5 xs:pl-0 shrink-0 flex items-baseline gap-1.5 xs:block">
                     <span className="text-emerald-800 font-black">
                       {item.actualValue}
-                    </span>{" "}
-                    <span className="text-gray-400">({item.threshold})</span>
+                    </span>
+                    <span className="text-gray-500 font-semibold text-[10px]">
+                      {" "}({item.threshold})
+                    </span>
                   </div>
                 </div>
               ))}

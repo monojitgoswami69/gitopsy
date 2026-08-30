@@ -161,4 +161,22 @@ describe("Commit Forensics Engine", () => {
       result.sizeDistribution.monster;
     expect(totalInDistribution).toBe(2);
   });
+
+  it("should rank topVolumeCommits by net code volume (additions - deletions)", () => {
+    const commitsWithDetails: ForensicCommit[] = [
+      // Gross: 50,656, Net: -33,906
+      makeCommitWithDetails("delete-heavy", 8375, 42281, true),
+      // Gross: 45,662, Net: +45,386 (Highest net!)
+      makeCommitWithDetails("add-heavy", 45524, 138, true),
+      // Gross: 38,473, Net: +25,037 (Second highest net!)
+      makeCommitWithDetails("mixed-heavy", 31755, 6718, true),
+    ];
+
+    const result = analyzeCommitForensics(commitsWithDetails, "user");
+    expect(result.topVolumeCommits).toBeDefined();
+    expect(result.topVolumeCommits).toHaveLength(3);
+    expect(result.topVolumeCommits![0].sha).toBe("add-heavy");
+    expect(result.topVolumeCommits![1].sha).toBe("mixed-heavy");
+    expect(result.topVolumeCommits![2].sha).toBe("delete-heavy");
+  });
 });

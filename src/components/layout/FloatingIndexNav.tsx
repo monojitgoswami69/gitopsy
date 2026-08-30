@@ -9,20 +9,19 @@ interface SectionItem {
 }
 
 const SECTIONS: SectionItem[] = [
-  { id: "section-headlines", label: "01. Executive Metrics" },
-  { id: "section-activity", label: "02. Contribution Heatmap" },
-  { id: "section-temporal", label: "03. Temporal Forensics" },
-  { id: "section-repositories", label: "04. Repositories" },
-  { id: "section-distinctions", label: "05. Repository Awards" },
-  { id: "section-languages", label: "06. Language DNA" },
-  { id: "section-commits", label: "07. Commit Forensics" },
-  { id: "section-churn", label: "08. Monthly Code Churn" },
-  { id: "section-collaboration", label: "09. Collaboration" },
-  { id: "section-classifications", label: "10. Gitopsy Awards" },
-  { id: "section-court", label: "11. Gitopsy Courtroom" },
-  { id: "section-case-notes", label: "12. Special Secrets" },
-  { id: "section-wrapped", label: "13. Wrapped Recap" },
-  { id: "section-data", label: "14. Export & Storage" },
+  { id: "section-headlines", label: "Executive Metrics" },
+  { id: "section-activity", label: "Contribution Heatmap" },
+  { id: "section-temporal", label: "Temporal Forensics" },
+  { id: "section-repositories", label: "Repositories" },
+  { id: "section-distinctions", label: "Repository Awards" },
+  { id: "section-languages", label: "Language DNA" },
+  { id: "section-commits", label: "Commit Forensics" },
+  { id: "section-churn", label: "Monthly Code Churn" },
+  { id: "section-collaboration", label: "Collaboration" },
+  { id: "section-classifications", label: "Gitopsy Awards" },
+  { id: "section-court", label: "Gitopsy Courtroom" },
+  { id: "section-wrapped", label: "Wrapped Recap" },
+  { id: "section-data", label: "Export & Storage" },
 ];
 
 export function FloatingIndexNav() {
@@ -91,7 +90,7 @@ export function FloatingIndexNav() {
       {isOpen && (
         <div className="bg-white border-[2.5px] border-black rounded-[8px] p-3 shadow-none w-60 sm:w-64 flex flex-col gap-1 max-h-[60vh] sm:max-h-[70vh] overflow-y-auto mb-2">
           <div className="flex items-center justify-between border-b-[2px] border-black pb-2 mb-1">
-            <span className="text-xs font-black uppercase tracking-wider text-black">DOSSIER INDEX</span>
+            <span className="text-xs font-jetbrains font-bold uppercase tracking-wider text-black">DOSSIER INDEX</span>
             <button
               onClick={() => setIsOpen(false)}
               className="p-1 hover:bg-gray-100 rounded border border-black/20"
@@ -104,10 +103,10 @@ export function FloatingIndexNav() {
             <button
               key={sec.id}
               onClick={() => scrollToSection(sec.id)}
-              className={`text-left text-xs font-bold px-2 py-1.5 rounded transition-all flex items-center justify-between ${
+              className={`text-left text-xs font-jetbrains px-2.5 py-1.5 rounded transition-all flex items-center justify-between ${
                 activeSection === sec.id
-                  ? "bg-[#FFDC58] text-black font-black border border-black shadow-none"
-                  : "text-gray-700 hover:bg-amber-50"
+                  ? "bg-[#FFDC58] text-black font-bold border border-black shadow-none"
+                  : "text-gray-700 hover:bg-amber-50 font-medium"
               }`}
             >
               <span className="truncate">{sec.label}</span>

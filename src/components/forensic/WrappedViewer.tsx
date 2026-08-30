@@ -73,13 +73,13 @@ export function WrappedViewer({
         <div className="flex flex-col items-center text-center gap-3 sm:gap-4">
           <h2 className="text-2xl sm:text-3xl md:text-5xl font-black uppercase">Historical Change Volume</h2>
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-6 my-2 sm:my-4">
-            <div className="border-[3px] border-black bg-white p-4 sm:p-5 rounded-[8px] shadow-[3.5px_3.5px_0_0_#000] sm:shadow-[4px_4px_0_0_#000]">
+            <div className="border-[2.5px] border-black bg-white p-4 sm:p-5 rounded-[8px] shadow-[2px_2px_0_0_#000]">
               <div className="text-2xl sm:text-3xl font-black text-emerald-600 font-mono">
                 +{report.summary.linesAdded.toLocaleString()}
               </div>
               <span className="text-xs font-black uppercase">Lines Added</span>
             </div>
-            <div className="border-[3px] border-black bg-white p-4 sm:p-5 rounded-[8px] shadow-[3.5px_3.5px_0_0_#000] sm:shadow-[4px_4px_0_0_#000]">
+            <div className="border-[2.5px] border-black bg-white p-4 sm:p-5 rounded-[8px] shadow-[2px_2px_0_0_#000]">
               <div className="text-2xl sm:text-3xl font-black text-rose-600 font-mono">
                 -{report.summary.linesDeleted.toLocaleString()}
               </div>

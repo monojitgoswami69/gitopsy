@@ -602,7 +602,7 @@ async function aggregateAndComplete(
     commitForensics,
   };
 
-  const courtCharges = generateCourtCharges(partialAnalysis, state.subjectLogin);
+  const courtCharges = generateCourtCharges(partialAnalysis, state.subjectLogin, allCommits);
   const findings = generateDeterministicFindings(partialAnalysis);
   const easterEggs = detectDeterministicEasterEggs(partialAnalysis, allCommits);
 

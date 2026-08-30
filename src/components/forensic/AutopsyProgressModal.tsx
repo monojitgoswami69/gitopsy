@@ -108,7 +108,7 @@ export function AutopsyProgressModal({
 
         {/* Resume Banner */}
         {showResume && (
-          <div className="border-[3px] border-amber-500 bg-amber-50 rounded-[12px] p-5 shadow-[4px_4px_0_0_#000] flex flex-col gap-4">
+          <div className="border-[2.5px] border-amber-500 bg-amber-50 rounded-[12px] p-4 sm:p-5 shadow-[2px_2px_0_0_#000] flex flex-col gap-4">
             <div className="flex items-start gap-3">
               <Save className="size-6 text-amber-600 shrink-0 mt-0.5" />
               <div className="flex-1">
@@ -128,7 +128,7 @@ export function AutopsyProgressModal({
             </div>
 
             {/* Countdown Timer */}
-            <div className="flex items-center justify-between bg-white border-[2px] border-amber-400 rounded-[8px] p-3">
+            <div className="flex items-center justify-between bg-white border-[2px] border-amber-400 rounded-[8px] p-3 shadow-[1.5px_1.5px_0_0_#000]">
               <div className="flex flex-col">
                 <span className="text-[10px] font-black uppercase text-gray-500">
                   {canResume ? "READY TO RESUME" : "RESUME AVAILABLE IN"}
@@ -143,9 +143,9 @@ export function AutopsyProgressModal({
               <button
                 onClick={onResume}
                 disabled={!canResume || !onResume}
-                className={`px-5 py-3 rounded-xl border-[2.5px] border-black font-black text-xs uppercase flex items-center gap-2 shadow-[3px_3px_0_0_#000] transition-all ${
+                className={`px-5 py-3 rounded-xl border-[2px] border-black font-black text-xs uppercase flex items-center gap-2 shadow-[2px_2px_0_0_#000] transition-all ${
                   canResume && onResume
-                    ? "bg-[#FFDC58] hover:bg-[#FD9745] hover:translate-x-[1.5px] hover:translate-y-[1.5px] hover:shadow-[1.5px_1.5px_0_0_#000] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none cursor-pointer"
+                    ? "bg-[#FFDC58] hover:bg-[#FD9745] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0_0_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none cursor-pointer"
                     : "bg-gray-200 text-gray-400 cursor-not-allowed"
                 }`}
               >
@@ -158,7 +158,7 @@ export function AutopsyProgressModal({
 
         {/* Coroner Dispatch Box (only when not in resume state) */}
         {!showResume && (
-          <div className="bg-white border-[3px] border-black p-4 rounded-[12px] shadow-[3px_3px_0_0_#000] flex flex-col gap-2">
+          <div className="bg-white border-[2px] border-black p-4 rounded-[10px] shadow-[1.5px_1.5px_0_0_#000] flex flex-col gap-2">
             <div className="flex items-center justify-between text-[10px] font-mono text-gray-600 border-b-2 border-black/10 pb-1.5 font-bold">
               <span className="flex items-center gap-1.5 text-black">
                 <Terminal className="size-3 text-black" />
@@ -185,7 +185,7 @@ export function AutopsyProgressModal({
                 <strong className="font-black text-sm">{current}</strong> / {total} SPECIMENS ({percentage}%)
               </span>
             </div>
-            <div className="h-6 w-full border-[3px] border-black rounded-xl overflow-hidden bg-white shadow-[2px_2px_0_0_#000] relative">
+            <div className="h-6 w-full border-[2px] border-black rounded-xl overflow-hidden bg-white shadow-[1.5px_1.5px_0_0_#000] relative">
               <div
                 className="h-full bg-[#FFDC58] transition-all duration-200 border-r-2 border-black"
                 style={{ width: `${Math.min(100, Math.max(0, percentage))}%` }}
@@ -200,7 +200,7 @@ export function AutopsyProgressModal({
         {/* Rate limit warning */}
         {rateLimitWarning && !showResume && (
           <div
-            className={`border-[2px] border-black p-3 rounded-[8px] text-white flex items-start gap-2.5 text-xs font-bold shadow-[3px_3px_0_0_#000] ${
+            className={`border-[2px] border-black p-3 rounded-[8px] text-white flex items-start gap-2.5 text-xs font-bold shadow-[1.5px_1.5px_0_0_#000] ${
               rateLimitWarning.isTerminal ? "bg-red-700" : "bg-[#FF6B6B]"
             }`}
           >
@@ -225,7 +225,7 @@ export function AutopsyProgressModal({
 
         {/* Repo failure warnings */}
         {visibleRepoWarnings.length > 0 && !showResume && (
-          <div className="border-[2px] border-amber-500 bg-amber-50 p-3 rounded-[8px] flex items-start gap-2.5 text-xs shadow-[3px_3px_0_0_#000]">
+          <div className="border-[2px] border-amber-500 bg-amber-50 p-3 rounded-[8px] flex items-start gap-2.5 text-xs shadow-[1.5px_1.5px_0_0_#000]">
             <AlertTriangle className="size-4 shrink-0 text-amber-600 mt-0.5" />
             <div className="flex-1 flex flex-col gap-1">
               <div className="font-black uppercase text-amber-800">

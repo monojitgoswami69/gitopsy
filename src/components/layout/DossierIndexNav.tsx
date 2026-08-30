@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowUp, List, ChevronRight, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowLeft, ArrowUp, List, ChevronRight, ChevronUp, X } from "lucide-react";
 
 interface SectionItem {
   id: string;
@@ -10,20 +11,19 @@ interface SectionItem {
 }
 
 const SECTIONS: SectionItem[] = [
-  { id: "section-headlines", label: "01. Case Summary" },
-  { id: "section-activity", label: "02. Activity Heatmap" },
-  { id: "section-temporal", label: "03. Temporal Profile" },
-  { id: "section-repositories", label: "04. Repositories" },
-  { id: "section-distinctions", label: "05. Repository Awards" },
-  { id: "section-languages", label: "06. Language DNA" },
-  { id: "section-commits", label: "07. Commit Forensics" },
-  { id: "section-churn", label: "08. Code Churn" },
-  { id: "section-collaboration", label: "09. Collaboration" },
-  { id: "section-classifications", label: "10. Gitopsy Awards" },
-  { id: "section-court", label: "11. Courtroom" },
-  { id: "section-case-notes", label: "12. Special Notes" },
-  { id: "section-wrapped", label: "13. Wrapped Recap" },
-  { id: "section-data", label: "14. Data & Privacy" },
+  { id: "section-headlines", label: "Case Summary" },
+  { id: "section-activity", label: "Activity Heatmap" },
+  { id: "section-temporal", label: "Temporal Profile" },
+  { id: "section-repositories", label: "Repositories" },
+  { id: "section-distinctions", label: "Repository Awards" },
+  { id: "section-languages", label: "Language DNA" },
+  { id: "section-commits", label: "Commit Forensics" },
+  { id: "section-churn", label: "Code Churn" },
+  { id: "section-collaboration", label: "Collaboration" },
+  { id: "section-classifications", label: "Gitopsy Awards" },
+  { id: "section-court", label: "Courtroom" },
+  { id: "section-wrapped", label: "Wrapped Recap" },
+  { id: "section-data", label: "Data & Privacy" },
 ];
 
 interface DossierIndexNavProps {
@@ -186,25 +186,26 @@ export function DossierIndexNav({ onLaunchWrapped }: DossierIndexNavProps) {
       >
         <div className="flex flex-col h-full justify-between">
           <div>
-            {/* Back to Console Link */}
+            {/* Console Link */}
             <Link
               href="/autopsy"
-              className="text-xs sm:text-[13px] font-mono font-black uppercase tracking-wider text-black bg-black/[0.04] hover:bg-black/[0.08] border border-black/15 hover:border-black/30 px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-all mb-3.5 group w-full"
+              className="relative text-xs sm:text-[13px] font-jetbrains uppercase tracking-wider text-black bg-black/[0.06] hover:bg-black/[0.12] border border-black/20 hover:border-black/40 px-3 py-2 rounded-lg flex items-center justify-center transition-all mb-3.5 group w-full font-bold"
+              style={{ fontWeight: 800 }}
             >
-              <ArrowLeft className="size-4 stroke-[3] group-hover:-translate-x-0.5 transition-transform" />
-              <span>BACK TO CONSOLE</span>
+              <ArrowLeft className="absolute left-3.5 size-4 stroke-[3] group-hover:-translate-x-0.5 transition-transform" />
+              <span>CONSOLE</span>
             </Link>
 
             {/* Header */}
             <div className="flex items-center justify-between pb-2 mb-3 border-b-2 border-black/15">
-              <span className="text-xs font-mono font-black uppercase tracking-widest text-black">
+              <span className="text-xs font-jetbrains font-bold uppercase tracking-widest text-black">
                 DOSSIER INDEX
               </span>
             </div>
 
-            {/* Section Items with Clean Color Indicator */}
+            {/* Section Items with Clean Subtle Background Effect */}
             <nav
-              className="flex flex-col gap-1 pr-1 overflow-y-auto overscroll-contain"
+              className="flex flex-col gap-1 pr-1 overflow-y-auto overscroll-contain no-scrollbar"
               style={{ maxHeight: `calc(100vh - ${headerOffset + 180}px)` }}
               data-lenis-prevent="true"
             >
@@ -214,10 +215,10 @@ export function DossierIndexNav({ onLaunchWrapped }: DossierIndexNavProps) {
                   <button
                     key={sec.id}
                     onClick={() => scrollToSection(sec.id)}
-                    className={`text-left font-mono py-1.5 px-2.5 transition-all block rounded-md text-xs xl:text-[13px] ${
+                    className={`text-left font-jetbrains py-1.5 px-2.5 transition-all block rounded-md text-xs xl:text-[13px] ${
                       isActive
-                        ? "text-black font-black bg-black/[0.08]"
-                        : "text-gray-500 font-bold hover:text-black hover:bg-black/[0.03]"
+                        ? "text-black font-bold bg-black/[0.10] backdrop-blur-sm"
+                        : "text-neutral-900 font-semibold hover:text-black hover:bg-black/[0.05]"
                     }`}
                   >
                     <span className="truncate block">{sec.label}</span>
@@ -232,7 +233,8 @@ export function DossierIndexNav({ onLaunchWrapped }: DossierIndexNavProps) {
             {onLaunchWrapped && (
               <button
                 onClick={onLaunchWrapped}
-                className="w-full bg-[#FFDC58] hover:bg-[#FACC15] text-black border-2 border-black rounded-lg py-2 px-3 shadow-[2.5px_2.5px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] font-black text-xs uppercase flex items-center justify-center transition-all active:shadow-[1px_1px_0_0_#000]"
+                className="w-full bg-[#FFDC58] hover:bg-[#FACC15] text-black border-2 border-black rounded-lg py-2 px-3 shadow-[2.5px_2.5px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] font-jetbrains text-xs sm:text-[13px] uppercase tracking-wider flex items-center justify-center transition-all cursor-pointer"
+                style={{ fontWeight: 800 }}
               >
                 <span>LAUNCH WRAPPED</span>
               </button>
@@ -242,9 +244,10 @@ export function DossierIndexNav({ onLaunchWrapped }: DossierIndexNavProps) {
             <div className="pt-2.5 border-t-2 border-black/15 flex items-center justify-center">
               <button
                 onClick={scrollToTop}
-                className="text-xs font-mono font-bold text-gray-600 hover:text-black flex items-center justify-center gap-1.5 py-0.5 px-1 hover:translate-y-[-1px] transition-transform w-full"
+                className="text-xs font-jetbrains font-semibold uppercase tracking-wider text-black hover:text-neutral-700 flex items-center justify-center gap-1.5 py-0.5 px-1 hover:translate-y-[-1px] transition-transform w-full cursor-pointer"
+                style={{ fontWeight: 600 }}
               >
-                <ArrowUp className="size-3.5 stroke-[2.5]" />
+                <ArrowUp className="size-3.5 stroke-[2.2]" />
                 <span>SCROLL TO TOP</span>
               </button>
             </div>
@@ -256,108 +259,153 @@ export function DossierIndexNav({ onLaunchWrapped }: DossierIndexNavProps) {
       <div className="lg:hidden w-full flex items-center justify-between gap-3 mb-4 pt-1 pb-2 border-b-2 border-black/10">
         <Link
           href="/autopsy"
-          className="text-xs font-mono font-black uppercase text-gray-800 hover:text-black flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/[0.05] hover:bg-black/[0.09] border border-black/15 transition-all"
+          className="text-xs font-jetbrains uppercase text-gray-800 hover:text-black flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/[0.05] hover:bg-black/[0.09] border border-black/15 transition-all font-bold"
+          style={{ fontWeight: 800 }}
         >
-          <ArrowLeft className="size-3.5 stroke-[2.5]" />
+          <ArrowLeft className="size-3.5 stroke-[3]" />
           <span>CONSOLE</span>
         </Link>
 
         {onLaunchWrapped && (
           <button
             onClick={onLaunchWrapped}
-            className="bg-[#FFDC58] hover:bg-[#FACC15] border-2 border-black px-3.5 py-1.5 rounded-lg shadow-[2px_2px_0_0_#000] text-black font-black text-xs uppercase flex items-center gap-1.5 transition-all active:shadow-none"
+            className="bg-[#FFDC58] hover:bg-[#FACC15] border-2 border-black px-3.5 py-1.5 rounded-lg shadow-[2px_2px_0_0_#000] text-black font-jetbrains text-xs uppercase flex items-center gap-1.5 transition-all active:shadow-none"
+            style={{ fontWeight: 800 }}
           >
             <span>LAUNCH WRAPPED</span>
           </button>
         )}
       </div>
 
-      {/* Mobile Floating Index (Bottom Left) */}
+      {/* Mobile Floating Island Dock Container — overshoots 20px past the viewport bottom
+           edge so no content can ever bleed through, even with subpixel rounding. */}
       <div
         id="mobile-floating-index-container"
-        className="lg:hidden fixed bottom-4 left-6 sm:left-8 z-40 flex flex-col items-start gap-2 select-none"
+        className="lg:hidden fixed -bottom-5 inset-x-0 flex flex-col items-center z-40 select-none pointer-events-none bg-[#F4EFE6] px-[6px] pt-[3px] pb-[26px]"
       >
-        {isMobileOpen && (
-          <div
-            className="bg-white border-[2.5px] border-black rounded-[8px] p-2.5 shadow-none w-64 sm:w-72 flex flex-col gap-1 max-h-[60vh] overflow-y-auto overscroll-contain mb-2 text-black animate-in fade-in slide-in-from-bottom-2 duration-150"
-            data-lenis-prevent="true"
-            onWheel={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b-[2px] border-black pb-2 mb-1">
-              <span className="text-xs font-mono font-black uppercase tracking-wider text-black">
-                DOSSIER INDEX
-              </span>
-              <button
-                onClick={() => setIsMobileOpen(false)}
-                className="p-1 hover:bg-gray-100 rounded border border-black/20"
-                aria-label="Close index"
+        {/* Single Morphing Pill that smoothly expands its height upwards */}
+        <motion.div
+          layout
+          transition={{
+            type: "spring",
+            damping: 32,
+            stiffness: 350,
+            mass: 0.8,
+          }}
+          className="w-full max-w-lg bg-white border-[2.5px] border-black rounded-[12px] shadow-none flex flex-col pointer-events-auto overflow-hidden relative"
+        >
+          {/* Expanded Drawer Content (animates in/out seamlessly inside the same pill) */}
+          <AnimatePresence initial={false}>
+            {isMobileOpen && (
+              <motion.div
+                key="mobile-index-expanded-drawer"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{
+                  duration: 0.28,
+                  ease: [0.16, 1, 0.3, 1],
+                }}
+                className="overflow-hidden flex flex-col"
               >
-                <X className="size-3.5" />
-              </button>
-            </div>
+                {/* Header inside the expanding pill */}
+                <div className="flex items-center justify-between px-3.5 pt-3 pb-2 border-b-[2px] border-black/15">
+                  <span className="text-xs font-jetbrains font-bold uppercase tracking-wider text-black">
+                    DOSSIER INDEX
+                  </span>
+                  <button
+                    onClick={() => setIsMobileOpen(false)}
+                    className="p-1 hover:bg-black/5 rounded-[6px] border border-black/20 cursor-pointer text-black"
+                    aria-label="Close index"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                </div>
 
-            {SECTIONS.map((sec) => {
-              const isActive = activeSection === sec.id;
-              return (
-                <button
-                  key={sec.id}
-                  onClick={() => scrollToSection(sec.id)}
-                  className={`text-left text-xs font-mono px-2.5 py-1.5 rounded transition-all flex items-center justify-between ${
-                    isActive
-                      ? "bg-[#FFDC58] text-black font-black border border-black shadow-none"
-                      : "text-gray-700 hover:bg-amber-50 font-bold"
-                  }`}
+                {/* Section Items List (utilizes available vertical height) */}
+                <div
+                  className="flex flex-col gap-0.5 p-2 max-h-[82vh] overflow-y-auto overscroll-contain no-scrollbar"
+                  data-lenis-prevent="true"
+                  onWheel={(e) => e.stopPropagation()}
                 >
-                  <span className="truncate">{sec.label}</span>
-                </button>
-              );
-            })}
+                  {SECTIONS.map((sec) => {
+                    const isActive = activeSection === sec.id;
+                    return (
+                      <button
+                        key={sec.id}
+                        onClick={() => {
+                          scrollToSection(sec.id);
+                          setIsMobileOpen(false);
+                        }}
+                        className={`text-left text-xs font-jetbrains px-3 py-1.5 rounded-[6px] transition-all flex items-center justify-between cursor-pointer ${
+                          isActive
+                            ? "bg-[#FFDC58] text-black font-bold border border-black shadow-none"
+                            : "text-neutral-800 hover:bg-amber-100/60 font-medium"
+                        }`}
+                      >
+                        <span className="truncate">{sec.label}</span>
+                        {isActive && <span className="text-[10px] font-bold">●</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Divider separating list from bottom bar */}
+                <div className="border-t-[2px] border-black/15" />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Bottom Dock Control Bar (always visible as the base 48px height) */}
+          <div className="w-full h-12 flex items-center shrink-0 relative bg-white">
+            {/* INDEX text — absolutely centered across the full pill width, safe from scroll indicator */}
+            <button
+              onClick={() => setIsMobileOpen(!isMobileOpen)}
+              className="absolute inset-0 flex items-center justify-center gap-2 pr-[86px] text-black font-jetbrains font-bold text-xs uppercase tracking-wider hover:bg-black/[0.04] active:bg-black/[0.08] transition-colors cursor-pointer z-0"
+              aria-label="Toggle Dossier Index"
+            >
+              <span>INDEX</span>
+              <ChevronUp
+                className={`size-4 stroke-[2.5] transition-transform duration-300 ease-out ${
+                  isMobileOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {/* Spacer to push scroll indicator to the right */}
+            <div className="flex-1" />
+
+            {/* Right Side: Circular Scroll Indicator & Percentage (above the INDEX layer) */}
+            <button
+              onClick={scrollToTop}
+              className="w-[84px] h-full flex items-center justify-center gap-1.5 px-2 hover:bg-black/[0.04] active:bg-black/[0.08] text-black font-jetbrains font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer shrink-0 relative z-10"
+              title={`Scroll to top (${Math.round(scrollProgress)}% read)`}
+              aria-label={`Scroll to top (${Math.round(scrollProgress)}% read)`}
+            >
+              <div className="relative size-7 flex items-center justify-center shrink-0">
+                <svg className="absolute inset-0 size-full -rotate-90" viewBox="0 0 32 32">
+                  <circle cx="16" cy="16" r="13" className="stroke-black/20 fill-none" strokeWidth="2.5" />
+                  <circle
+                    cx="16"
+                    cy="16"
+                    r="13"
+                    fill="none"
+                    stroke="#FD9745"
+                    strokeWidth="3"
+                    strokeDasharray={81.68}
+                    strokeDashoffset={81.68 - (scrollProgress / 100) * 81.68}
+                    strokeLinecap="round"
+                    className="transition-[stroke-dashoffset] duration-100 ease-out"
+                  />
+                </svg>
+                <ArrowUp className="size-3.5 stroke-[3] text-black" />
+              </div>
+              <span className="w-[38px] text-left font-mono font-bold text-xs tabular-nums">
+                {Math.round(scrollProgress)}%
+              </span>
+            </button>
           </div>
-        )}
-
-        <button
-          onClick={() => setIsMobileOpen(!isMobileOpen)}
-          className="h-11 px-4.5 rounded-[6px] border-[2.5px] border-black bg-white text-black font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-amber-50 active:bg-gray-100 transition-colors shadow-none cursor-pointer"
-          aria-label="Toggle Dossier Index"
-        >
-          <List className="size-4 stroke-[2.5]" />
-          <span>INDEX</span>
-        </button>
-      </div>
-
-      {/* Mobile Floating Go To Top (Bottom Right) with Circular Progress Ring */}
-      <div className="lg:hidden fixed bottom-4 right-6 sm:right-8 z-40 select-none">
-        <button
-          onClick={scrollToTop}
-          className="relative size-12 rounded-full flex items-center justify-center cursor-pointer shadow-none group hover:scale-105 active:scale-95 transition-transform"
-          title={`Scroll to top (${Math.round(scrollProgress)}% read)`}
-          aria-label={`Scroll to top (${Math.round(scrollProgress)}% read)`}
-        >
-          <svg className="absolute inset-0 size-full -rotate-90 pointer-events-none" viewBox="0 0 48 48">
-            {/* Background circle fill with black border */}
-            <circle
-              cx="24"
-              cy="24"
-              r="20"
-              className="fill-white stroke-black"
-              strokeWidth="2.5"
-            />
-            {/* Dynamic Active Progress Ring */}
-            <circle
-              cx="24"
-              cy="24"
-              r="16.5"
-              fill="none"
-              stroke="#FD9745"
-              strokeWidth="3.5"
-              strokeDasharray={103.67}
-              strokeDashoffset={103.67 - (scrollProgress / 100) * 103.67}
-              strokeLinecap="round"
-              className="transition-[stroke-dashoffset] duration-100 ease-out"
-            />
-          </svg>
-          <ArrowUp className="size-4 stroke-[3] text-black relative z-10 group-hover:-translate-y-0.5 transition-transform" />
-        </button>
+        </motion.div>
       </div>
     </>
   );

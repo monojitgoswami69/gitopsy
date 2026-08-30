@@ -13,6 +13,7 @@ import {
   Trophy,
   Star,
   GitFork,
+  Activity,
 } from "lucide-react";
 
 interface HeadlineMetricsProps {
@@ -29,59 +30,63 @@ export function HeadlineMetrics({ summary, topLanguage }: HeadlineMetricsProps) 
 
   const cards = [
     {
-      title: "TOTAL COMMITS ANALYZED",
+      title: "TOTAL COMMITS",
       value: summary.totalCommits.toLocaleString(),
       subtitle: `${summary.totalActiveDays} active days logged`,
       icon: History,
       rotation: -10,
     },
     {
-      title: "CONTRIBUTED REPOSITORIES",
+      title: "CONTRIBUTED REPOS",
       value: summary.reposAnalyzed.toString(),
-      subtitle: `${summary.activeRepos} active in last 90 days`,
+      subtitle: `${summary.activeRepos} active in last 90d`,
       icon: Layers,
       rotation: 8,
     },
     {
       title: "HISTORICAL CHURN",
-      value: `+${formatLines(summary.linesAdded)} / -${formatLines(summary.linesDeleted)}`,
-      subtitle: `Net change: ${summary.netLines >= 0 ? "+" : ""}${formatLines(summary.netLines)} lines`,
+      value: (
+        <span className="text-[13px] xs:text-sm sm:text-xl tracking-tight">
+          +{formatLines(summary.linesAdded)} / -{formatLines(summary.linesDeleted)}
+        </span>
+      ),
+      subtitle: `Net: ${summary.netLines >= 0 ? "+" : ""}${formatLines(summary.netLines)} lines`,
       icon: GitCompareArrows,
       rotation: -8,
     },
     {
-      title: "PULL REQUESTS MERGED",
+      title: "PULL REQUESTS",
       value: `${summary.prsMerged} / ${summary.prsAuthored}`,
       subtitle:
         summary.mergeRatePercentage !== null
-          ? `${summary.mergeRatePercentage}% merge completion rate`
-          : "No pull requests authored",
+          ? `${summary.mergeRatePercentage}% merge rate`
+          : "No PRs authored",
       icon: GitMerge,
       rotation: 12,
     },
     {
-      title: "LONGEST CODING STREAK",
+      title: "LONGEST STREAK",
       value: `${summary.longestStreakDays} DAYS`,
-      subtitle: `Current active streak: ${summary.activeStreakDays}d`,
+      subtitle: `Current: ${summary.activeStreakDays}d active`,
       icon: Flame,
       rotation: -12,
     },
     {
       title: "PRIMARY LANGUAGE",
       value: topLanguage?.name || "N/A",
-      subtitle: topLanguage ? `${topLanguage.percentage}% of total bytes` : "No language bytes",
+      subtitle: topLanguage ? `${topLanguage.percentage}% of code` : "No language code",
       icon: Braces,
       rotation: 10,
     },
     {
       title: "ISSUES & REVIEWS",
       value: `${summary.issuesAuthored} / ${summary.reviewsAuthored}`,
-      subtitle: `${summary.issuesAuthored} issues authored • ${summary.reviewsAuthored} reviews`,
+      subtitle: `${summary.issuesAuthored} issues • ${summary.reviewsAuthored} reviews`,
       icon: MessageSquareCode,
       rotation: -8,
     },
     {
-      title: "COMMUNITY ENGAGEMENT",
+      title: "COMMUNITY IMPACT",
       value: (
         <span className="inline-flex items-center gap-2 sm:gap-3">
           <span className="inline-flex items-center gap-1">
@@ -94,7 +99,7 @@ export function HeadlineMetrics({ summary, topLanguage }: HeadlineMetricsProps) 
           </span>
         </span>
       ),
-      subtitle: "Stars & forks across repositories",
+      subtitle: "Stars & forks across repos",
       icon: Trophy,
       rotation: 10,
     },
@@ -102,9 +107,10 @@ export function HeadlineMetrics({ summary, topLanguage }: HeadlineMetricsProps) 
 
   return (
     <div id="section-headlines" className="flex flex-col gap-3 sm:gap-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-black uppercase tracking-tight text-black">
-          01. EXECUTIVE HEADLINE METRICS
+      <div className="flex items-center gap-2.5">
+        <Activity className="size-5 sm:size-6 text-black stroke-[2.2] shrink-0" />
+        <h2 className="text-xl font-bold uppercase tracking-tight text-black">
+          EXECUTIVE HEADLINE METRICS
         </h2>
       </div>
 
@@ -127,17 +133,17 @@ export function HeadlineMetrics({ summary, topLanguage }: HeadlineMetricsProps) 
 
               {/* Card Header Title */}
               <div className="relative z-10 flex items-center justify-between">
-                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-600 line-clamp-1">
+                <span className="text-[9.5px] sm:text-[10.5px] font-black uppercase tracking-wider text-gray-600 leading-tight block">
                   {card.title}
                 </span>
               </div>
 
               {/* Card Metrics & Subtitle */}
               <div className="relative z-10 min-w-0">
-                <div className="text-base xs:text-lg sm:text-2xl font-black font-mono tracking-tight text-black truncate">
+                <div className="text-sm xs:text-base sm:text-2xl font-black font-mono tracking-tight text-black leading-tight">
                   {card.value}
                 </div>
-                <div className="text-[10px] sm:text-xs font-semibold text-gray-600 mt-0.5 sm:mt-1 line-clamp-2 leading-tight">
+                <div className="text-[10px] sm:text-xs font-semibold text-gray-600 mt-1 leading-snug">
                   {card.subtitle}
                 </div>
               </div>

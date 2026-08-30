@@ -3,11 +3,12 @@
  * Generates formal indictments grounded strictly in verified GitHub statistics.
  */
 
-import { CourtCharge, GitopsyAnalysis } from "@/types/domain";
+import { CourtCharge, GitopsyAnalysis, ForensicCommit } from "@/types/domain";
 
 export function generateCourtCharges(
   analysis: Partial<GitopsyAnalysis>,
-  defendantLogin: string
+  defendantLogin: string,
+  commits?: ForensicCommit[]
 ): CourtCharge[] {
   const charges: CourtCharge[] = [];
   const summary = analysis.summary;
@@ -61,6 +62,28 @@ export function generateCourtCharges(
       evidence: `${summary.weekendCommitPercentage}% of commits occurred during Saturday or Sunday.`,
       verdict: "GUILTY AS CHARGED",
       sentence: "Ordered to touch grass for a minimum of 45 consecutive minutes.",
+    });
+  }
+
+  // Charge 5: Perjury in Commit Finality (from consolidated easter egg)
+  const finalCommits = (commits || []).filter((c) => {
+    const m = (c.message || "").toLowerCase();
+    return (
+      m.includes("final final") ||
+      m.includes("really final") ||
+      m.includes("final v2") ||
+      m.includes("final-final") ||
+      m.includes("final version")
+    );
+  });
+  if (finalCommits.length >= 2) {
+    charges.push({
+      id: "charge-false-finality",
+      chargeTitle: `COUNT ${charges.length + 1}: FALSE DECLARATIONS OF FINALITY`,
+      allegation: `Defendant repeatedly declared code branches and commits as 'final' before proceeding with subsequent revisions.`,
+      evidence: `${finalCommits.length} commits were titled variations of 'final final' or 'really final'.`,
+      verdict: "GUILTY AS CHARGED",
+      sentence: "Banned from naming any branch or commit 'final' indefinitely.",
     });
   }
 

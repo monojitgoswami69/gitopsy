@@ -103,19 +103,26 @@ export function SubjectHeader({
           {/* Repository Scope Pill (Report View Only) */}
           {showRepoScope && (
             <div className="flex items-center justify-center sm:justify-start mt-1">
-              <div className="bg-white border-[2.5px] border-black px-3 sm:px-4 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-mono font-bold shadow-[2px_2px_0_0_#000] flex items-center gap-2 sm:gap-2.5 flex-wrap justify-center sm:justify-start text-black">
-                <span>
-                  <strong className="font-black">
-                    {contributedRepos !== undefined ? contributedRepos : accessibleRepos}
-                  </strong>{" "}
-                  Contributed Repos
-                </span>
-                <span className="text-gray-400">|</span>
-                <span><strong className="font-black">{ownedRepos}</strong> Owned</span>
-                <span className="text-gray-400">|</span>
-                <span><strong className="font-black">{ownedPublic}</strong> Public</span>
-                <span className="text-gray-400">|</span>
-                <span><strong className="font-black">{ownedPrivate}</strong> Private</span>
+              <div className="inline-flex items-center justify-center gap-x-2.5 gap-y-1 flex-wrap bg-white border-2 border-black px-3 py-1 rounded-[6px] text-[11px] sm:text-xs font-mono font-bold shadow-[2px_2px_0_0_#000] text-black">
+                <div className="inline-flex items-center gap-2">
+                  <span>
+                    <strong className="font-black">{accessibleRepos}</strong> Accessible Repos
+                  </span>
+                  <span className="text-gray-300">•</span>
+                  <span>
+                    <strong className="font-black">{ownedRepos}</strong> Owned
+                  </span>
+                </div>
+                <span className="text-gray-300 hidden sm:inline">•</span>
+                <div className="inline-flex items-center gap-2">
+                  <span className="text-gray-700">
+                    <strong className="font-black text-black">{ownedPublic}</strong> Public
+                  </span>
+                  <span className="text-gray-300">•</span>
+                  <span className="text-gray-700">
+                    <strong className="font-black text-black">{ownedPrivate}</strong> Private
+                  </span>
+                </div>
               </div>
             </div>
           )}

@@ -35,7 +35,7 @@ export function TabsList({ className, children, ...props }: React.HTMLAttributes
     <div
       className={twMerge(
         clsx(
-          "inline-flex items-center gap-1 p-1 bg-gray-100/90 border-[1.5px] border-black rounded-[8px]",
+          "inline-flex items-stretch gap-1 p-1 bg-gray-100/90 border-[1.5px] border-black rounded-[8px]",
           className
         )
       )}
@@ -61,9 +61,9 @@ export function TabsTrigger({
       onClick={() => context?.onValueChange(value)}
       className={twMerge(
         clsx(
-          "px-3 py-1.5 text-xs font-black uppercase tracking-wider rounded-[6px] transition-all cursor-pointer select-none",
+          "px-3 py-1.5 text-xs font-black uppercase tracking-wider rounded-[6px] transition-all cursor-pointer select-none whitespace-nowrap inline-flex items-center justify-center shadow-none",
           isSelected
-            ? "bg-[#FFDC58] text-black border-[1.5px] border-black shadow-[1px_1px_0_0_#000]"
+            ? "bg-[#FFDC58] text-black border-[1.5px] border-black"
             : "text-gray-600 hover:text-black hover:bg-black/5 border-[1.5px] border-transparent",
           className
         )

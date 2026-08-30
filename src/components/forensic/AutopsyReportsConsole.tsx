@@ -201,7 +201,7 @@ export function AutopsyReportsConsole({
                   <Link
                     href={`/autopsy/${r.id}`}
                     onClick={(e) => e.stopPropagation()}
-                    className="flex-1 md:flex-initial bg-[#FFDC58] hover:bg-[#ffe27a] text-black border-[2px] border-black px-4 py-2.5 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-1.5 shadow-[2.5px_2.5px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1.5px_1.5px_0_0_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all duration-75 select-none"
+                    className="flex-1 md:flex-initial bg-[#FFDC58] hover:bg-[#ffe27a] text-black border-[2px] border-black px-4 py-2.5 rounded-[8px] text-xs font-black uppercase flex items-center justify-center gap-1.5 shadow-[2px_2px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0_0_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all duration-75 select-none"
                   >
                     <span>VIEW REPORT</span>
                     <ArrowRight className="size-3.5" />
@@ -210,7 +210,7 @@ export function AutopsyReportsConsole({
                   <button
                     onClick={(e) => handleDelete(r.id, e)}
                     title="Delete record"
-                    className="p-2.5 text-gray-500 hover:text-red-600 bg-gray-50 hover:bg-red-50 rounded-xl border border-black/20 hover:border-black shadow-[2px_2px_0_0_rgba(0,0,0,0.08)] hover:shadow-[2px_2px_0_0_#000] transition-all cursor-pointer shrink-0"
+                    className="p-2.5 text-black hover:text-white bg-white hover:bg-red-500 rounded-[8px] border-[2px] border-black shadow-[2px_2px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0_0_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all cursor-pointer shrink-0"
                     aria-label="Delete autopsy record"
                   >
                     <Trash2 className="size-4" />

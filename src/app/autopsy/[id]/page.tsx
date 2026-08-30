@@ -4,7 +4,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { gitopsyDb } from "@/lib/db";
-import { GitopsyAnalysis, DeterministicEasterEgg } from "@/types/domain";
+import { GitopsyAnalysis } from "@/types/domain";
 import { SubjectHeader } from "@/components/forensic/SubjectHeader";
 import { HeadlineMetrics } from "@/components/forensic/HeadlineMetrics";
 import { RepositorySection } from "@/components/forensic/RepositorySection";
@@ -13,8 +13,8 @@ import { ClassificationsSection } from "@/components/forensic/ClassificationsSec
 import { CourtSection } from "@/components/forensic/CourtSection";
 import { DataManagementSection } from "@/components/forensic/DataManagementSection";
 import { WrappedViewer } from "@/components/forensic/WrappedViewer";
-import { EasterEggModal } from "@/components/forensic/EasterEggModal";
 import { DossierIndexNav } from "@/components/layout/DossierIndexNav";
+import Image from "next/image";
 import { HeatmapChart } from "@/components/charts/HeatmapChart";
 import { TemporalHoursChart } from "@/components/charts/TemporalHoursChart";
 import { ChurnAreaChart } from "@/components/charts/ChurnAreaChart";
@@ -30,7 +30,7 @@ import {
   Calendar,
   Clock,
   Globe2,
-  Sparkles,
+  Gift,
   RefreshCw,
   Zap,
   FileCode2,
@@ -50,9 +50,17 @@ export default function AutopsyReportDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [heatmapMetric, setHeatmapMetric] = useState<"COMMITS" | "LINES">("COMMITS");
-  const [churnGranularity, setChurnGranularity] = useState<"WEEKLY" | "MONTHLY">("WEEKLY");
+  const [isMobile, setIsMobile] = useState(false);
   const [isWrappedOpen, setIsWrappedOpen] = useState(false);
-  const [selectedEgg, setSelectedEgg] = useState<DeterministicEasterEgg | null>(null);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   useEffect(() => {
     async function loadReport() {
@@ -103,139 +111,25 @@ export default function AutopsyReportDetailPage() {
   }, [analysis, heatmapMetric]);
 
   const churnData = useMemo(() => {
-    if (!analysis) return [];
-    if (churnGranularity === "WEEKLY") {
-      const dayMap = new Map<
-        string,
-        { additions: number; deletions: number; count: number }
-      >();
-      if (analysis.activity?.heatmapCalendar) {
-        for (const d of analysis.activity.heatmapCalendar) {
-          if (d.date) {
-            dayMap.set(d.date, {
-              additions: d.additions || 0,
-              deletions: d.deletions || 0,
-              count: d.count || 0,
-            });
-          }
-        }
-      }
-
-      // Determine full timeline range from byMonth or heatmapCalendar
-      let startDate: Date;
-      let endDate: Date;
-
-      if (analysis.activity?.byMonth && analysis.activity.byMonth.length > 0) {
-        const sortedMonths = [...analysis.activity.byMonth].sort((a, b) =>
-          a.month.localeCompare(b.month)
-        );
-        const [startYear, startMonth] = sortedMonths[0].month.split("-").map(Number);
-        const [endYear, endMonth] = sortedMonths[sortedMonths.length - 1].month
-          .split("-")
-          .map(Number);
-
-        startDate = new Date(startYear, startMonth - 1, 1);
-        endDate = new Date(endYear, endMonth, 0); // Last day of ending month
-      } else {
-        const today = new Date();
-        startDate = new Date(today.getFullYear() - 1, today.getMonth(), 1);
-        endDate = today;
-      }
-
-      // Align startDate to Monday of that week
-      const startDay = startDate.getDay();
-      const diffToMonday = (startDay === 0 ? -6 : 1) - startDay;
-      const current = new Date(startDate);
-      current.setDate(startDate.getDate() + diffToMonday);
-
-      const weeks: {
-        key: string;
-        label: string;
-        additions: number;
-        deletions: number;
-        count: number;
-      }[] = [];
-
-      let weekIndex = 0;
-
-      while (current <= endDate) {
-        let weekAdds = 0;
-        let weekDels = 0;
-        let weekCommits = 0;
-
-        // Thursday of this 7-day rolling window defines representative date & month (ISO-8601)
-        const midWeek = new Date(current);
-        midWeek.setDate(current.getDate() + 3);
-
-        for (let i = 0; i < 7; i++) {
-          const d = new Date(current);
-          d.setDate(current.getDate() + i);
-          const y = d.getFullYear();
-          const m = String(d.getMonth() + 1).padStart(2, "0");
-          const dayStr = String(d.getDate()).padStart(2, "0");
-          const dateIso = `${y}-${m}-${dayStr}`;
-
-          const data = dayMap.get(dateIso);
-          if (data) {
-            weekAdds += data.additions;
-            weekDels += data.deletions;
-            weekCommits += data.count;
-          }
-        }
-
-        // Compute ISO-8601 week number and year
-        const targetDate = new Date(
-          Date.UTC(midWeek.getFullYear(), midWeek.getMonth(), midWeek.getDate())
-        );
-        const dayNum = targetDate.getUTCDay() || 7;
-        targetDate.setUTCDate(targetDate.getUTCDate() + 4 - dayNum);
-        const yearStart = new Date(Date.UTC(targetDate.getUTCFullYear(), 0, 1));
-        const weekNum = Math.ceil(
-          ((targetDate.getTime() - yearStart.getTime()) / 86400000 + 1) / 7
-        );
-        const isoYear = targetDate.getUTCFullYear();
-
-        // Show month label every 4 weeks
-        const showMonthLabel = weekIndex % 4 === 0;
-        const monthLabel = midWeek.toLocaleDateString("en-US", {
-          month: "short",
-          year: "2-digit",
-        });
-
-        weeks.push({
-          key: `${isoYear}, Week ${weekNum}`,
-          label: showMonthLabel ? monthLabel : "",
-          additions: weekAdds,
-          deletions: weekDels,
-          count: weekCommits,
-        });
-
-        weekIndex++;
-        // Advance 7 days for next rolling bar
-        current.setDate(current.getDate() + 7);
-      }
-
-      return weeks;
-    } else {
-      return analysis.activity.byMonth.map((m) => {
-        const [year, month] = m.month.split("-").map(Number);
-        const date = new Date(year, (month || 1) - 1, 1);
-        const label = !isNaN(date.getTime())
-          ? date.toLocaleDateString("en-US", { month: "short", year: "2-digit" })
-          : m.month;
-        const fullLabel = !isNaN(date.getTime())
-          ? date.toLocaleDateString("en-US", { month: "long", year: "numeric" })
-          : m.month;
-        return {
-          key: fullLabel,
-          label,
-          additions: m.additions,
-          deletions: m.deletions,
-          count: m.commits,
-        };
-      });
-    }
-  }, [analysis, churnGranularity]);
+    if (!analysis?.activity?.byMonth) return [];
+    return analysis.activity.byMonth.map((m) => {
+      const [year, month] = m.month.split("-").map(Number);
+      const date = new Date(year, (month || 1) - 1, 1);
+      const label = !isNaN(date.getTime())
+        ? date.toLocaleDateString("en-US", { month: "short", year: "2-digit" })
+        : m.month;
+      const fullLabel = !isNaN(date.getTime())
+        ? date.toLocaleDateString("en-US", { month: "long", year: "numeric" })
+        : m.month;
+      return {
+        key: fullLabel,
+        label,
+        additions: m.additions,
+        deletions: m.deletions,
+        count: m.commits,
+      };
+    });
+  }, [analysis]);
 
   if (isLoading) {
     return (
@@ -306,7 +200,7 @@ export default function AutopsyReportDetailPage() {
     })();
 
   return (
-    <div className="w-full relative pb-16">
+    <div className="w-full relative pb-24 lg:pb-16">
       {/* Standalone Left Sidebar Index Navigation */}
       <DossierIndexNav onLaunchWrapped={() => setIsWrappedOpen(true)} />
 
@@ -368,13 +262,13 @@ export default function AutopsyReportDetailPage() {
         <div id="section-activity" className="border-[4px] border-black bg-white rounded-[12px] p-4 sm:p-5 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-2.5 text-black">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b-[3px] border-black pb-3">
             <div>
-              <div className="flex items-center gap-2">
-                <Calendar className="size-5 sm:size-6 text-black" />
-                <h2 className="text-lg sm:text-xl font-black uppercase tracking-tight">
-                  02. CONTRIBUTION ACTIVITY &amp; ANNUAL HEATMAP
+              <div className="flex items-center gap-2.5">
+                <Calendar className="size-5 sm:size-6 text-black stroke-[2.2] shrink-0" />
+                <h2 className="text-lg sm:text-xl font-bold uppercase tracking-tight">
+                  CONTRIBUTION ACTIVITY &amp; ANNUAL HEATMAP
                 </h2>
               </div>
-              <p className="text-xs font-bold text-gray-600 mt-0.5">
+              <p className="text-xs font-bold text-neutral-800 mt-1">
                 Daily author timestamp cadence collected directly from version control logs in your local timezone ({userTz}).
               </p>
             </div>
@@ -392,26 +286,28 @@ export default function AutopsyReportDetailPage() {
           {/* Peak Activity Highlights */}
           <div className="grid grid-cols-3 gap-1.5 sm:gap-3 border-t-[2px] border-black/15 pt-2.5">
             <div className="border-[1.5px] sm:border-[2px] border-black bg-amber-50 p-1.5 sm:p-2.5 py-1.5 sm:py-2 rounded-[6px] text-center flex flex-col justify-center min-w-0">
-              <span className="text-[8px] xs:text-[9px] sm:text-[10px] font-black uppercase text-gray-500 truncate">
+              <span className="text-[8px] sm:text-[10px] font-black uppercase text-gray-500 tracking-wider">
                 PEAK HOUR
               </span>
-              <div className="text-xs xs:text-sm sm:text-lg md:text-xl font-black font-mono mt-0.5 text-black truncate">
-                {analysis.summary.busiestHour}:00 {tzAbbr}
+              <div className="text-[11.5px] sm:text-lg md:text-xl font-black font-mono mt-0.5 text-black">
+                {analysis.summary.busiestHour}:00 <span className="text-[9.5px] sm:text-xs text-gray-600 font-bold">{tzAbbr}</span>
               </div>
             </div>
+
             <div className="border-[1.5px] sm:border-[2px] border-black bg-amber-50 p-1.5 sm:p-2.5 py-1.5 sm:py-2 rounded-[6px] text-center flex flex-col justify-center min-w-0">
-              <span className="text-[8px] xs:text-[9px] sm:text-[10px] font-black uppercase text-gray-500 truncate">
+              <span className="text-[8px] sm:text-[10px] font-black uppercase text-gray-500 tracking-wider">
                 BUSIEST DAY
               </span>
-              <div className="text-xs xs:text-sm sm:text-lg md:text-xl font-black mt-0.5 text-black truncate">
+              <div className="text-[11.5px] sm:text-lg md:text-xl font-black mt-0.5 text-black">
                 {analysis.summary.busiestWeekday}
               </div>
             </div>
+
             <div className="border-[1.5px] sm:border-[2px] border-black bg-amber-50 p-1.5 sm:p-2.5 py-1.5 sm:py-2 rounded-[6px] text-center flex flex-col justify-center min-w-0">
-              <span className="text-[8px] xs:text-[9px] sm:text-[10px] font-black uppercase text-gray-500 truncate">
+              <span className="text-[8px] sm:text-[10px] font-black uppercase text-gray-500 tracking-wider">
                 BUSIEST MONTH
               </span>
-              <div className="text-xs xs:text-sm sm:text-lg md:text-xl font-black mt-0.5 text-black truncate">
+              <div className="text-[11.5px] sm:text-lg md:text-xl font-black mt-0.5 text-black">
                 {(() => {
                   const m = analysis.summary.busiestMonth;
                   if (!m || !m.includes("-")) return m || "N/A";
@@ -431,13 +327,13 @@ export default function AutopsyReportDetailPage() {
         <div id="section-temporal" className="border-[4px] border-black bg-white rounded-[12px] p-4 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-5 sm:gap-6 text-black">
           <div className="flex items-center justify-between border-b-[3px] border-black pb-4">
             <div>
-              <div className="flex items-center gap-2">
-                <Clock className="size-6 text-black" />
-                <h2 className="text-xl font-black uppercase tracking-tight">
-                  03. TEMPORAL PROFILE &amp; CADENCE
+              <div className="flex items-center gap-2.5">
+                <Clock className="size-5 sm:size-6 text-black stroke-[2.2] shrink-0" />
+                <h2 className="text-xl font-bold uppercase tracking-tight">
+                  TEMPORAL PROFILE &amp; CADENCE
                 </h2>
               </div>
-              <p className="text-xs font-bold text-gray-600 mt-0.5">
+              <p className="text-xs font-bold text-neutral-800 mt-1">
                 24-hour clock and weekday distributions in your local timezone ({userTz}).
               </p>
             </div>
@@ -487,13 +383,13 @@ export default function AutopsyReportDetailPage() {
         <div id="section-languages" className="border-[4px] border-black bg-white rounded-[12px] p-4 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-5 sm:gap-6 text-black">
           <div className="flex items-center justify-between border-b-[3px] border-black pb-4">
             <div>
-              <div className="flex items-center gap-2">
-                <Globe2 className="size-6 text-black" />
-                <h2 className="text-xl font-black uppercase tracking-tight">
-                  06. PROGRAMMING LANGUAGE DNA &amp; COMPOSITION
+              <div className="flex items-center gap-2.5">
+                <Globe2 className="size-5 sm:size-6 text-black stroke-[2.2] shrink-0" />
+                <h2 className="text-xl font-bold uppercase tracking-tight">
+                  PROGRAMMING LANGUAGE DNA &amp; COMPOSITION
                 </h2>
               </div>
-              <p className="text-xs font-bold text-gray-600 mt-0.5">
+              <p className="text-xs font-bold text-neutral-800 mt-1">
                 Exact language byte distributions across all examined repositories.
               </p>
             </div>
@@ -566,39 +462,32 @@ export default function AutopsyReportDetailPage() {
         <div id="section-churn" className="border-[4px] border-black bg-white rounded-[12px] p-4 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-5 sm:gap-6 text-black">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b-[3px] border-black pb-4">
             <div>
-              <div className="flex items-center gap-2">
-                <FileCode2 className="size-6 text-black" />
-                <h2 className="text-xl font-black uppercase tracking-tight">
-                  08. HISTORICAL CODE CHURN TIMELINE
+              <div className="flex items-center gap-2.5">
+                <FileCode2 className="size-5 sm:size-6 text-black stroke-[2.2] shrink-0" />
+                <h2 className="text-xl font-bold uppercase tracking-tight">
+                  HISTORICAL CODE CHURN TIMELINE
                 </h2>
               </div>
-              <p className="text-xs font-bold text-gray-600 mt-0.5">
+              <p className="text-xs font-bold text-neutral-800 mt-1">
                 Gross additions (+lines) and deletions (-lines) plotted across time from version control diffs.
               </p>
             </div>
-
-            <Tabs value={churnGranularity} onValueChange={(v) => setChurnGranularity(v as any)} className="w-full sm:w-auto gap-0">
-              <TabsList className="w-full sm:w-auto">
-                <TabsTrigger value="WEEKLY" className="flex-1 sm:flex-initial text-center justify-center">WEEKLY</TabsTrigger>
-                <TabsTrigger value="MONTHLY" className="flex-1 sm:flex-initial text-center justify-center">MONTHLY</TabsTrigger>
-              </TabsList>
-            </Tabs>
           </div>
 
-          <ChurnAreaChart data={churnData} granularity={churnGranularity} />
+          <ChurnAreaChart data={churnData} />
         </div>
 
         {/* 09. Collaboration Record */}
         <div id="section-collaboration" className="border-[4px] border-black bg-white rounded-[12px] p-4 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-5 sm:gap-6 text-black">
           <div className="flex items-center justify-between border-b-[3px] border-black pb-4">
             <div>
-              <div className="flex items-center gap-2">
-                <GitPullRequest className="size-6 text-black" />
-                <h2 className="text-xl font-black uppercase tracking-tight">
-                  09. COLLABORATION RECORD &amp; PULL REQUESTS
+              <div className="flex items-center gap-2.5">
+                <GitPullRequest className="size-5 sm:size-6 text-black stroke-[2.2] shrink-0" />
+                <h2 className="text-xl font-bold uppercase tracking-tight">
+                  COLLABORATION RECORD &amp; PULL REQUESTS
                 </h2>
               </div>
-              <p className="text-xs font-bold text-gray-600 mt-0.5">
+              <p className="text-xs font-bold text-neutral-800 mt-1">
                 Verified pull request throughput, code reviews submitted, and multi-contributor footprint.
               </p>
             </div>
@@ -648,52 +537,16 @@ export default function AutopsyReportDetailPage() {
           defendantLogin={analysis.subject.login}
         />
 
-        {/* 12. Special Findings & Case Notes */}
-        {analysis.easterEggs.length > 0 && (
-          <div id="section-case-notes" className="border-[4px] border-black bg-white rounded-[12px] p-4 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-5 sm:gap-6 text-black">
-            <div className="flex items-center justify-between border-b-[3px] border-black pb-4">
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Zap className="size-6 text-purple-700" />
-                  <h2 className="text-xl font-black uppercase tracking-tight">
-                    12. SPECIAL FINDINGS &amp; CASE NOTES
-                  </h2>
-                  <Badge variant="purple">{analysis.easterEggs.length}</Badge>
-                </div>
-                <p className="text-xs font-bold text-gray-600 mt-0.5">
-                  Distinct statistical milestones and notable discoveries identified during the examination.
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
-              {analysis.easterEggs.map((egg) => (
-                <div
-                  key={egg.id}
-                  onClick={() => setSelectedEgg(egg)}
-                  className="border-[2px] border-black bg-purple-100 p-3 rounded-[6px] shadow-[3px_3px_0_0_#000] flex flex-col justify-between gap-2 cursor-pointer hover:translate-x-[1.5px] hover:translate-y-[1.5px] hover:shadow-[1.5px_1.5px_0_0_#000] hover:bg-purple-200 active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all duration-150"
-                >
-                  <div className="flex items-center justify-between">
-                    <Badge variant="purple">DISCOVERED</Badge>
-                    <Sparkles className="size-3.5 text-purple-800" />
-                  </div>
-                  <h4 className="font-black text-xs uppercase text-black">{egg.title}</h4>
-                  <div className="text-[10px] font-mono text-gray-600 truncate font-bold">{egg.trigger}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* 13. Wrapped Recap & Launcher */}
+        {/* Wrapped Recap & Launcher */}
         <div id="section-wrapped" className="border-[4px] border-black bg-[#FFDC58] rounded-[12px] p-4 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 text-black">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight">
-                13. GITOPSY FORENSIC WRAPPED
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-2.5">
+              <Gift className="size-5 sm:size-6 text-black stroke-[2.2] shrink-0" />
+              <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-tight">
+                GITOPSY FORENSIC WRAPPED
               </h2>
             </div>
-            <p className="text-xs font-bold text-gray-800 max-w-lg leading-relaxed">
+            <p className="text-xs font-bold text-neutral-900 max-w-lg leading-relaxed mt-1">
               Launch the full-screen 15-chapter presentation summarizing your headline records,
               dominant repository, and developer assessment.
             </p>
@@ -714,6 +567,52 @@ export default function AutopsyReportDetailPage() {
           analysis={analysis}
           onAnalysisUpdated={(a) => setAnalysis(a)}
         />
+
+        {/* Footer — Minimalistic (matches landing page) */}
+        <footer className="w-full text-center mt-6">
+          <div className="pt-6 border-t-2 border-black/20 flex flex-col sm:flex-row items-center justify-between text-xs font-bold uppercase text-gray-700 gap-3 sm:gap-4">
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-2">
+              <div className="flex items-center gap-2">
+                <div className="relative size-5 shrink-0">
+                  <Image
+                    src="/gitopsy-logo.png"
+                    alt="Gitopsy Logo"
+                    width={20}
+                    height={20}
+                    className="object-contain"
+                  />
+                </div>
+                <span>© Gitopsy {new Date().getFullYear()}</span>
+              </div>
+              <span className="hidden sm:inline text-black/40">•</span>
+              <a
+                href="https://github.com/monojitgoswami69/gitopsy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-black transition-colors flex items-center gap-1.5 hover:underline"
+                title="GitHub Repository"
+              >
+                <svg className="size-4 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    fillRule="evenodd"
+                    clipRule="evenodd"
+                    d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+                  />
+                </svg>
+                <span>GitHub</span>
+              </a>
+            </div>
+            <button
+              onClick={() => {
+                const el = document.getElementById("app-main-scroll");
+                if (el) el.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              className="hover:underline hover:text-black transition-colors cursor-pointer"
+            >
+              Back to top ↑
+            </button>
+          </div>
+        </footer>
       </div>
 
       {/* Full-Screen Wrapped Modal */}
@@ -721,15 +620,6 @@ export default function AutopsyReportDetailPage() {
         <WrappedViewer
           report={analysis}
           onClose={() => setIsWrappedOpen(false)}
-        />
-      )}
-
-      {/* Case Note / Special Finding Modal */}
-      {selectedEgg && (
-        <EasterEggModal
-          egg={selectedEgg}
-          isOpen={Boolean(selectedEgg)}
-          onClose={() => setSelectedEgg(null)}
         />
       )}
     </div>

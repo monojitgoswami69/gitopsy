@@ -59,44 +59,27 @@ export function groupLanguagesWithOthers(languages: LanguageByteEntry[]): Langua
 export function LanguagesSunburst({ languages }: { languages: LanguageByteEntry[] }) {
   const palette = LANGUAGE_PALETTE;
   const grouped = useMemo(() => groupLanguagesWithOthers(languages), [languages]);
-  const [unselected, setUnselected] = useState<Set<string>>(new Set());
-
-  const toggleLanguage = (name: string) => {
-    setUnselected((prev) => {
-      const next = new Set(prev);
-      if (next.has(name)) {
-        next.delete(name);
-      } else {
-        if (next.size < grouped.length - 1) {
-          next.add(name);
-        }
-      }
-      return next;
-    });
-  };
 
   const chartOptions: EChartsOption = useMemo(() => {
-    const data = grouped
-      .filter((l) => !unselected.has(l.name))
-      .map((l, idx) => {
-        const pctLabel = l.percentage > 0 ? `${l.percentage}%` : l.bytes > 0 ? "<1%" : "0%";
-        const estLines = Math.round(l.bytes / 35);
-        return {
-          value: l.bytes,
-          name: `${l.name} (${pctLabel})`,
-          langName: l.name,
-          percentageLabel: pctLabel,
-          bytes: l.bytes,
-          repoCount: l.repoCount || 0,
-          estLines,
-          isFunctional: l.isFunctional,
-          itemStyle: {
-            color: l.name === "Others" ? "#94A3B8" : palette[idx % palette.length],
-            borderColor: "#000",
-            borderWidth: 2.5,
-          },
-        };
-      });
+    const data = grouped.map((l, idx) => {
+      const pctLabel = l.percentage > 0 ? `${l.percentage}%` : l.bytes > 0 ? "<1%" : "0%";
+      const estLines = Math.round(l.bytes / 35);
+      return {
+        value: l.bytes,
+        name: `${l.name} (${pctLabel})`,
+        langName: l.name,
+        percentageLabel: pctLabel,
+        bytes: l.bytes,
+        repoCount: l.repoCount || 0,
+        estLines,
+        isFunctional: l.isFunctional,
+        itemStyle: {
+          color: l.name === "Others" ? "#94A3B8" : palette[idx % palette.length],
+          borderColor: "#000",
+          borderWidth: 2.5,
+        },
+      };
+    });
 
     return {
       tooltip: {
@@ -154,12 +137,11 @@ export function LanguagesSunburst({ languages }: { languages: LanguageByteEntry[
           type: "pie",
           center: ["50%", "50%"],
           radius: ["42%", "82%"],
-          padAngle: 3.5,
           avoidLabelOverlap: false,
           itemStyle: {
-            borderRadius: 5,
+            borderRadius: 0,
             borderColor: "#000",
-            borderWidth: 2,
+            borderWidth: 2.5,
           },
           label: {
             show: false,
@@ -167,47 +149,41 @@ export function LanguagesSunburst({ languages }: { languages: LanguageByteEntry[
           },
           emphasis: {
             scale: true,
-            scaleSize: 6,
+            scaleSize: 5,
             itemStyle: {
-              shadowBlur: 12,
+              shadowBlur: 8,
               shadowOffsetX: 0,
               shadowColor: "rgba(0, 0, 0, 0.35)",
               borderColor: "#000",
-              borderWidth: 2.5,
+              borderWidth: 3,
             },
           },
           data,
         },
       ],
     };
-  }, [grouped, unselected, palette]);
+  }, [grouped, palette]);
 
   return (
     <div className="w-full flex flex-col items-center justify-center">
       <EChartContainer options={chartOptions} height="180px" />
       <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 mt-2 px-2 max-w-[360px] mx-auto text-center select-none">
         {grouped.map((l, idx) => {
-          const isHidden = unselected.has(l.name);
           const pctLabel = l.percentage > 0 ? `${l.percentage}%` : l.bytes > 0 ? "<1%" : "0%";
           const dotColor = l.name === "Others" ? "#94A3B8" : palette[idx % palette.length];
           return (
-            <button
+            <div
               key={l.name}
-              type="button"
-              onClick={() => toggleLanguage(l.name)}
-              className={`flex items-center gap-1.5 shrink-0 cursor-pointer hover:opacity-80 active:scale-95 transition-all ${
-                isHidden ? "opacity-35 line-through grayscale" : "opacity-100"
-              }`}
-              title={isHidden ? `Click to show ${l.name}` : `Click to filter out ${l.name}`}
+              className="flex items-center gap-1.5 shrink-0"
             >
               <span
                 className="size-2.5 rounded-[3px] border-[1.5px] border-black shrink-0"
                 style={{ backgroundColor: dotColor }}
               />
-              <span className="text-[11px] font-black text-black whitespace-nowrap">
+              <span className="text-[11px] font-bold text-black whitespace-nowrap">
                 {l.name} ({pctLabel})
               </span>
-            </button>
+            </div>
           );
         })}
       </div>

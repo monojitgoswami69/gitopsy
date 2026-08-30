@@ -45,7 +45,7 @@ export function EChartContainer({
     // Merge default Neobrutalism chart styles
     const brutalistOptions: echarts.EChartsOption = {
       textStyle: {
-        fontFamily: "system-ui, monospace",
+        fontFamily: "'JetBrains Mono', monospace",
         fontWeight: "bold",
         color: "#000",
       },
@@ -56,7 +56,8 @@ export function EChartContainer({
         padding: [10, 14],
         textStyle: {
           color: "#000000",
-          fontWeight: "bold",
+          fontFamily: "'JetBrains Mono', monospace",
+          fontWeight: 700,
           fontSize: 12,
         },
         extraCssText: "border-radius: 6px;",

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { JetBrains_Mono, Space_Mono, Space_Grotesk } from "next/font/google";
+import { JetBrains_Mono, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { HeaderNav } from "@/components/layout/HeaderNav";
 import { Footer } from "@/components/layout/Footer";
@@ -14,16 +14,9 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
-const spaceMono = Space_Mono({
-  weight: ["400", "700"],
+const geistMono = Geist_Mono({
   subsets: ["latin"],
-  variable: "--font-space-mono",
-  display: "swap",
-});
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-space-grotesk",
+  variable: "--font-geist-mono",
   display: "swap",
 });
 
@@ -53,6 +46,12 @@ export const metadata: Metadata = {
   manifest: "/favicon/site.webmanifest",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover" as const,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -61,9 +60,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`h-full overflow-hidden ${jetbrainsMono.variable} ${spaceMono.variable} ${spaceGrotesk.variable}`}
+      className={`h-full overflow-hidden ${jetbrainsMono.variable} ${geistMono.variable}`}
     >
-      <body className="bg-[#F4EFE6] text-[#121212] font-sans h-full w-full overflow-hidden flex flex-col selection:bg-[#FFDC58] selection:text-black relative">
+      <body className="bg-[#F4EFE6] text-[#121212] font-body h-full w-full overflow-hidden flex flex-col selection:bg-[#FFDC58] selection:text-black relative">
         <SmoothScroll>
           <ForensicWatermark />
           <HeaderNav />

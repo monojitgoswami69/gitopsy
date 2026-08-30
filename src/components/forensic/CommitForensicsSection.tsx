@@ -47,10 +47,13 @@ export function CommitForensicsSection({ commitForensics }: CommitForensicsSecti
       <div className="border-[4px] border-black bg-white rounded-[12px] p-4 sm:p-6 shadow-[3.5px_3.5px_0_0_#000] flex flex-col gap-5 sm:gap-6 text-black">
         <div className="flex items-center justify-between border-b-[3px] border-black pb-4">
           <div>
-            <h2 className="text-xl font-black uppercase tracking-tight flex items-center gap-2">
-              <FileCode2 className="size-6 text-black" /> 07. COMMIT FORENSICS &amp; MESSAGE HYGIENE
-            </h2>
-            <p className="text-xs font-bold text-gray-600 mt-0.5">
+            <div className="flex items-center gap-2.5">
+              <FileCode2 className="size-5 sm:size-6 text-black stroke-[2.2] shrink-0" />
+              <h2 className="text-xl font-bold uppercase tracking-tight">
+                COMMIT FORENSICS &amp; MESSAGE HYGIENE
+              </h2>
+            </div>
+            <p className="text-xs font-bold text-neutral-800 mt-1">
               Examined {totalAnalyzed.toLocaleString()} historical commits across message intent, character length, and size spectrums.
             </p>
           </div>
@@ -102,35 +105,41 @@ export function CommitForensicsSection({ commitForensics }: CommitForensicsSecti
 
           {/* Multi-segment proportional intent bar */}
           <div className="h-3 w-full rounded border border-black overflow-hidden flex bg-gray-100">
-            {messageCategories.map((cat, idx) => (
-              <div
-                key={cat.category}
-                style={{
-                  width: `${Math.max(1, cat.percentage)}%`,
-                  backgroundColor: INTENT_COLORS[idx % INTENT_COLORS.length],
-                }}
-                title={`${cat.category}: ${cat.count} (${cat.percentage}%)`}
-                className="h-full border-r border-black/20 last:border-r-0"
-              />
-            ))}
+            {messageCategories.map((cat, idx) => {
+              const pctText = cat.percentage > 0 ? `${cat.percentage}%` : "<1%";
+              return (
+                <div
+                  key={cat.category}
+                  style={{
+                    width: `${Math.max(1, cat.percentage)}%`,
+                    backgroundColor: INTENT_COLORS[idx % INTENT_COLORS.length],
+                  }}
+                  title={`${cat.category}: ${cat.count} (${pctText})`}
+                  className="h-full border-r border-black/20 last:border-r-0"
+                />
+              );
+            })}
           </div>
 
           {/* Intent Legends (Unboxed & Centered) */}
           <div className="flex flex-wrap items-center justify-center gap-x-3 sm:gap-x-4 gap-y-1.5 pt-1 text-[10.5px] sm:text-[11px] font-mono">
-            {messageCategories.map((cat, idx) => (
-              <div key={cat.category} className="inline-flex items-center gap-1.5 shrink-0">
-                <span
-                  className="size-2 rounded-full border border-black/40 shrink-0"
-                  style={{
-                    backgroundColor: INTENT_COLORS[idx % INTENT_COLORS.length],
-                  }}
-                />
-                <span className="font-bold text-black">{cat.category}</span>
-                <span className="text-gray-500 font-medium">
-                  {cat.count} ({cat.percentage}%)
-                </span>
-              </div>
-            ))}
+            {messageCategories.map((cat, idx) => {
+              const pctText = cat.percentage > 0 ? `${cat.percentage}%` : "<1%";
+              return (
+                <div key={cat.category} className="inline-flex items-center gap-1.5 shrink-0">
+                  <span
+                    className="size-2 rounded-full border border-black/40 shrink-0"
+                    style={{
+                      backgroundColor: INTENT_COLORS[idx % INTENT_COLORS.length],
+                    }}
+                  />
+                  <span className="font-bold text-black">{cat.category}</span>
+                  <span className="text-gray-500 font-medium">
+                    {cat.count} ({pctText})
+                  </span>
+                </div>
+              );
+            })}
           </div>
 
           {/* Additional Hygiene Context */}
@@ -181,10 +190,10 @@ export function CommitForensicsSection({ commitForensics }: CommitForensicsSecti
           <div className="flex flex-col gap-3.5 border-[1.5px] border-black p-4 sm:p-5 rounded-[8px] bg-white">
             <div className="flex items-center justify-between">
               <span className="text-xs font-black uppercase tracking-wider text-gray-700">
-                HIGH VOLUME COMMITS
+                THE COMMITS PODIUM
               </span>
               <span className="text-[10px] font-mono font-bold text-gray-500">
-                Top {topVolumeCommits.length} commits by line modification volume
+                Top commits by volume
               </span>
             </div>
 
@@ -230,7 +239,7 @@ export function CommitForensicsSection({ commitForensics }: CommitForensicsSecti
                       </div>
                     </div>
 
-                    <p className="text-xs italic font-semibold text-gray-800 font-mono">
+                    <p className="text-xs italic font-semibold text-gray-800 font-mono break-words">
                       &ldquo;{c.message}&rdquo;
                     </p>
                   </div>
