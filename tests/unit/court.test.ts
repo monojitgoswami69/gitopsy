@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { generateCourtCharges } from "@/lib/analytics/court";
 
 describe("Gitopsy Courtroom Charges Engine", () => {
-  it("should charge Nocturnal Malpractice when night percentage >= 35% and sample >= 20", () => {
+  it("should charge Nocturnal Software Contempt when night percentage >= 35% and sample >= 20", () => {
     const charges = generateCourtCharges(
       {
         summary: {
@@ -41,7 +41,69 @@ describe("Gitopsy Courtroom Charges Engine", () => {
 
     const nightCharge = charges.find((c) => c.id === "charge-night");
     expect(nightCharge).toBeDefined();
+    expect(nightCharge?.chargeTitle).toBe("COUNT 1: NOCTURNAL SOFTWARE CONTEMPT");
     expect(nightCharge?.verdict).toBe("GUILTY AS CHARGED");
+    expect(nightCharge?.sentence).toContain("mandated sunrise");
+  });
+
+  it("should assign sequential COUNT 1 when only WIP charge triggers", () => {
+    const charges = generateCourtCharges(
+      {
+        summary: {
+          totalCommits: 50,
+          totalContributions: 50,
+          reposAnalyzed: 1,
+          reposSkipped: 0,
+          activeRepos: 1,
+          linesAdded: 200,
+          linesDeleted: 20,
+          netLines: 180,
+          prsAuthored: 0,
+          prsMerged: 0,
+          mergeRatePercentage: null,
+          issuesAuthored: 0,
+          reviewsAuthored: 0,
+          starsReceived: 0,
+          forksReceived: 0,
+          longestStreakDays: 1,
+          activeStreakDays: 1,
+          totalActiveDays: 5,
+          longestInactiveGapDays: 0,
+          peakDailyCommits: 5,
+          averageDailyCommits: 2,
+          multiContributorRepoShare: 0,
+          functionalLanguageCount: 1,
+          busiestHour: 14,
+          busiestWeekday: "Tuesday",
+          busiestMonth: "2026-08",
+          nightCommitPercentage: 10,
+          weekendCommitPercentage: 10,
+        },
+        commitForensics: {
+          totalAnalyzed: 50,
+          detailedCommitsCount: 50,
+          averageAdditionsPerCommit: 4,
+          averageDeletionsPerCommit: 0.4,
+          medianCommitSize: 10,
+          averageMessageLength: 20,
+          churnRatio: 0.1,
+          sizeDistribution: { tiny: 50, small: 0, medium: 0, large: 0, monster: 0 },
+          messageCategories: [{ category: "WIP", count: 4, percentage: 8 }],
+          shortMessageCount: 0,
+          longMessageCount: 0,
+          repeatedMessageCount: 0,
+          conventionalCommitCount: 0,
+          remarks: [],
+          largestCommit: null,
+        },
+      },
+      "wipuser"
+    );
+
+    expect(charges.length).toBe(1);
+    expect(charges[0].id).toBe("charge-wip");
+    // Must be COUNT 1, not hardcoded COUNT 3!
+    expect(charges[0].chargeTitle).toBe("COUNT 1: WORK-IN-PROGRESS RECKLESSNESS");
   });
 
   it("should acquit on clean discipline when no violations are detected", () => {
@@ -82,6 +144,7 @@ describe("Gitopsy Courtroom Charges Engine", () => {
     );
 
     expect(charges.length).toBe(1);
+    expect(charges[0].chargeTitle).toBe("COUNT 1: HYGIENIC GIT DISCIPLINE");
     expect(charges[0].verdict).toBe("ACQUITTED ON TECHNICALITY");
   });
 
@@ -159,5 +222,6 @@ describe("Gitopsy Courtroom Charges Engine", () => {
     const finalityCharge = charges.find((c) => c.id === "charge-false-finality");
     expect(finalityCharge).toBeDefined();
     expect(finalityCharge?.verdict).toBe("GUILTY AS CHARGED");
+    expect(finalityCharge?.sentence).toContain("confiscated by the court");
   });
 });

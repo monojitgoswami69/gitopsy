@@ -1,5 +1,5 @@
 /**
- * DETERMINISTIC ASSESSMENTS ENGINE
+ * DETERMINISTIC DEVELOPER ASSESSMENTS ENGINE
  * Every assessment is calculated strictly from verified GitHub metrics with transparent evidence criteria.
  */
 
@@ -44,123 +44,179 @@ export interface ClassificationContext {
 }
 
 export function computeDeveloperClassifications(ctx: ClassificationContext): DeveloperClassification[] {
-  const { commits, repositories, temporal, summary, churn, commitForensics, languages, commitCategories } = ctx;
-  const totalCommits = Math.max(1, summary.totalCommits);
-  const totalRepos = Math.max(1, repositories.length);
+  const { repositories, temporal, summary, churn, commitForensics, languages, commitCategories } = ctx;
+  const totalCommits = Math.max(0, summary.totalCommits || 0);
+  const totalRepos = Math.max(0, repositories.length);
   const detailedCommits = commitForensics.detailedCommitsCount || 0;
 
   const classifications: DeveloperClassification[] = [];
 
   function getStrength(sampleSize: number, margin: number): DeveloperClassification["evidenceStrength"] {
     if (sampleSize < 15) return "LOW";
-    if (sampleSize < 40 || margin < 5) return "MODERATE";
+    if (sampleSize < 35 || margin < 5) return "MODERATE";
     if (margin < 20) return "HIGH";
     return "VERY HIGH";
   }
 
   const tzAbbr = summary.timezoneAbbr || temporal.timezoneAbbr || "local";
 
-  // 1. NIGHT OWL
-  // >= 35% of commits between 21:00 and 04:59 in local time, min 20 commits
-  const nightThreshold = 35;
-  const nightMargin = summary.nightCommitPercentage - nightThreshold;
-  const isNightOwl = summary.nightCommitPercentage >= nightThreshold && totalCommits >= 20;
+  // Temporal buckets calculation
+  // Night: 21:00 - 04:59 (8 hours)
+  const nightHours = [21, 22, 23, 0, 1, 2, 3, 4];
+  const nightCommits = nightHours.reduce((acc, h) => acc + (temporal.byHour[h] || 0), 0);
+  const nightPct = totalCommits > 0 ? Math.round((nightCommits / totalCommits) * 100) : 0;
+
+  // Morning: 05:00 - 11:59 (7 hours)
+  const morningCommits = temporal.byHour.slice(5, 12).reduce((a, b) => a + b, 0);
+  const morningPct = totalCommits > 0 ? Math.round((morningCommits / totalCommits) * 100) : 0;
+
+  // Afternoon: 12:00 - 16:59 (5 hours)
+  const afternoonCommits = temporal.byHour.slice(12, 17).reduce((a, b) => a + b, 0);
+
+  // Evening: 17:00 - 20:59 (4 hours)
+  const eveningCommits = temporal.byHour.slice(17, 21).reduce((a, b) => a + b, 0);
+
+  const daytimeCommits = morningCommits + afternoonCommits + eveningCommits;
+
+  // Weekend vs Weekday
+  const weekendCommits = (temporal.byWeekday[0] || 0) + (temporal.byWeekday[6] || 0);
+  const weekendPct = totalCommits > 0 ? Math.round((weekendCommits / totalCommits) * 100) : 0;
+  const weekdayCommits = totalCommits - weekendCommits;
+  const weekdayPct = totalCommits > 0 ? Math.round((weekdayCommits / totalCommits) * 100) : 0;
+
+  // 1. NIGHT SHIFT (Extreme nocturnal concentration)
+  const isNightShift = totalCommits >= 25 && nightPct >= 75 && nightCommits >= 20;
+  classifications.push({
+    id: "night-shift",
+    title: "NIGHT SHIFT",
+    tagline: "Operating almost exclusively during nocturnal hours.",
+    description: `Over 75% of your recorded engineering output occurs between 21:00 and 04:59 ${tzAbbr}, with minimal daytime activity.`,
+    badgeAccent: "#7C3AED",
+    evidenceStrength: getStrength(totalCommits, nightPct - 75),
+    evidence: [
+      {
+        criterion: `Nocturnal commit dominance (21:00 - 04:59 ${tzAbbr})`,
+        actualValue: `${nightPct}% (${nightCommits} commits)`,
+        threshold: "≥ 75%",
+        isSatisfied: nightPct >= 75,
+      },
+      {
+        criterion: "Sample size",
+        actualValue: `${totalCommits} commits`,
+        threshold: "≥ 25 commits",
+        isSatisfied: totalCommits >= 25,
+      },
+    ],
+  });
+
+  // 2. NIGHT OWL (Elevated late-night activity with meaningful volume exceeding afternoon baseline)
+  const isNightOwl =
+    totalCommits >= 25 &&
+    nightPct >= 35 &&
+    nightPct < 75 &&
+    nightCommits >= 10 &&
+    nightCommits > afternoonCommits;
+
   classifications.push({
     id: "night-owl",
     title: "NIGHT OWL",
     tagline: "High volume of development activity during late-night hours.",
     description: `A substantial percentage of your timestamped commits occur between 21:00 and 04:59 ${tzAbbr}.`,
     badgeAccent: "#C084FC",
-    evidenceStrength: getStrength(totalCommits, nightMargin),
+    evidenceStrength: getStrength(totalCommits, nightPct - 35),
     evidence: [
       {
         criterion: `Late-night commit share (21:00 - 04:59 ${tzAbbr})`,
-        actualValue: `${summary.nightCommitPercentage}%`,
-        threshold: "≥ 35%",
-        isSatisfied: summary.nightCommitPercentage >= nightThreshold,
+        actualValue: `${nightPct}% (${nightCommits} commits)`,
+        threshold: "35% - 74%",
+        isSatisfied: nightPct >= 35 && nightPct < 75,
+      },
+      {
+        criterion: "Nocturnal activity vs afternoon volume",
+        actualValue: `${nightCommits} night vs ${afternoonCommits} afternoon`,
+        threshold: "Night > Afternoon",
+        isSatisfied: nightCommits > afternoonCommits,
       },
       {
         criterion: "Sample size",
         actualValue: `${totalCommits} commits`,
-        threshold: "≥ 20 commits",
-        isSatisfied: totalCommits >= 20,
+        threshold: "≥ 25 commits",
+        isSatisfied: totalCommits >= 25,
       },
     ],
   });
 
-  // 2. MORNING SKYLARK
-  // >= 25% of commits between 05:00 and 09:59 in local time, min 20 commits
-  const morningCommits = temporal.byHour.slice(5, 10).reduce((a, b) => a + b, 0);
-  const morningPercentage = Math.round((morningCommits / totalCommits) * 100);
-  const isMorning = morningPercentage >= 25 && totalCommits >= 20;
+  // 3. MORNING SKYLARK (Concentration during early morning hours)
+  const isMorning = totalCommits >= 25 && morningPct >= 30 && morningCommits >= 10 && morningCommits > eveningCommits;
   classifications.push({
     id: "morning-skylark",
     title: "MORNING SKYLARK",
     tagline: "Concentration of activity during early morning hours.",
-    description: `A large portion of your commit timestamps are recorded between 05:00 and 09:59 ${tzAbbr}.`,
+    description: `A large portion of your commit timestamps are recorded between 05:00 and 11:59 ${tzAbbr}.`,
     badgeAccent: "#38BDF8",
-    evidenceStrength: getStrength(totalCommits, morningPercentage - 25),
+    evidenceStrength: getStrength(totalCommits, morningPct - 30),
     evidence: [
       {
-        criterion: `Early-morning commit share (05:00 - 09:59 ${tzAbbr})`,
-        actualValue: `${morningPercentage}%`,
-        threshold: "≥ 25%",
-        isSatisfied: morningPercentage >= 25,
+        criterion: `Morning commit share (05:00 - 11:59 ${tzAbbr})`,
+        actualValue: `${morningPct}% (${morningCommits} commits)`,
+        threshold: "≥ 30%",
+        isSatisfied: morningPct >= 30,
+      },
+      {
+        criterion: "Morning volume vs evening volume",
+        actualValue: `${morningCommits} morning vs ${eveningCommits} evening`,
+        threshold: "Morning > Evening",
+        isSatisfied: morningCommits > eveningCommits,
       },
       {
         criterion: "Sample size",
         actualValue: `${totalCommits} commits`,
-        threshold: "≥ 20 commits",
-        isSatisfied: totalCommits >= 20,
+        threshold: "≥ 25 commits",
+        isSatisfied: totalCommits >= 25,
       },
     ],
   });
 
-  // 3. WEEKEND WARRIOR
-  // >= 35% of commits on Saturday or Sunday, min 20 commits
-  const weekendThreshold = 35;
-  const weekendMargin = summary.weekendCommitPercentage - weekendThreshold;
-  const isWeekendWarrior = summary.weekendCommitPercentage >= weekendThreshold && totalCommits >= 20;
+  // 4. WEEKEND WARRIOR
+  const isWeekendWarrior = weekendPct >= 35 && weekendCommits >= 10 && totalCommits >= 25;
   classifications.push({
     id: "weekend-warrior",
     title: "WEEKEND WARRIOR",
     tagline: "Elevated activity recorded on Saturdays and Sundays.",
     description: "A notable proportion of your commit activity is deployed on weekend days relative to the weekly baseline.",
     badgeAccent: "#FFDC58",
-    evidenceStrength: getStrength(totalCommits, weekendMargin),
+    evidenceStrength: getStrength(totalCommits, weekendPct - 35),
     evidence: [
       {
         criterion: "Weekend commit percentage (Saturday & Sunday)",
-        actualValue: `${summary.weekendCommitPercentage}%`,
+        actualValue: `${weekendPct}% (${weekendCommits} commits)`,
         threshold: "≥ 35%",
-        isSatisfied: summary.weekendCommitPercentage >= weekendThreshold,
+        isSatisfied: weekendPct >= 35,
       },
       {
         criterion: "Sample size",
         actualValue: `${totalCommits} commits`,
-        threshold: "≥ 20 commits",
-        isSatisfied: totalCommits >= 20,
+        threshold: "≥ 25 commits",
+        isSatisfied: totalCommits >= 25,
       },
     ],
   });
 
-  // 4. WEEKDAY OPERATOR
-  // >= 90% of commits on Monday through Friday, min 30 commits
-  const weekdayCommitsPct = 100 - summary.weekendCommitPercentage;
-  const isWeekday = weekdayCommitsPct >= 90 && totalCommits >= 30;
+  // 5. WEEKDAY OPERATOR
+  const isWeekday = weekdayPct >= 90 && weekdayCommits >= 25 && totalCommits >= 30;
   classifications.push({
     id: "weekday-operator",
     title: "WEEKDAY OPERATOR",
     tagline: "Activity concentrated almost exclusively during standard weekdays.",
     description: "Almost all of your engineering output occurs Monday through Friday with minimal weekend activity.",
     badgeAccent: "#34D399",
-    evidenceStrength: getStrength(totalCommits, weekdayCommitsPct - 90),
+    evidenceStrength: getStrength(totalCommits, weekdayPct - 90),
     evidence: [
       {
         criterion: "Weekday commit percentage (Monday - Friday)",
-        actualValue: `${weekdayCommitsPct}%`,
+        actualValue: `${weekdayPct}% (${weekdayCommits} commits)`,
         threshold: "≥ 90%",
-        isSatisfied: weekdayCommitsPct >= 90,
+        isSatisfied: weekdayPct >= 90,
       },
       {
         criterion: "Sample size",
@@ -171,8 +227,7 @@ export function computeDeveloperClassifications(ctx: ClassificationContext): Dev
     ],
   });
 
-  // 5. ATOMIC COMMITTER
-  // Median commit size <= 35 lines, min 15 detailed commits
+  // 6. ATOMIC COMMITTER
   const isAtomic = commitForensics.medianCommitSize <= 35 && detailedCommits >= 15 && commitForensics.medianCommitSize > 0;
   classifications.push({
     id: "atomic-committer",
@@ -197,8 +252,7 @@ export function computeDeveloperClassifications(ctx: ClassificationContext): Dev
     ],
   });
 
-  // 6. BATCH DEPLOYER
-  // Median commit size >= 250 lines, min 10 detailed commits
+  // 7. BATCH DEPLOYER
   const isBatch = commitForensics.medianCommitSize >= 250 && detailedCommits >= 10;
   classifications.push({
     id: "batch-deployer",
@@ -223,10 +277,10 @@ export function computeDeveloperClassifications(ctx: ClassificationContext): Dev
     ],
   });
 
-  // 7. CONVENTIONAL DISCIPLINE
-  // >= 70% conventional commit messages, min 20 commits
-  const conventionalPercentage = Math.round((commitForensics.conventionalCommitCount / totalCommits) * 100);
-  const isConventional = conventionalPercentage >= 70 && totalCommits >= 20;
+  // 8. CONVENTIONAL DISCIPLINE
+  const conventionalCount = commitForensics.conventionalCommitCount || 0;
+  const conventionalPercentage = totalCommits > 0 ? Math.round((conventionalCount / totalCommits) * 100) : 0;
+  const isConventional = conventionalPercentage >= 70 && conventionalCount >= 15 && totalCommits >= 25;
   classifications.push({
     id: "conventional-discipline",
     title: "CONVENTIONAL DISCIPLINE",
@@ -237,22 +291,21 @@ export function computeDeveloperClassifications(ctx: ClassificationContext): Dev
     evidence: [
       {
         criterion: "Conventional commit format adoption",
-        actualValue: `${conventionalPercentage}%`,
+        actualValue: `${conventionalPercentage}% (${conventionalCount} commits)`,
         threshold: "≥ 70%",
-        isSatisfied: conventionalPercentage >= 70,
+        isSatisfied: conventionalPercentage >= 70 && conventionalCount >= 15,
       },
       {
         criterion: "Sample size",
         actualValue: `${totalCommits} commits`,
-        threshold: "≥ 20 commits",
-        isSatisfied: totalCommits >= 20,
+        threshold: "≥ 25 commits",
+        isSatisfied: totalCommits >= 25,
       },
     ],
   });
 
-  // 8. REFACTOR MACHINE
-  // Deletion ratio >= 40% and total deletions >= 500 lines, min 20 commits
-  const isRefactor = churn.churnRatio >= 0.4 && churn.totalDeletions >= 500 && totalCommits >= 20;
+  // 9. REFACTOR MACHINE
+  const isRefactor = churn.churnRatio >= 0.4 && churn.totalDeletions >= 500 && totalCommits >= 25;
   classifications.push({
     id: "refactor-machine",
     title: "REFACTOR MACHINE",
@@ -273,30 +326,6 @@ export function computeDeveloperClassifications(ctx: ClassificationContext): Dev
         threshold: "≥ 500 lines",
         isSatisfied: churn.totalDeletions >= 500,
       },
-    ],
-  });
-
-  // 9. ONE-PROJECT SPECIALIST
-  // >= 65% of all activity concentrated in a single repository, min 25 commits
-  const sortedRepos = [...repositories].sort((a, b) => b.commitCount - a.commitCount);
-  const topRepo = sortedRepos[0];
-  const topRepoCommits = topRepo?.commitCount || 0;
-  const topRepoRatio = Math.round((topRepoCommits / totalCommits) * 100);
-  const isSpecialist = topRepoRatio >= 65 && totalCommits >= 25;
-  classifications.push({
-    id: "one-project-specialist",
-    title: "ONE-PROJECT SPECIALIST",
-    tagline: "Activity concentrated in a single primary repository.",
-    description: "The majority of your logged engineering commits are concentrated in one flagship repository.",
-    badgeAccent: "#6BCB77",
-    evidenceStrength: getStrength(totalCommits, topRepoRatio - 65),
-    evidence: [
-      {
-        criterion: "Concentration in primary repository",
-        actualValue: `${topRepoRatio}% in ${topRepo?.name || "primary repo"}`,
-        threshold: "≥ 65%",
-        isSatisfied: topRepoRatio >= 65,
-      },
       {
         criterion: "Sample size",
         actualValue: `${totalCommits} commits`,
@@ -306,37 +335,76 @@ export function computeDeveloperClassifications(ctx: ClassificationContext): Dev
     ],
   });
 
-  // 10. ECOSYSTEM EXPLORER
-  // >= 8 repos, no single repo holds > 30% of total commits, min 40 commits
-  const isExplorer = totalRepos >= 8 && topRepoRatio <= 30 && totalCommits >= 40;
+  // 10. ONE-PROJECT SPECIALIST (Requires at least 2 repos to represent genuine focus choice)
+  const sortedRepos = [...repositories].sort((a, b) => b.commitCount - a.commitCount);
+  const topRepo = sortedRepos[0];
+  const topRepoCommits = topRepo?.commitCount || 0;
+  const topRepoRatio = totalCommits > 0 ? Math.round((topRepoCommits / totalCommits) * 100) : 0;
+  const isSpecialist = topRepoRatio >= 70 && totalCommits >= 30 && totalRepos >= 2;
+  classifications.push({
+    id: "one-project-specialist",
+    title: "ONE-PROJECT SPECIALIST",
+    tagline: "Activity concentrated in a single primary repository.",
+    description: "The overwhelming majority of your logged engineering commits are concentrated in one flagship repository.",
+    badgeAccent: "#6BCB77",
+    evidenceStrength: getStrength(totalCommits, topRepoRatio - 70),
+    evidence: [
+      {
+        criterion: "Concentration in primary repository",
+        actualValue: `${topRepoRatio}% in ${topRepo?.name || "primary repo"}`,
+        threshold: "≥ 70%",
+        isSatisfied: topRepoRatio >= 70,
+      },
+      {
+        criterion: "Portfolio breadth",
+        actualValue: `${totalRepos} repositories`,
+        threshold: "≥ 2 repos",
+        isSatisfied: totalRepos >= 2,
+      },
+      {
+        criterion: "Sample size",
+        actualValue: `${totalCommits} commits`,
+        threshold: "≥ 30 commits",
+        isSatisfied: totalCommits >= 30,
+      },
+    ],
+  });
+
+  // 11. ECOSYSTEM EXPLORER
+  const isExplorer = totalRepos >= 6 && topRepoRatio <= 35 && totalCommits >= 35;
   classifications.push({
     id: "ecosystem-explorer",
     title: "ECOSYSTEM EXPLORER",
     tagline: "Maintains an evenly distributed multi-repository portfolio.",
     description: "Your commit activity is spread across numerous repositories without any single codebase dominating.",
     badgeAccent: "#A78BFA",
-    evidenceStrength: getStrength(totalCommits, 30 - topRepoRatio),
+    evidenceStrength: getStrength(totalCommits, 35 - topRepoRatio),
     evidence: [
       {
         criterion: "Total accessible repositories",
         actualValue: `${totalRepos} repos`,
-        threshold: "≥ 8 repos",
-        isSatisfied: totalRepos >= 8,
+        threshold: "≥ 6 repos",
+        isSatisfied: totalRepos >= 6,
       },
       {
         criterion: "Maximum single-repository share",
         actualValue: `${topRepoRatio}%`,
-        threshold: "≤ 30%",
-        isSatisfied: topRepoRatio <= 30,
+        threshold: "≤ 35%",
+        isSatisfied: topRepoRatio <= 35,
+      },
+      {
+        criterion: "Sample size",
+        actualValue: `${totalCommits} commits`,
+        threshold: "≥ 35 commits",
+        isSatisfied: totalCommits >= 35,
       },
     ],
   });
 
-  // 11. REPOSITORY HOARDER
-  // >= 12 repositories with >= 50% having <= 2 commits
+  // 12. REPOSITORY HOARDER
   const quietRepos = repositories.filter((r) => r.commitCount <= 2).length;
-  const quietRatio = Math.round((quietRepos / totalRepos) * 100);
-  const isHoarder = totalRepos >= 12 && quietRatio >= 50;
+  const quietRatio = totalRepos > 0 ? Math.round((quietRepos / totalRepos) * 100) : 0;
+  const isHoarder = totalRepos >= 10 && quietRatio >= 50 && quietRepos >= 5;
   classifications.push({
     id: "repository-hoarder",
     title: "REPOSITORY HOARDER",
@@ -348,22 +416,21 @@ export function computeDeveloperClassifications(ctx: ClassificationContext): Dev
       {
         criterion: "Total accessible repositories",
         actualValue: `${totalRepos} repos`,
-        threshold: "≥ 12 repos",
-        isSatisfied: totalRepos >= 12,
+        threshold: "≥ 10 repos",
+        isSatisfied: totalRepos >= 10,
       },
       {
         criterion: "Percentage with ≤ 2 commits",
         actualValue: `${quietRatio}% (${quietRepos} repos)`,
-        threshold: "≥ 50%",
-        isSatisfied: quietRatio >= 50,
+        threshold: "≥ 50% (min 5 repos)",
+        isSatisfied: quietRatio >= 50 && quietRepos >= 5,
       },
     ],
   });
 
-  // 12. STEADY BUILDER
-  // Streak >= 7 days and activity spread across all weekdays, min 25 commits
-  const hasAllWeekdays = temporal.byWeekday.every((c) => c > 0);
-  const isSteady = summary.longestStreakDays >= 7 && hasAllWeekdays && totalCommits >= 25;
+  // 13. STEADY BUILDER
+  const hasAllWeekdays = temporal.byWeekday.length === 7 && temporal.byWeekday.every((c) => c > 0);
+  const isSteady = summary.longestStreakDays >= 7 && hasAllWeekdays && totalCommits >= 30;
   classifications.push({
     id: "steady-builder",
     title: "STEADY BUILDER",
@@ -384,14 +451,20 @@ export function computeDeveloperClassifications(ctx: ClassificationContext): Dev
         threshold: "All 7 weekdays > 0 commits",
         isSatisfied: hasAllWeekdays,
       },
+      {
+        criterion: "Sample size",
+        actualValue: `${totalCommits} commits`,
+        threshold: "≥ 30 commits",
+        isSatisfied: totalCommits >= 30,
+      },
     ],
   });
 
-  // 13. FIX ADDICT
-  // >= 20% of commit messages contain fix-related terms, min 20 commits
+  // 14. FIX ADDICT
   const fixCategory = commitCategories.find((c) => c.category === "FIX");
   const fixPercentage = fixCategory ? fixCategory.percentage : 0;
-  const isFixAddict = fixPercentage >= 20 && totalCommits >= 20;
+  const fixCount = fixCategory ? fixCategory.count : 0;
+  const isFixAddict = fixPercentage >= 20 && fixCount >= 5 && totalCommits >= 25;
   classifications.push({
     id: "fix-addict",
     title: "FIX ADDICT",
@@ -402,50 +475,53 @@ export function computeDeveloperClassifications(ctx: ClassificationContext): Dev
     evidence: [
       {
         criterion: "Percentage of commits containing 'fix' terminology",
-        actualValue: `${fixPercentage}%`,
-        threshold: "≥ 20%",
-        isSatisfied: fixPercentage >= 20,
+        actualValue: `${fixPercentage}% (${fixCount} commits)`,
+        threshold: "≥ 20% (min 5 commits)",
+        isSatisfied: fixPercentage >= 20 && fixCount >= 5,
       },
       {
         criterion: "Sample size",
         actualValue: `${totalCommits} commits`,
-        threshold: "≥ 20 commits",
-        isSatisfied: totalCommits >= 20,
+        threshold: "≥ 25 commits",
+        isSatisfied: totalCommits >= 25,
       },
     ],
   });
 
-  // 14. WIP SPECIALIST
-  // >= 5% of commits labeled 'wip' or 'work in progress', min 20 commits
+  // 15. WIP SPECIALIST
   const wipCategory = commitCategories.find((c) => c.category === "WIP");
   const wipPercentage = wipCategory ? wipCategory.percentage : 0;
-  const isWipSpecialist = wipPercentage >= 5 && totalCommits >= 20;
+  const wipCount = wipCategory ? wipCategory.count : 0;
+  const isWipSpecialist = wipPercentage >= 6 && wipCount >= 3 && totalCommits >= 25;
   classifications.push({
     id: "wip-specialist",
     title: "WIP SPECIALIST",
     tagline: "Frequently commits work-in-progress snapshots.",
     description: "A noticeable proportion of your commit messages are labeled as 'wip' or temporary checkpoints.",
     badgeAccent: "#F59E0B",
-    evidenceStrength: getStrength(totalCommits, wipPercentage - 5),
+    evidenceStrength: getStrength(totalCommits, wipPercentage - 6),
     evidence: [
       {
         criterion: "Percentage of commits labeled 'WIP'",
-        actualValue: `${wipPercentage}%`,
-        threshold: "≥ 5%",
-        isSatisfied: wipPercentage >= 5,
+        actualValue: `${wipPercentage}% (${wipCount} commits)`,
+        threshold: "≥ 6% (min 3 commits)",
+        isSatisfied: wipPercentage >= 6 && wipCount >= 3,
       },
       {
         criterion: "Sample size",
         actualValue: `${totalCommits} commits`,
-        threshold: "≥ 20 commits",
-        isSatisfied: totalCommits >= 20,
+        threshold: "≥ 25 commits",
+        isSatisfied: totalCommits >= 25,
       },
     ],
   });
 
-  // 15. MESSAGE MINIMALIST
-  // Average message length < 15 characters, min 20 commits
-  const isMinimalist = commitForensics.averageMessageLength < 15 && totalCommits >= 20 && commitForensics.averageMessageLength > 0;
+  // 16. MESSAGE MINIMALIST
+  const isMinimalist =
+    commitForensics.averageMessageLength < 15 &&
+    commitForensics.averageMessageLength > 0 &&
+    commitForensics.shortMessageCount >= 8 &&
+    totalCommits >= 25;
   classifications.push({
     id: "message-minimalist",
     title: "MESSAGE MINIMALIST",
@@ -461,16 +537,21 @@ export function computeDeveloperClassifications(ctx: ClassificationContext): Dev
         isSatisfied: commitForensics.averageMessageLength < 15 && commitForensics.averageMessageLength > 0,
       },
       {
+        criterion: "Short commit messages count (< 10 chars)",
+        actualValue: `${commitForensics.shortMessageCount} commits`,
+        threshold: "≥ 8 commits",
+        isSatisfied: commitForensics.shortMessageCount >= 8,
+      },
+      {
         criterion: "Sample size",
         actualValue: `${totalCommits} commits`,
-        threshold: "≥ 20 commits",
-        isSatisfied: totalCommits >= 20,
+        threshold: "≥ 25 commits",
+        isSatisfied: totalCommits >= 25,
       },
     ],
   });
 
-  // 16. POLYGLOT INVESTIGATOR
-  // >= 4 functional programming languages with >= 5% byte share
+  // 17. POLYGLOT INVESTIGATOR
   const functionalLangs = languages.filter((l) => l.isFunctional !== false && l.percentage >= 5);
   const isPolyglot = functionalLangs.length >= 4;
   classifications.push({
@@ -490,52 +571,28 @@ export function computeDeveloperClassifications(ctx: ClassificationContext): Dev
     ],
   });
 
-  // 17. SOLO OPERATOR (consolidated from easter egg)
-  const isSolo = totalCommits >= 40 && summary.prsAuthored === 0 && summary.reviewsAuthored === 0;
+  // 18. MARATHON SPRINTER (High single-day burst capacity)
+  const peakDayCommits = summary.peakDailyCommits || temporal.peakDailyCommits || 0;
+  const isSprinter = peakDayCommits >= 15 && totalCommits >= 40;
   classifications.push({
-    id: "solo-operator",
-    title: "SOLO OPERATOR",
-    tagline: "Direct branch and trunk deployment workflow.",
-    description: "Substantial direct commit volume logged without formal pull requests or peer code review overhead.",
-    badgeAccent: "#10B981",
-    evidenceStrength: getStrength(totalCommits, totalCommits - 40),
+    id: "marathon-sprinter",
+    title: "MARATHON SPRINTER",
+    tagline: "Capable of massive single-day deployment surges.",
+    description: "Your commit history records intense bursts of development activity concentrated within single calendar days.",
+    badgeAccent: "#EC4899",
+    evidenceStrength: getStrength(totalCommits, peakDayCommits - 15),
     evidence: [
       {
-        criterion: "Direct commit volume",
+        criterion: "Peak single-day commit burst",
+        actualValue: `${peakDayCommits} commits`,
+        threshold: "≥ 15 commits/day",
+        isSatisfied: peakDayCommits >= 15,
+      },
+      {
+        criterion: "Sample size",
         actualValue: `${totalCommits} commits`,
         threshold: "≥ 40 commits",
         isSatisfied: totalCommits >= 40,
-      },
-      {
-        criterion: "Pull requests & reviews overhead",
-        actualValue: "0 PRs / 0 reviews",
-        threshold: "0 PRs and 0 reviews",
-        isSatisfied: Boolean(summary.prsAuthored === 0 && summary.reviewsAuthored === 0),
-      },
-    ],
-  });
-
-  // 18. ARTISANAL BUILDER (consolidated from easter egg)
-  const isArtisanal = totalCommits >= 60 && repositories.every((r) => r.stars === 0 && r.forks === 0);
-  classifications.push({
-    id: "artisanal-builder",
-    title: "ARTISANAL BUILDER",
-    tagline: "Independent craft across solo personal repositories.",
-    description: "Consistent development logged across private or independent repositories without public star tracking.",
-    badgeAccent: "#EAB308",
-    evidenceStrength: getStrength(totalCommits, totalCommits - 60),
-    evidence: [
-      {
-        criterion: "Total analyzed commits",
-        actualValue: `${totalCommits} commits`,
-        threshold: "≥ 60 commits",
-        isSatisfied: totalCommits >= 60,
-      },
-      {
-        criterion: "Solo independent repositories",
-        actualValue: `${totalRepos} repos (0 stars, 0 forks)`,
-        threshold: "100% solo repos",
-        isSatisfied: repositories.every((r) => r.stars === 0 && r.forks === 0),
       },
     ],
   });
@@ -544,6 +601,15 @@ export function computeDeveloperClassifications(ctx: ClassificationContext): Dev
   return classifications.sort((a, b) => {
     const aSatisfied = a.evidence.every((e) => e.isSatisfied) ? 1 : 0;
     const bSatisfied = b.evidence.every((e) => e.isSatisfied) ? 1 : 0;
-    return bSatisfied - aSatisfied;
+    if (bSatisfied !== aSatisfied) {
+      return bSatisfied - aSatisfied;
+    }
+    const rank: Record<DeveloperClassification["evidenceStrength"], number> = {
+      "VERY HIGH": 4,
+      HIGH: 3,
+      MODERATE: 2,
+      LOW: 1,
+    };
+    return (rank[b.evidenceStrength] || 0) - (rank[a.evidenceStrength] || 0);
   });
 }

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { computeDeveloperClassifications } from "@/lib/analytics/classifications";
 import { RepositoryAnalysis } from "@/types/domain";
 
-describe("Developer Assessments Engine", () => {
+describe("Developer Classifications Engine", () => {
   const baseRepo: RepositoryAnalysis = {
     id: 1,
     name: "test-repo",
@@ -31,65 +31,129 @@ describe("Developer Assessments Engine", () => {
     fetchWarnings: [],
   };
 
-  it("should assess NIGHT OWL when late night percentage exceeds threshold and sample is sufficient", () => {
+  function createMockTemporal(hourMap: Record<number, number>, weekdayMap: Record<number, number> = {}) {
+    const byHour = new Array(24).fill(0);
+    for (const [h, count] of Object.entries(hourMap)) {
+      byHour[Number(h)] = count;
+    }
+    const byWeekday = new Array(7).fill(0);
+    for (const [w, count] of Object.entries(weekdayMap)) {
+      byWeekday[Number(w)] = count;
+    }
+    return {
+      heatmapCalendar: [],
+      byHour,
+      byWeekday,
+      byMonth: [],
+      longestInactiveGapDays: 0,
+      peakDailyCommits: 5,
+    };
+  }
+
+  it("should classify NIGHT SHIFT when >= 75% commits occur at night with sufficient sample", () => {
+    // 30 commits all at 23:00 (night)
     const classifications = computeDeveloperClassifications({
       commits: [],
       repositories: [baseRepo],
-      temporal: {
-        heatmapCalendar: [],
-        byHour: new Array(24).fill(2),
-        byWeekday: new Array(7).fill(5),
-        byMonth: [],
-        longestInactiveGapDays: 2,
-        peakDailyCommits: 5,
-      },
+      temporal: createMockTemporal({ 23: 30 }, { 1: 30 }),
       summary: {
-        totalCommits: 50,
-        totalActiveDays: 20,
-        longestStreakDays: 12,
-        nightCommitPercentage: 58, // > 35% threshold
-        weekendCommitPercentage: 10,
-        busiestHour: 2,
-        busiestWeekday: "Thursday",
+        totalCommits: 30,
+        totalActiveDays: 10,
+        longestStreakDays: 3,
+        nightCommitPercentage: 100,
+        weekendCommitPercentage: 0,
+        busiestHour: 23,
       },
-      churn: {
-        churnRatio: 0.16,
-        totalDeletions: 200,
-        totalAdditions: 1000,
-      },
+      churn: { churnRatio: 0.2, totalDeletions: 100, totalAdditions: 400 },
       commitForensics: {
         medianCommitSize: 20,
         averageMessageLength: 25,
-        shortMessageCount: 2,
-        longMessageCount: 5,
-        conventionalCommitCount: 40,
-        detailedCommitsCount: 30,
+        shortMessageCount: 0,
+        longMessageCount: 0,
+        conventionalCommitCount: 0,
+        detailedCommitsCount: 20,
       },
       languages: [{ name: "TypeScript", bytes: 10000, percentage: 100, isFunctional: true }],
-      commitCategories: [
-        { category: "FEAT", count: 30, percentage: 60 },
-        { category: "FIX", count: 10, percentage: 20 },
-      ],
+      commitCategories: [],
+    });
+
+    const nightShift = classifications.find((c) => c.id === "night-shift");
+    expect(nightShift).toBeDefined();
+    expect(nightShift?.evidence.every((e) => e.isSatisfied)).toBe(true);
+
+    const nightOwl = classifications.find((c) => c.id === "night-owl");
+    // Night Shift should supersede Night Owl
+    expect(nightOwl?.evidence.every((e) => e.isSatisfied)).toBe(false);
+  });
+
+  it("should classify NIGHT OWL when night activity is elevated and exceeds afternoon baseline", () => {
+    // 40 commits total: 18 night (45%), 6 afternoon (15%), 16 morning (40%)
+    const classifications = computeDeveloperClassifications({
+      commits: [],
+      repositories: [baseRepo],
+      temporal: createMockTemporal({ 22: 18, 14: 6, 9: 16 }, { 1: 20, 2: 20 }),
+      summary: {
+        totalCommits: 40,
+        totalActiveDays: 15,
+        longestStreakDays: 4,
+        nightCommitPercentage: 45,
+        weekendCommitPercentage: 0,
+        busiestHour: 22,
+      },
+      churn: { churnRatio: 0.2, totalDeletions: 100, totalAdditions: 400 },
+      commitForensics: {
+        medianCommitSize: 20,
+        averageMessageLength: 25,
+        shortMessageCount: 0,
+        longMessageCount: 0,
+        conventionalCommitCount: 0,
+        detailedCommitsCount: 20,
+      },
+      languages: [{ name: "TypeScript", bytes: 10000, percentage: 100, isFunctional: true }],
+      commitCategories: [],
     });
 
     const nightOwl = classifications.find((c) => c.id === "night-owl");
     expect(nightOwl).toBeDefined();
     expect(nightOwl?.evidence.every((e) => e.isSatisfied)).toBe(true);
-    expect(nightOwl?.evidenceStrength).toBe("VERY HIGH");
+  });
+
+  it("should NOT classify NIGHT OWL for tiny sample sizes or balanced activity", () => {
+    // Only 4 commits at night
+    const classifications = computeDeveloperClassifications({
+      commits: [],
+      repositories: [baseRepo],
+      temporal: createMockTemporal({ 23: 4 }),
+      summary: {
+        totalCommits: 4,
+        totalActiveDays: 2,
+        longestStreakDays: 1,
+        nightCommitPercentage: 100,
+        weekendCommitPercentage: 0,
+        busiestHour: 23,
+      },
+      churn: { churnRatio: 0.2, totalDeletions: 10, totalAdditions: 40 },
+      commitForensics: {
+        medianCommitSize: 20,
+        averageMessageLength: 25,
+        shortMessageCount: 0,
+        longMessageCount: 0,
+        conventionalCommitCount: 0,
+        detailedCommitsCount: 4,
+      },
+      languages: [{ name: "TypeScript", bytes: 10000, percentage: 100, isFunctional: true }],
+      commitCategories: [],
+    });
+
+    const nightOwl = classifications.find((c) => c.id === "night-owl");
+    expect(nightOwl?.evidence.every((e) => e.isSatisfied)).toBe(false);
   });
 
   it("should assess ATOMIC COMMITTER when median commit size is <= 35 lines", () => {
     const classifications = computeDeveloperClassifications({
       commits: [],
       repositories: [baseRepo],
-      temporal: {
-        heatmapCalendar: [],
-        byHour: new Array(24).fill(2),
-        byWeekday: new Array(7).fill(5),
-        byMonth: [],
-        longestInactiveGapDays: 0,
-        peakDailyCommits: 3,
-      },
+      temporal: createMockTemporal({ 14: 40 }),
       summary: {
         totalCommits: 40,
         totalActiveDays: 15,
@@ -97,13 +161,8 @@ describe("Developer Assessments Engine", () => {
         nightCommitPercentage: 10,
         weekendCommitPercentage: 15,
         busiestHour: 14,
-        busiestWeekday: "Tuesday",
       },
-      churn: {
-        churnRatio: 0.2,
-        totalDeletions: 100,
-        totalAdditions: 400,
-      },
+      churn: { churnRatio: 0.2, totalDeletions: 100, totalAdditions: 400 },
       commitForensics: {
         medianCommitSize: 18,
         averageMessageLength: 30,
@@ -121,57 +180,98 @@ describe("Developer Assessments Engine", () => {
     expect(atomic?.evidence.every((e) => e.isSatisfied)).toBe(true);
   });
 
-  it("should assess SOLO OPERATOR and ARTISANAL BUILDER when criteria are met", () => {
-    const soloRepo: RepositoryAnalysis = {
-      ...baseRepo,
-      stars: 0,
-      forks: 0,
-    };
+  it("should not contain removed weak rules artisanal-builder or solo-operator", () => {
     const classifications = computeDeveloperClassifications({
       commits: [],
-      repositories: [soloRepo],
-      temporal: {
-        heatmapCalendar: [],
-        byHour: new Array(24).fill(3),
-        byWeekday: new Array(7).fill(10),
-        byMonth: [],
-        longestInactiveGapDays: 0,
-        peakDailyCommits: 5,
-      },
+      repositories: [{ ...baseRepo, stars: 0, forks: 0 }],
+      temporal: createMockTemporal({ 12: 50 }),
       summary: {
-        totalCommits: 70,
-        totalActiveDays: 30,
-        longestStreakDays: 8,
-        nightCommitPercentage: 10,
-        weekendCommitPercentage: 10,
-        busiestHour: 15,
-        busiestWeekday: "Wednesday",
+        totalCommits: 50,
+        totalActiveDays: 20,
+        longestStreakDays: 5,
+        nightCommitPercentage: 0,
+        weekendCommitPercentage: 0,
+        busiestHour: 12,
         prsAuthored: 0,
         reviewsAuthored: 0,
-      } as any,
-      churn: {
-        churnRatio: 0.2,
-        totalDeletions: 200,
-        totalAdditions: 800,
       },
+      churn: { churnRatio: 0.2, totalDeletions: 100, totalAdditions: 400 },
       commitForensics: {
-        medianCommitSize: 25,
-        averageMessageLength: 20,
-        shortMessageCount: 1,
-        longMessageCount: 1,
-        conventionalCommitCount: 50,
-        detailedCommitsCount: 40,
+        medianCommitSize: 50,
+        averageMessageLength: 25,
+        shortMessageCount: 0,
+        longMessageCount: 0,
+        conventionalCommitCount: 0,
+        detailedCommitsCount: 50,
       },
-      languages: [{ name: "TypeScript", bytes: 10000, percentage: 100, isFunctional: true }],
-      commitCategories: [{ category: "FEAT", count: 70, percentage: 100 }],
+      languages: [],
+      commitCategories: [],
     });
 
-    const soloOp = classifications.find((c) => c.id === "solo-operator");
-    expect(soloOp).toBeDefined();
-    expect(soloOp?.evidence.every((e) => e.isSatisfied)).toBe(true);
+    expect(classifications.find((c) => c.id === "artisanal-builder")).toBeUndefined();
+    expect(classifications.find((c) => c.id === "solo-operator")).toBeUndefined();
+  });
 
-    const artisanal = classifications.find((c) => c.id === "artisanal-builder");
-    expect(artisanal).toBeDefined();
-    expect(artisanal?.evidence.every((e) => e.isSatisfied)).toBe(true);
+  it("should NOT classify POLYGLOT when language data is empty", () => {
+    const classifications = computeDeveloperClassifications({
+      commits: [],
+      repositories: [baseRepo],
+      temporal: createMockTemporal({ 12: 50 }),
+      summary: {
+        totalCommits: 50,
+        totalActiveDays: 20,
+        longestStreakDays: 5,
+        nightCommitPercentage: 0,
+        weekendCommitPercentage: 0,
+        busiestHour: 12,
+      },
+      churn: { churnRatio: 0.2, totalDeletions: 100, totalAdditions: 400 },
+      commitForensics: {
+        medianCommitSize: 50,
+        averageMessageLength: 25,
+        shortMessageCount: 0,
+        longMessageCount: 0,
+        conventionalCommitCount: 0,
+        detailedCommitsCount: 50,
+      },
+      languages: [],
+      commitCategories: [],
+    });
+
+    const polyglot = classifications.find((c) => c.id === "polyglot-investigator");
+    expect(polyglot?.evidence.every((e) => e.isSatisfied)).toBe(false);
+  });
+
+  it("should remain resilient with 0 commits without NaN or crashing", () => {
+    const classifications = computeDeveloperClassifications({
+      commits: [],
+      repositories: [],
+      temporal: createMockTemporal({}),
+      summary: {
+        totalCommits: 0,
+        totalActiveDays: 0,
+        longestStreakDays: 0,
+        nightCommitPercentage: 0,
+        weekendCommitPercentage: 0,
+        busiestHour: 0,
+      },
+      churn: { churnRatio: 0, totalDeletions: 0, totalAdditions: 0 },
+      commitForensics: {
+        medianCommitSize: 0,
+        averageMessageLength: 0,
+        shortMessageCount: 0,
+        longMessageCount: 0,
+        conventionalCommitCount: 0,
+        detailedCommitsCount: 0,
+      },
+      languages: [],
+      commitCategories: [],
+    });
+
+    expect(classifications).toBeDefined();
+    expect(classifications.length).toBeGreaterThan(0);
+    // None should be satisfied
+    const satisfied = classifications.filter((c) => c.evidence.every((e) => e.isSatisfied));
+    expect(satisfied.length).toBe(0);
   });
 });

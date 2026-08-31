@@ -1,6 +1,6 @@
 /**
  * DETERMINISTIC FINDINGS ENGINE
- * Generates verified analytical findings derived strictly from GitHub metrics.
+ * Generates verified analytical findings derived strictly from GitHub metrics that pass a meaningfulness filter.
  */
 
 import { DeterministicFinding, GitopsyAnalysis } from "@/types/domain";
@@ -12,8 +12,10 @@ export function generateDeterministicFindings(
   const summary = analysis.summary;
   if (!summary) return findings;
 
-  // 1. Peak Cadence
-  if (summary.busiestWeekday && summary.busiestWeekday !== "N/A") {
+  const totalCommits = Math.max(0, summary.totalCommits || 0);
+
+  // 1. Peak Cadence (Only when there is a valid busy weekday and sufficient commit volume)
+  if (summary.busiestWeekday && summary.busiestWeekday !== "N/A" && totalCommits >= 15) {
     findings.push({
       id: "finding-weekday",
       icon: "📅",
@@ -23,42 +25,44 @@ export function generateDeterministicFindings(
     });
   }
 
-  // 2. Churn Ratio
-  if (summary.linesDeleted > 0) {
+  // 2. High or Low Churn Ratio (Only when ratio is notable, e.g. >= 4.0x or <= 0.8x)
+  if (summary.linesDeleted > 100 && summary.linesAdded > 100) {
     const ratio = Math.round((summary.linesAdded / summary.linesDeleted) * 10) / 10;
-    findings.push({
-      id: "finding-ratio",
-      icon: "⚖️",
-      title: `Addition to Deletion Ratio: ${ratio}x`,
-      evidence: `${summary.linesAdded.toLocaleString()} additions vs ${summary.linesDeleted.toLocaleString()} deletions.`,
-      category: "CHURN",
-    });
+    if (ratio >= 4.0 || ratio <= 0.8) {
+      findings.push({
+        id: "finding-ratio",
+        icon: "⚖️",
+        title: `Addition to Deletion Ratio: ${ratio}x`,
+        evidence: `${summary.linesAdded.toLocaleString()} additions vs ${summary.linesDeleted.toLocaleString()} deletions across history.`,
+        category: "CHURN",
+      });
+    }
   }
 
-  // 3. Inactivity Hiatus
-  if (summary.longestInactiveGapDays && summary.longestInactiveGapDays >= 14) {
+  // 3. Meaningful Inactivity Hiatus (>= 21 days)
+  if (summary.longestInactiveGapDays && summary.longestInactiveGapDays >= 21) {
     findings.push({
       id: "finding-hiatus",
       icon: "⏸️",
       title: `Longest Hiatus: ${summary.longestInactiveGapDays} Days`,
-      evidence: `The longest observed break between consecutive commits was ${summary.longestInactiveGapDays} days.`,
+      evidence: `The longest observed pause between consecutive commits was ${summary.longestInactiveGapDays} calendar days.`,
       category: "TEMPORAL",
     });
   }
 
-  // 4. Peak Daily Velocity
-  if (summary.peakDailyCommits && summary.peakDailyCommits >= 5) {
+  // 4. Peak Daily Velocity Burst (>= 8 commits in a single day)
+  if (summary.peakDailyCommits && summary.peakDailyCommits >= 8) {
     findings.push({
       id: "finding-peak-day",
       icon: "🚀",
       title: `Peak Single-Day Output: ${summary.peakDailyCommits} Commits`,
-      evidence: `Highest single-day commit burst recorded in the analysis window.`,
+      evidence: `Highest single-day commit burst recorded in the analyzed timeframe.`,
       category: "TEMPORAL",
     });
   }
 
-  // 5. Daily Density
-  if (summary.averageDailyCommits && summary.averageDailyCommits > 0) {
+  // 5. High Daily Density (>= 3.5 commits/active day)
+  if (summary.averageDailyCommits && summary.averageDailyCommits >= 3.5 && summary.totalActiveDays >= 5) {
     findings.push({
       id: "finding-density",
       icon: "📊",
@@ -68,22 +72,8 @@ export function generateDeterministicFindings(
     });
   }
 
-  // 6. Concentration in primary repo
-  if (analysis.repositories && analysis.repositories.length > 0 && summary.totalCommits > 0) {
-    const sorted = [...analysis.repositories].sort((a, b) => b.commitCount - a.commitCount);
-    const topRepo = sorted[0];
-    const percentage = Math.round((topRepo.commitCount / summary.totalCommits) * 100);
-    findings.push({
-      id: "finding-concentration",
-      icon: "🎯",
-      title: `Portfolio Concentration: ${percentage}% in ${topRepo.name}`,
-      evidence: `${topRepo.commitCount.toLocaleString()} out of ${summary.totalCommits.toLocaleString()} commits live in your primary repository.`,
-      category: "BEHAVIOR",
-    });
-  }
-
-  // 7. Languages touched
-  if (analysis.languages && analysis.languages.length > 0) {
+  // 6. Polyglot Language Footprint (>= 3 distinct languages)
+  if (analysis.languages && analysis.languages.length >= 3) {
     findings.push({
       id: "finding-languages",
       icon: "🌐",
@@ -93,8 +83,8 @@ export function generateDeterministicFindings(
     });
   }
 
-  // 8. Streak
-  if (summary.longestStreakDays > 1) {
+  // 7. Sustained Streak (>= 5 consecutive days)
+  if (summary.longestStreakDays && summary.longestStreakDays >= 5) {
     findings.push({
       id: "finding-streak",
       icon: "🔥",
@@ -104,14 +94,27 @@ export function generateDeterministicFindings(
     });
   }
 
-  // 9. Merge Rate
-  if (summary.mergeRatePercentage !== null && summary.prsAuthored > 0) {
+  // 8. PR Merge Rate (Only when developer has authored >= 5 PRs)
+  if (summary.mergeRatePercentage !== null && summary.prsAuthored >= 5) {
     findings.push({
       id: "finding-merge-rate",
       icon: "🔀",
       title: `PR Merge Completion: ${summary.mergeRatePercentage}%`,
       evidence: `${summary.prsMerged.toLocaleString()} of ${summary.prsAuthored.toLocaleString()} pull requests were merged into target branches.`,
       category: "COLLABORATION",
+    });
+  }
+
+  // 9. Peak Productivity Hour (Localized context)
+  if (summary.busiestHour !== undefined && totalCommits >= 20) {
+    const tzAbbr = summary.timezoneAbbr || "local";
+    const hourStr = `${String(summary.busiestHour).padStart(2, "0")}:00 ${tzAbbr}`;
+    findings.push({
+      id: "finding-hourly-peak",
+      icon: "⏰",
+      title: `Peak Hour of Output: ${hourStr}`,
+      evidence: `Most frequent timestamp window recorded across all analyzed repositories.`,
+      category: "TEMPORAL",
     });
   }
 
