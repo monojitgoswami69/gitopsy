@@ -1,5 +1,5 @@
 // GITOPSY Service Worker — Offline-First Cache & PWA Support
-const CACHE_NAME = "gitopsy-996c4b9c";
+const CACHE_NAME = "gitopsy-c000ddb8";
 
 const PRECACHE_ASSETS = [
   "/",

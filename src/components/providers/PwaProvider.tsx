@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { Download, X, Sparkles } from "lucide-react";
+import { Download, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface BeforeInstallPromptEvent extends Event {
@@ -59,24 +59,40 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
 
-      // Check if user dismissed recently (session)
-      const isDismissed = sessionStorage.getItem("gitopsy_pwa_dismissed");
-      if (!isDismissed) {
-        setShowInstallBanner(true);
+      // Only show the prompt on the very first time the user uses the app
+      try {
+        const hasBeenPrompted = localStorage.getItem("gitopsy_pwa_prompt_shown");
+        const isDismissed = localStorage.getItem("gitopsy_pwa_dismissed");
+        const isInstalled = localStorage.getItem("gitopsy_pwa_installed");
+
+        if (!hasBeenPrompted && !isDismissed && !isInstalled) {
+          setShowInstallBanner(true);
+          localStorage.setItem("gitopsy_pwa_prompt_shown", "true");
+        }
+      } catch {
+        // localStorage may be unavailable in private browsing
       }
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
 
     // Track app installation
-    window.addEventListener("appinstalled", () => {
+    const handleAppInstalled = () => {
       setDeferredPrompt(null);
       setShowInstallBanner(false);
       setIsStandalone(true);
-    });
+      try {
+        localStorage.setItem("gitopsy_pwa_installed", "true");
+      } catch {
+        // localStorage may be unavailable in private browsing
+      }
+    };
+
+    window.addEventListener("appinstalled", handleAppInstalled);
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", handleAppInstalled);
     };
   }, []);
 
@@ -88,6 +104,11 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
       const choiceResult = await deferredPrompt.userChoice;
       if (choiceResult.outcome === "accepted") {
         setShowInstallBanner(false);
+        try {
+          localStorage.setItem("gitopsy_pwa_installed", "true");
+        } catch {
+          // localStorage may be unavailable in private browsing
+        }
       }
       setDeferredPrompt(null);
     } catch {
@@ -99,9 +120,9 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
     setShowInstallBanner(false);
     setDismissed(true);
     try {
-      sessionStorage.setItem("gitopsy_pwa_dismissed", "true");
+      localStorage.setItem("gitopsy_pwa_dismissed", "true");
     } catch {
-      // sessionStorage may be unavailable in private browsing
+      // localStorage may be unavailable in private browsing
     }
   };
 
@@ -115,52 +136,51 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
     >
       {children}
 
-      {/* Neobrutalist Install Notification Banner */}
+      {/* Modern, Refined Install Notification Banner */}
       {showInstallBanner && !isStandalone && !dismissed && (
         <aside
           role="region"
           aria-label="Install Gitopsy Web Application"
-          className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:max-w-sm z-50 animate-in fade-in slide-in-from-bottom-4 duration-300"
+          className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:max-w-sm z-50 animate-in fade-in slide-in-from-bottom-3 duration-300"
         >
-          <div className="border-[3px] border-black bg-[#FFFBEB] p-4 rounded-[12px] shadow-[4px_4px_0_0_#000] flex flex-col gap-3 text-black">
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <div className="size-7 rounded-[6px] border-2 border-black bg-[#FFDC58] flex items-center justify-center shrink-0">
-                  <Download className="size-4 text-black stroke-[2.5]" />
-                </div>
+          <div className="border-[1.5px] border-black/80 bg-[#FFFDF9]/95 backdrop-blur-md p-3.5 sm:p-4 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,0.85)] flex flex-col gap-3 text-black">
+            <div className="flex items-start justify-between gap-2.5">
+              <div className="flex items-start gap-2.5">
+                <Download className="size-5 text-black stroke-[2.2] shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="text-xs font-black uppercase tracking-tight">INSTALL GITOPSY APP</h4>
-                  <p className="text-[11px] font-bold text-gray-700">
-                    Offline dossier access &amp; instant desktop/mobile launching.
+                  <h4 className="text-xs font-black uppercase tracking-tight text-neutral-900 mb-0.5">
+                    INSTALL GITOPSY
+                  </h4>
+                  <p className="text-[11px] font-medium text-neutral-700 leading-snug">
+                    Offline dossier access &amp; instant desktop or mobile launching.
                   </p>
                 </div>
               </div>
               <button
                 onClick={handleDismissBanner}
-                className="text-gray-500 hover:text-black p-1 hover:bg-black/5 rounded cursor-pointer transition-colors"
+                className="text-neutral-400 hover:text-black p-1 hover:bg-black/5 rounded-md cursor-pointer transition-colors shrink-0"
                 aria-label="Dismiss install prompt"
               >
-                <X className="size-4" />
+                <X className="size-3.5" />
               </button>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-1 border-t border-black/15">
-              <Button
-                size="sm"
-                variant="outline"
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-black/10">
+              <button
+                type="button"
                 onClick={handleDismissBanner}
-                className="text-[11px] py-1 h-auto"
+                className="text-[11px] font-bold text-neutral-600 hover:text-neutral-900 px-2.5 py-1.5 rounded-md hover:bg-black/5 transition-colors cursor-pointer"
               >
                 LATER
-              </Button>
+              </button>
               <Button
                 size="sm"
                 variant="main"
                 onClick={installApp}
-                className="text-[11px] py-1 h-auto flex items-center gap-1.5"
+                className="text-[11px] py-1 px-3 h-8 shadow-[1.5px_1.5px_0_0_#000] hover:shadow-[1px_1px_0_0_#000] flex items-center gap-1.5"
               >
-                <Sparkles className="size-3" />
-                <span>INSTALL</span>
+                <Download className="size-3 stroke-[2.5]" />
+                <span>INSTALL APP</span>
               </Button>
             </div>
           </div>
