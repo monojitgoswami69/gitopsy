@@ -3,7 +3,7 @@
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { DeterministicEasterEgg } from "@/types/domain";
-import { Zap, Sparkles } from "lucide-react";
+import { Zap, CheckCircle2 } from "lucide-react";
 import confetti from "canvas-confetti";
 
 export function EasterEggModal({
@@ -43,7 +43,7 @@ export function EasterEggModal({
             onClose();
           }}
         >
-          <Sparkles className="size-4" /> ACKNOWLEDGE CASE NOTE
+          <CheckCircle2 className="size-4" /> ACKNOWLEDGE CASE NOTE
         </Button>
       </div>
     </Dialog>

@@ -4,6 +4,8 @@ import { CommitForensics } from "@/types/domain";
 import {
   FileCode2,
   Scale,
+  Zap,
+  FileText,
 } from "lucide-react";
 
 const INTENT_COLORS = [
@@ -142,13 +144,19 @@ export function CommitForensicsSection({ commitForensics }: CommitForensicsSecti
           {/* Additional Hygiene Context */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-3 text-[10.5px] sm:text-[11px] font-mono font-bold text-gray-500 pt-2 border-t border-black/10 text-center">
             {shortMessageCount > 0 && (
-              <span>⚡ {shortMessageCount} short descriptions (&lt; 10 chars)</span>
+              <span className="flex items-center gap-1">
+                <Zap className="size-3 text-amber-600 shrink-0" />
+                <span>{shortMessageCount} short descriptions (&lt; 10 chars)</span>
+              </span>
             )}
             {shortMessageCount > 0 && longMessageCount > 0 && (
               <span className="hidden sm:inline text-gray-300">•</span>
             )}
             {longMessageCount > 0 && (
-              <span>📝 {longMessageCount} extended descriptions (≥ 80 chars)</span>
+              <span className="flex items-center gap-1">
+                <FileText className="size-3 text-blue-600 shrink-0" />
+                <span>{longMessageCount} extended descriptions (≥ 80 chars)</span>
+              </span>
             )}
           </div>
         </div>

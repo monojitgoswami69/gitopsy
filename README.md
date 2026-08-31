@@ -131,7 +131,7 @@ Gitopsy enforces strict privacy standards:
 
 1. **No External Database**: There is no server-side database (PostgreSQL, MongoDB, Supabase, Firebase, Redis, etc.). All report data lives locally in your browser's IndexedDB.
 2. **Zero Telemetry**: No third-party trackers, analytics scripts, or session recordings.
-3. **Read-Only Scopes**: Defaults to `read:user repo` (read-only access to analyze user metadata and repository commit statistics). Gitopsy never requests or executes write operations.
+3. **Pure Read-Only Operations**: Uses standard GitHub OAuth (`read:user repo`) to analyze profile and repository commit activity. Gitopsy strictly performs read operations and never creates, modifies, or deletes any repository content or code.
 4. **Local Data Management**: All stored analyses, sync markers, and checkpoints can be exported, redacted, or permanently purged at any time.
 
 ---
